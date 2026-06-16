@@ -66,6 +66,8 @@ core loop:
 - command timeout handling with recorded timeout result
 - SQLite connections close after each operation
 - explicit `patch` command dependency check for patch sync
+- `agentos doctor` preflight checks for Linux/WSL, Python, Docker, patch, and workspace path
+- demo validation commands use the current Python executable instead of hardcoded `python3`
 - common worker runtime used by the Codex adapter
 - Codex `--docker` records target AgentOS image metadata without running Codex inside the image
 - session destruction
@@ -142,7 +144,8 @@ Contract layer, safe patch apply, selected-file sync, Codex execute result
 collection, Docker command execution, host-side worker runtime extraction,
 Docker sandbox policy validation, selected-file approval scopes, and Markdown
 document workflow, end-to-end rehearsal, and first runtime hardening pass now
-exist. Next build:
+exist. Environment preflight is now available through `agentos doctor`. Next
+build:
 
 1. image capability metadata for base/code/document layers
 2. CLI UX and JSON output polish for marketplace-grade use

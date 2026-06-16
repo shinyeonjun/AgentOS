@@ -371,3 +371,25 @@ Observed result:
 - Patch sync reports a clear error when the `patch` command is missing.
 - Docker command artifact records hardening flags: `--cap-drop ALL`, `no-new-privileges`, PID/memory/CPU limits, `--read-only`, and `/tmp` tmpfs.
 - Hardened rehearsal `8b85041ff2bd` passed with Docker sandbox policy session `3945d5475219`.
+
+## 2026-06-16 Environment Doctor Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover /mnt/usb/projects/agentos/prototype/tests -v
+scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos doctor --workspace /mnt/usb/projects/agentos
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos doctor --workspace /mnt/usb/projects/agentos --json
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos rehearse --state-dir /mnt/usb/projects/agentos/.agentos-state --output-dir /mnt/usb/projects/agentos/.agentos-output --docker-sudo
+```
+
+Observed result:
+
+- 24 unit tests passed.
+- Ruff passed.
+- Compileall passed.
+- `agentos doctor` reported passed checks for Linux, Python 3.12.3, Docker, patch, and workspace path.
+- JSON doctor output matched the human-readable status.
+- Rehearsal `81084a4918ad` passed after replacing internal demo `python3` calls with the current Python executable.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shutil
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -191,7 +192,7 @@ def _structured_document() -> str:
 
 def _markdown_validation_command() -> list[str]:
     return [
-        "python3",
+        sys.executable,
         "-c",
         (
             "from pathlib import Path\n"

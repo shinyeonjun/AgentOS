@@ -55,6 +55,14 @@ It proves the control-plane lifecycle without requiring a live LLM.
 
 ## Run
 
+Check local runtime readiness first:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype \
+python3 -m agentos doctor \
+  --workspace /mnt/usb/projects/agentos
+```
+
 From any directory:
 
 ```bash
@@ -127,6 +135,9 @@ writable.
 The current prototype is tested on Linux and WSL-style environments. Native
 Windows support is not claimed yet because the prototype intentionally uses
 POSIX-oriented tools such as `python3`, Docker, and `patch`.
+For Windows users, the supported path is WSL2 with Docker Desktop WSL
+integration enabled, preferably with the project stored on the WSL/Linux
+filesystem rather than under `/mnt/c`.
 
 ## Project Notes
 

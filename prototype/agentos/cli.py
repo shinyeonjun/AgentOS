@@ -8,6 +8,7 @@ from .demo import run_code_fix_demo
 from .document_demo import run_markdown_document_demo
 from .docker_sandbox import DEFAULT_IMAGE, run_docker_task
 from .inspector import inspect_state, render_inspection
+from .platform_checks import render_doctor, run_doctor
 from .rehearsal import run_rehearsal
 
 
@@ -83,6 +84,18 @@ def main(argv: list[str] | None = None) -> int:
         "--skip-docker",
         action="store_true",
         help="Skip the Docker policy step when Docker is unavailable",
+    )
+    doctor = subparsers.add_parser("doctor", help="Check whether the local runtime environment can run AgentOS")
+    doctor.add_argument(
+        "--workspace",
+        type=Path,
+        default=Path.cwd(),
+        help="Workspace path to inspect for WSL/Windows mount warnings",
+    )
+    doctor.add_argument(
+        "--json",
+        action="store_true",
+        help="Render doctor output as JSON",
     )
     inspect = subparsers.add_parser("inspect", help="Inspect AgentOS sessions and artifacts")
     inspect.add_argument(
@@ -263,6 +276,11 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{step.status}: {step.name} session={step.session_id}")
         print(f"summary: {result.summary_path}")
         return 0 if result.passed else 1
+
+    if args.command == "doctor":
+        result = run_doctor(workspace_path=args.workspace)
+        print(result.to_json() if args.json else render_doctor(result))
+        return 0 if result.status in {"passed", "warning"} else 1
 
     if args.command == "inspect":
         data = inspect_state(args.state_dir, session_id=args.session)

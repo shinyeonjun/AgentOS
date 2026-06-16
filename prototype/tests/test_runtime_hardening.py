@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
@@ -23,7 +24,7 @@ class RuntimeHardeningTests(unittest.TestCase):
 
             result = runtime.run_command(
                 session=session,
-                command=["python3", "-c", "import time; time.sleep(5)"],
+                command=[sys.executable, "-c", "import time; time.sleep(5)"],
                 cwd=workdir,
             )
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shutil
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -39,7 +40,7 @@ def run_code_fix_demo(state_dir: Path, output_dir: Path, destroy_session: bool =
     task_manifest_artifact = runtime.write_json_artifact(session, "task.json", task_manifest.to_dict())
     workspace_project = runtime.import_input(session, input_dir)
 
-    first = runtime.run_command(session, ["python3", "-m", "unittest", "discover", "-v"], workspace_project)
+    first = runtime.run_command(session, [sys.executable, "-m", "unittest", "discover", "-v"], workspace_project)
 
     calculator = workspace_project / "calculator.py"
     calculator.write_text(
@@ -50,7 +51,7 @@ def run_code_fix_demo(state_dir: Path, output_dir: Path, destroy_session: bool =
     )
     shutil.rmtree(workspace_project / "__pycache__", ignore_errors=True)
 
-    second = runtime.run_command(session, ["python3", "-m", "unittest", "discover", "-v"], workspace_project)
+    second = runtime.run_command(session, [sys.executable, "-m", "unittest", "discover", "-v"], workspace_project)
 
     diff_artifact = runtime.create_unified_diff_artifact(
         session=session,

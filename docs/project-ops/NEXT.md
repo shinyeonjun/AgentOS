@@ -18,6 +18,7 @@ The first contract slice now exists:
 - Markdown document workflow demo
 - end-to-end `agentos rehearse` command
 - SQLite close, command timeout, patch dependency check, and Docker hardening flags
+- `agentos doctor` Linux/WSL environment preflight
 
 Next, add image capability metadata for base/code/document layers, then polish
 CLI output/JSON mode for marketplace-grade use.

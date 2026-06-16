@@ -38,6 +38,12 @@ Run the end-to-end rehearsal suite:
 PYTHONPATH=projects/agentos/prototype python3 -m agentos rehearse --docker-sudo
 ```
 
+Check local runtime readiness:
+
+```bash
+PYTHONPATH=projects/agentos/prototype python3 -m agentos doctor
+```
+
 Inspect sessions:
 
 ```bash
