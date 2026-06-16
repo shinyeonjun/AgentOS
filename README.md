@@ -85,6 +85,7 @@ python3 -m agentos inspect \
 By default this prepares a copied workspace and Codex command artifact without
 spending tokens. Add `--execute` only when you want AgentOS to run Codex and
 collect changed files/diff artifacts into the review package.
+Add `--docker` to route that execution through the Docker sandbox runner.
 
 ```bash
 PYTHONPATH=/mnt/usb/projects/agentos/prototype \

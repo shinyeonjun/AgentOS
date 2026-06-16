@@ -82,6 +82,31 @@ def main(argv: list[str] | None = None) -> int:
         help="Actually run Codex. Without this flag, only prepare the session and command artifact.",
     )
     codex.add_argument(
+        "--docker",
+        action="store_true",
+        help="Run Codex through the Docker sandbox runner when --execute is set",
+    )
+    codex.add_argument(
+        "--docker-image",
+        default=DEFAULT_IMAGE,
+        help="Docker image to use with --docker",
+    )
+    codex.add_argument(
+        "--docker-bin",
+        default="docker",
+        help="Docker executable name or path",
+    )
+    codex.add_argument(
+        "--docker-sudo",
+        action="store_true",
+        help="Run Docker through sudo for shells that do not have docker-group access yet",
+    )
+    codex.add_argument(
+        "--docker-network",
+        default="none",
+        help="Docker network mode for --docker. Default is none.",
+    )
+    codex.add_argument(
         "--destroy-session",
         action="store_true",
         help="Destroy the copied workspace after preparing/executing the task",
@@ -163,11 +188,17 @@ def main(argv: list[str] | None = None) -> int:
             task=args.task,
             execute=args.execute,
             codex_bin=args.codex_bin,
+            use_docker=args.docker,
+            docker_image=args.docker_image,
+            docker_bin=args.docker_bin,
+            docker_sudo=args.docker_sudo,
+            docker_network=args.docker_network,
             destroy_session=args.destroy_session,
         )
         print(f"session: {result.session_id}")
         print(f"workspace_path: {result.workspace_path}")
         print(f"executed: {result.executed}")
+        print(f"docker_used: {result.docker_used}")
         if result.codex_result is not None:
             print(f"codex_exit_code: {result.codex_result.exit_code}")
         print(f"changed_files: {len(result.changed_files)}")

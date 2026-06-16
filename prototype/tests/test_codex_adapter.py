@@ -35,8 +35,8 @@ class CodexAdapterTests(unittest.TestCase):
 
             self.assertEqual(task_manifest["host_agent"], "codex-cli")
             self.assertEqual(command_artifact["execute"], False)
-            self.assertEqual(command_artifact["command"][0], "codex")
-            self.assertEqual(command_artifact["command"][-1], "Summarize the project.")
+            self.assertEqual(command_artifact["codex_command"][0], "codex")
+            self.assertEqual(command_artifact["execution_command"][-1], "Summarize the project.")
             self.assertEqual(review_package["validation"]["status"], "not_run")
 
             session_detail = inspect_state(root / "state", session_id=result.session_id)
@@ -88,6 +88,55 @@ class CodexAdapterTests(unittest.TestCase):
             artifact_names = {artifact["name"] for artifact in session["artifacts"]}
             self.assertIn("final-report.md", artifact_names)
             self.assertIn("diff-README.md.diff", artifact_names)
+
+    def test_codex_execute_can_run_through_docker_command(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            input_project = root / "input-project"
+            input_project.mkdir()
+            (input_project / "README.md").write_text("# Demo\n", encoding="utf-8")
+            fake_docker = root / "fake-docker"
+            fake_docker.write_text(
+                "#!/bin/sh\n"
+                "workspace=''\n"
+                "while [ \"$#\" -gt 0 ]; do\n"
+                "  if [ \"$1\" = '-v' ]; then\n"
+                "    shift\n"
+                "    case \"$1\" in\n"
+                "      *:/agentos/work) workspace=${1%:/agentos/work} ;;\n"
+                "    esac\n"
+                "  fi\n"
+                "  shift\n"
+                "done\n"
+                "printf '# Demo\\n\\nUpdated through fake Docker.\\n' > \"$workspace/README.md\"\n"
+                "exit 0\n",
+                encoding="utf-8",
+            )
+            fake_docker.chmod(0o755)
+
+            result = run_codex_task(
+                state_dir=root / "state",
+                output_dir=root / "output",
+                input_path=input_project,
+                task="Update README through Docker.",
+                execute=True,
+                use_docker=True,
+                docker_image="agentos-test:fake",
+                docker_bin=str(fake_docker),
+            )
+
+            self.assertTrue(result.executed)
+            self.assertTrue(result.docker_used)
+            self.assertEqual(result.changed_files, ("README.md",))
+
+            command_artifact = json.loads(result.command_artifact.read_text())
+            self.assertTrue(command_artifact["docker"]["enabled"])
+            self.assertEqual(command_artifact["docker"]["image"], "agentos-test:fake")
+            self.assertEqual(command_artifact["execution_command"][0], str(fake_docker))
+
+            review_package = json.loads(result.review_package_artifact.read_text())
+            self.assertEqual(review_package["validation"]["status"], "passed")
+            self.assertEqual(review_package["changes"]["changed_files"][0]["path"], "README.md")
 
 
 if __name__ == "__main__":

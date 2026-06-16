@@ -13,11 +13,15 @@ The first contract slice now exists:
 - selected-file sync to a safe target
 - Codex prepare wrapper with optional execution
 
-Next, run Codex execute mode inside the Docker-backed AgentOS workspace.
+Next, make the Docker-backed path use a real Codex-capable image, then add the
+Markdown document workflow.
 
 ## Next 7 Actions
 
-1. Run Codex execute mode inside Docker-backed workspace.
+1. Build a Codex-capable image or tool layer:
+   - Node/Codex CLI available inside container
+   - auth mount strategy documented
+   - network policy explicit
 2. Add Markdown document modification demo.
 3. Add first end-to-end demo script for exhibition rehearsal.
 4. Add minimal policy checks for network and writable mounts.

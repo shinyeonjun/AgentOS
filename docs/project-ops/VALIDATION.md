@@ -246,3 +246,26 @@ Observed result:
 - Workspace was mounted at `/agentos/work`.
 - Artifact directory was mounted at `/agentos/artifacts`.
 - Container wrote `/agentos/artifacts/readme.txt`, and the host artifact contained `hello docker sandbox`.
+
+## 2026-06-16 Codex Through Docker Routing Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover /mnt/usb/projects/agentos/prototype/tests -v
+scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos codex --state-dir /tmp/agentos-codex-docker/state --output-dir /tmp/agentos-codex-docker/output --input /tmp/agentos-codex-docker/input --task 'Update README in Docker.' --execute --docker --docker-bin /tmp/agentos-codex-docker/fake-docker --docker-image agentos-test:fake
+```
+
+Observed result:
+
+- 8 unit tests passed.
+- Ruff passed.
+- Compileall passed.
+- Fake Docker-routed Codex session `f7054175c732` exited with code 0.
+- Command artifact recorded Docker execution with `network: none`.
+- Review package reported `Docker execution: True`.
+- Review package reported 1 changed file: `README.md`.
+- Diff artifact was written: `diff-README.md.diff`.
+- No real Codex tokens were spent during this validation.

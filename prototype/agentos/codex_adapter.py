@@ -6,6 +6,7 @@ from typing import Any
 
 from .changes import FileChange, detect_file_changes
 from .contracts import TaskInput, TaskManifest, artifact_ref, build_review_package
+from .docker_sandbox import DEFAULT_IMAGE, build_docker_run_command
 from .runtime import AgentOSRuntime, Session, ToolResult
 
 
@@ -17,6 +18,7 @@ class CodexRunResult:
     command_artifact: Path
     review_package_artifact: Path
     executed: bool
+    docker_used: bool
     codex_result: ToolResult | None
     changed_files: tuple[str, ...]
     destroyed: bool
@@ -30,6 +32,11 @@ def run_codex_task(
     task: str,
     execute: bool = False,
     codex_bin: str = "codex",
+    use_docker: bool = False,
+    docker_image: str = DEFAULT_IMAGE,
+    docker_bin: str = "docker",
+    docker_sudo: bool = False,
+    docker_network: str = "none",
     destroy_session: bool = False,
 ) -> CodexRunResult:
     runtime = AgentOSRuntime(state_dir=state_dir, output_dir=output_dir)
@@ -43,7 +50,22 @@ def run_codex_task(
     task_manifest_artifact = runtime.write_json_artifact(session, "task.json", task_manifest.to_dict())
     workspace_path = runtime.import_input(session, input_path)
     original_path = session.original_dir / input_path.resolve().name
-    command = _codex_command(codex_bin=codex_bin, task=task)
+    codex_command = _codex_command(codex_bin=codex_bin, task=task)
+    artifact_dir = runtime.artifacts_dir / session.session_id
+    artifact_dir.mkdir(parents=True, exist_ok=True)
+    execution_command = (
+        build_docker_run_command(
+            workspace_dir=workspace_path,
+            artifact_dir=artifact_dir,
+            command=codex_command,
+            image=docker_image,
+            docker_bin=docker_bin,
+            use_sudo=docker_sudo,
+            network=docker_network,
+        )
+        if use_docker
+        else codex_command
+    )
     command_artifact = runtime.write_json_artifact(
         session,
         "codex-command.json",
@@ -51,11 +73,17 @@ def run_codex_task(
             "host_agent": "codex-cli",
             "cwd": str(workspace_path),
             "execute": execute,
-            "command": command,
+            "docker": {
+                "enabled": use_docker,
+                "image": docker_image if use_docker else None,
+                "network": docker_network if use_docker else None,
+            },
+            "codex_command": codex_command,
+            "execution_command": execution_command,
         },
     )
 
-    codex_result = runtime.run_command(session, command, workspace_path) if execute else None
+    codex_result = runtime.run_command(session, execution_command, workspace_path) if execute else None
     changes = detect_file_changes(original_path, workspace_path) if execute else []
     diff_artifacts = _write_diff_artifacts(runtime, session, changes)
     report_artifact = _write_codex_report(runtime, session, task, execute, codex_result, changes)
@@ -63,6 +91,7 @@ def run_codex_task(
         session_id=session.session_id,
         task=task,
         executed=execute,
+        docker_used=use_docker,
         codex_result=codex_result,
         changes=changes,
         task_manifest_artifact=task_manifest_artifact,
@@ -83,6 +112,7 @@ def run_codex_task(
         command_artifact=command_artifact,
         review_package_artifact=review_package_artifact,
         executed=execute,
+        docker_used=use_docker,
         codex_result=codex_result,
         changed_files=tuple(change.path for change in changes),
         destroyed=destroy_session and not session.session_dir.exists(),
@@ -108,6 +138,7 @@ def _build_codex_review_package(
     session_id: str,
     task: str,
     executed: bool,
+    docker_used: bool,
     codex_result: ToolResult | None,
     changes: list[FileChange],
     task_manifest_artifact: Path,
@@ -186,6 +217,10 @@ def _build_codex_review_package(
         validation_status=validation_status,
         artifacts=artifacts,
         risk_notes=[
+            {
+                "severity": "low",
+                "message": f"Docker execution: {docker_used}",
+            },
             {
                 "severity": "low",
                 "message": f"Task prompt: {task}",
