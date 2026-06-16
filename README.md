@@ -45,6 +45,7 @@ python3 -m unittest discover /mnt/usb/projects/agentdesk/prototype/tests -v
 
 ## Project Notes
 
+- Requirements: `docs/requirements.md`
 - Technical plan: `docs/technical-plan.md`
 - Operating notes: `docs/project-ops/`
 - Prototype code: `prototype/`

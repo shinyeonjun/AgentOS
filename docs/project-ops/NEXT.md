@@ -2,11 +2,11 @@
 
 ## Immediate Next Move
 
-Write the requirement/design docs around the corrected product definition before adding more runtime features.
+Review and refine `docs/requirements.md`, then write system flow and plugin API docs.
 
 ## Next 7 Actions
 
-1. Write `docs/requirements.md`.
+1. Review `docs/requirements.md` against the user's intended concept.
 2. Write `docs/system-flow.md`.
 3. Write `docs/plugin-api.md` for the Codex CLI-first integration.
 4. Write `docs/review-response-schema.md`.

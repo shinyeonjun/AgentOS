@@ -15,6 +15,7 @@ v0 prototype started.
 - Canonical implementation root: `/mnt/usb/projects/agentdesk/`
 - Canonical local git repository: `/mnt/usb/projects/agentdesk/.git`
 - Executable v0 prototype: `/mnt/usb/projects/agentdesk/prototype/`
+- Requirements draft: `/mnt/usb/projects/agentdesk/docs/requirements.md`
 - Latest local control-plane run state: `/mnt/usb/projects/agentdesk/.agentdesk-state/`
 - Latest approved demo output: `/mnt/usb/projects/agentdesk/.agentdesk-output/`
 - Workspace links: `projects/agentdesk/prototype`, `.agentdesk-state`, and `.agentdesk-output`
