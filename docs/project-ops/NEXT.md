@@ -2,7 +2,7 @@
 
 ## Immediate Next Move
 
-Prepare for the end-to-end exhibition rehearsal slice.
+Prepare for the marketplace-grade CLI polish slice.
 
 The first contract slice now exists:
 
@@ -16,17 +16,19 @@ The first contract slice now exists:
 - Docker sandbox policy validation and `sandbox-policy.json`
 - selected-file approval scopes in `review_package.json`
 - Markdown document workflow demo
+- end-to-end `agentos rehearse` command
 
-Next, add the first end-to-end exhibition rehearsal script.
+Next, add image capability metadata and polish CLI output/JSON mode for
+marketplace-grade use.
 
 ## Next 7 Actions
 
-1. Add first end-to-end demo script for exhibition rehearsal.
-2. Add image capability metadata for base/code/document layers.
-3. Add policy checks to host-side worker sessions once image execution expands.
-4. Split persistence out of `runtime.py` when DB logic starts growing.
-5. Add a minimal review dashboard only after the CLI demo is solid.
-6. Add richer adapter support after the document workflow proves the contract.
+1. Add image capability metadata for base/code/document layers.
+2. Add `--json` output mode to rehearsal and major CLI commands.
+3. Polish CLI failure messages and exit codes.
+4. Add policy checks to host-side worker sessions once image execution expands.
+5. Split persistence out of `runtime.py` when DB logic starts growing.
+6. Add a minimal review dashboard only after the CLI demo is solid.
 7. Add real-worker execution rehearsals after the deterministic demo story is stable.
 
 ## Do Not Do Yet

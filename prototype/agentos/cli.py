@@ -8,6 +8,7 @@ from .demo import run_code_fix_demo
 from .document_demo import run_markdown_document_demo
 from .docker_sandbox import DEFAULT_IMAGE, run_docker_task
 from .inspector import inspect_state, render_inspection
+from .rehearsal import run_rehearsal
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -49,6 +50,39 @@ def main(argv: list[str] | None = None) -> int:
         "--keep-session",
         action="store_true",
         help="Keep the disposable workspace for inspection instead of destroying it",
+    )
+    rehearse = subparsers.add_parser("rehearse", help="Run the AgentOS end-to-end rehearsal suite")
+    rehearse.add_argument(
+        "--state-dir",
+        type=Path,
+        default=Path("projects/agentos/.agentos-state"),
+        help="Persistent control-plane state directory",
+    )
+    rehearse.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("projects/agentos/.agentos-output"),
+        help="Safe approved-sync output directory",
+    )
+    rehearse.add_argument(
+        "--docker-bin",
+        default="docker",
+        help="Docker executable name or path",
+    )
+    rehearse.add_argument(
+        "--docker-sudo",
+        action="store_true",
+        help="Run Docker through sudo for shells that do not have docker-group access yet",
+    )
+    rehearse.add_argument(
+        "--docker-image",
+        default=DEFAULT_IMAGE,
+        help="Docker image to use for the Docker policy step",
+    )
+    rehearse.add_argument(
+        "--skip-docker",
+        action="store_true",
+        help="Skip the Docker policy step when Docker is unavailable",
     )
     inspect = subparsers.add_parser("inspect", help="Inspect AgentOS sessions and artifacts")
     inspect.add_argument(
@@ -213,6 +247,22 @@ def main(argv: list[str] | None = None) -> int:
         print(f"task_manifest_artifact: {result.task_manifest_artifact}")
         print(f"review_package_artifact: {result.review_package_artifact}")
         return 0
+
+    if args.command == "rehearse":
+        result = run_rehearsal(
+            state_dir=args.state_dir,
+            output_dir=args.output_dir,
+            docker_bin=args.docker_bin,
+            docker_sudo=args.docker_sudo,
+            docker_image=args.docker_image,
+            skip_docker=args.skip_docker,
+        )
+        print(f"rehearsal: {result.rehearsal_id}")
+        print(f"status: {'passed' if result.passed else 'failed'}")
+        for step in result.steps:
+            print(f"{step.status}: {step.name} session={step.session_id}")
+        print(f"summary: {result.summary_path}")
+        return 0 if result.passed else 1
 
     if args.command == "inspect":
         data = inspect_state(args.state_dir, session_id=args.session)

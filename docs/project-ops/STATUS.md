@@ -56,6 +56,7 @@ core loop:
 - approved selected-file sync to safe target
 - `approval.scopes` in `review_package.json` for all-changes and per-file selected sync
 - Markdown document workflow demo with document diff, validation, review, approval, and selected sync
+- end-to-end `agentos rehearse` command with code, document, and Docker policy steps
 - Codex prepare wrapper with optional `--execute`
 - Codex execute result collection with changed-file detection and diff artifacts
 - Docker-backed sandbox command runner using `agentos-base:0.1`
@@ -136,10 +137,10 @@ baselines, not final specs.
 Contract layer, safe patch apply, selected-file sync, Codex execute result
 collection, Docker command execution, host-side worker runtime extraction,
 Docker sandbox policy validation, selected-file approval scopes, and Markdown
-document workflow now exist. Next build:
+document workflow, and end-to-end rehearsal now exist. Next build:
 
-1. first end-to-end exhibition rehearsal script
-2. image capability metadata for base/code/document layers
+1. image capability metadata for base/code/document layers
+2. CLI UX and JSON output polish for marketplace-grade use
 3. policy checks to host-side worker sessions once image execution expands
 
 ## Docker Image State

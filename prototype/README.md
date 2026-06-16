@@ -32,6 +32,12 @@ Run the Markdown document workflow demo:
 PYTHONPATH=projects/agentos/prototype python3 -m agentos run-doc-demo
 ```
 
+Run the end-to-end rehearsal suite:
+
+```bash
+PYTHONPATH=projects/agentos/prototype python3 -m agentos rehearse --docker-sudo
+```
+
 Inspect sessions:
 
 ```bash

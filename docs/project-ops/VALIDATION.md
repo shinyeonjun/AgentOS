@@ -327,3 +327,25 @@ Observed result:
 - `document-change.diff`, `final-report.md`, `task.json`, and `review_package.json` were written.
 - `approval.scopes` includes `sync_selected:meeting-notes.md`.
 - Approved selected sync wrote only `meeting-notes.md` to `.agentos-output/5c47fe2c5234-document-selected`.
+
+## 2026-06-16 End-to-End Rehearsal Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover /mnt/usb/projects/agentos/prototype/tests -v
+scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos rehearse --state-dir /mnt/usb/projects/agentos/.agentos-state --output-dir /mnt/usb/projects/agentos/.agentos-output --docker-sudo
+```
+
+Observed result:
+
+- 17 unit tests passed.
+- Ruff passed.
+- Compileall passed.
+- Rehearsal `209246f2623b` passed.
+- Code lifecycle session `544e95229be3` passed.
+- Markdown document lifecycle session `6fe7dc3ed9a8` passed.
+- Docker sandbox policy session `dac7dd892258` passed.
+- Summary written to `.agentos-output/rehearsals/209246f2623b.json`.
