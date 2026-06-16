@@ -86,6 +86,7 @@ core loop:
 - review package artifact entries include size and SHA-256 digest metadata
 - `artifact-manifest.json` records review artifact integrity metadata
 - optional HMAC-SHA256 manifest signatures via `AGENTOS_MANIFEST_KEY`
+- `agentos verify-review` validates manifest digest, artifact metadata, and optional HMAC signatures
 - sandbox threat model with current claims, gaps, and roadmap
 - package folders split into `core`, `sandbox`, `workers`, and `demos`
 - Linux/WSL2 setup guide from clone to rehearsal
@@ -169,12 +170,13 @@ document workflow, end-to-end rehearsal, first runtime hardening pass, doctor
 preflight, capability metadata, major-command JSON output, structured CLI
 errors, Python-native approved patch apply, editable package install, a real
 Codex smoke path, worker evidence artifacts, artifact integrity metadata,
-artifact manifests, optional HMAC manifest signatures, a Linux/WSL2 setup
-guide, sandbox threat model, and a separated SQLite storage boundary now exist.
+artifact manifests, optional HMAC manifest signatures, review verification, a
+Linux/WSL2 setup guide, sandbox threat model, and a separated SQLite storage
+boundary now exist.
 Next build:
 
 1. continuing real-worker rehearsal coverage
-2. manifest verification command / stronger integrity checks
+2. Docker image digest pinning / stronger runtime provenance
 3. continuing CLI UX polish as new commands appear
 
 ## Docker Image State

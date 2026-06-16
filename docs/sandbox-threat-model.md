@@ -152,6 +152,8 @@ Current mitigation:
 - `artifact-manifest.json` records the artifact set covered by review integrity
 - optional HMAC-SHA256 manifest signatures are available through
   `AGENTOS_MANIFEST_KEY`
+- `agentos verify-review` validates manifest digest, artifact sizes, artifact
+  SHA-256 digests, and optional HMAC signatures
 
 Remaining gaps:
 
@@ -179,6 +181,7 @@ Implemented:
 - worker result artifact
 - artifact size and SHA-256 digest metadata in review packages
 - artifact manifest with optional HMAC-SHA256 signature metadata
+- manifest verification command
 
 Not implemented yet:
 
@@ -188,7 +191,6 @@ Not implemented yet:
 - environment variable filtering
 - signed approval records
 - public-key artifact signing
-- manifest verification command
 - image digest pinning
 - SBOM/image provenance
 - interactive review dashboard
@@ -199,12 +201,12 @@ Not implemented yet:
 Next practical steps:
 
 1. Add environment allowlist for worker execution.
-2. Add a manifest verification command for review packages.
-3. Pin Docker image by digest in policy artifacts.
+2. Pin Docker image by digest in policy artifacts.
+3. Add signed approval records with approver identity and chosen scope.
 4. Add a rootless Docker setup path.
 5. Add a stricter seccomp/AppArmor profile.
 6. Add a review UI that shows changed files, validation, and sync scopes.
-7. Add explicit approval records with approver identity and chosen scope.
+7. Add SBOM/image provenance records.
 
 ## Recommended Wording
 

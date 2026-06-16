@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
-from agentos.core.contracts import build_artifact_manifest
+from agentos.core.integrity import build_artifact_manifest, verify_review_package
+from agentos.demos.demo import run_code_fix_demo
 
 
 class ContractIntegrityTests(unittest.TestCase):
@@ -38,6 +42,42 @@ class ContractIntegrityTests(unittest.TestCase):
         self.assertEqual(first["signature"]["key_id"], "test-key")
         self.assertEqual(len(first["signature"]["value"]), 64)
         self.assertEqual(first["signature"]["value"], second["signature"]["value"])
+
+    def test_verify_unsigned_review_package_returns_warning(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with patch.dict("os.environ", {"AGENTOS_MANIFEST_KEY": ""}):
+                result = run_code_fix_demo(
+                    state_dir=root / "state",
+                    output_dir=root / "output",
+                    destroy_session=True,
+                )
+
+            verification = verify_review_package(result.review_package_artifact)
+
+            self.assertEqual(verification.status, "warning")
+            self.assertTrue(verification.passed)
+            self.assertIn("manifest signature", {check.name for check in verification.checks})
+
+    def test_verify_signed_review_package_passes_with_key(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with patch.dict(
+                "os.environ",
+                {
+                    "AGENTOS_MANIFEST_KEY": "test-secret",
+                    "AGENTOS_MANIFEST_KEY_ID": "test-key",
+                },
+            ):
+                result = run_code_fix_demo(
+                    state_dir=root / "state",
+                    output_dir=root / "output",
+                    destroy_session=True,
+                )
+
+            verification = verify_review_package(result.review_package_artifact, signing_key="test-secret")
+
+            self.assertEqual(verification.status, "passed")
 
 
 if __name__ == "__main__":

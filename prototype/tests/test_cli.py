@@ -6,6 +6,7 @@ import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 from agentos.cli import main
 
@@ -112,6 +113,36 @@ class AgentOSCliTests(unittest.TestCase):
             self.assertFalse(data["executed"])
             self.assertIsNone(data["codex_result"])
             self.assertEqual(data["changed_files"], [])
+
+    def test_verify_review_json_outputs_integrity_status(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with patch.dict("os.environ", {"AGENTOS_MANIFEST_KEY": ""}):
+                run_exit_code, run_output = _run_cli(
+                    [
+                        "run-demo",
+                        "--state-dir",
+                        str(root / "state"),
+                        "--output-dir",
+                        str(root / "output"),
+                        "--json",
+                    ]
+                )
+            self.assertEqual(run_exit_code, 0)
+            review_package = json.loads(run_output)["review_package_artifact"]
+
+            exit_code, output = _run_cli(
+                [
+                    "verify-review",
+                    review_package,
+                    "--json",
+                ]
+            )
+
+            self.assertEqual(exit_code, 0)
+            data = json.loads(output)
+            self.assertEqual(data["status"], "warning")
+            self.assertTrue(any(check["name"] == "manifest digest" for check in data["checks"]))
 
     def test_codex_smoke_prepare_json_outputs_validation_status(self) -> None:
         with TemporaryDirectory() as tmp:

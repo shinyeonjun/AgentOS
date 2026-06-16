@@ -1,9 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import hmac
-import json
-import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -12,8 +9,6 @@ from .capabilities import capability_manifest
 
 
 SCHEMA_VERSION = "0.2"
-MANIFEST_SIGNING_KEY_ENV = "AGENTOS_MANIFEST_KEY"
-MANIFEST_SIGNING_KEY_ID_ENV = "AGENTOS_MANIFEST_KEY_ID"
 
 
 @dataclass(frozen=True)
@@ -87,71 +82,6 @@ def artifact_sha256(path: Path) -> str:
         for chunk in iter(lambda: file.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
-
-
-def build_artifact_manifest(
-    *,
-    session_id: str,
-    artifacts: list[dict[str, Any]],
-    signing_key: str | None = None,
-    signing_key_id: str | None = None,
-) -> dict[str, Any]:
-    manifest = {
-        "schema_version": SCHEMA_VERSION,
-        "kind": "agentos.artifact_manifest",
-        "session_id": session_id,
-        "artifact_count": len(artifacts),
-        "artifacts": [
-            {
-                "name": item["name"],
-                "type": item["type"],
-                "ref": item["ref"],
-                "size_bytes": item["size_bytes"],
-                "digest": item["digest"],
-            }
-            for item in artifacts
-        ],
-    }
-    manifest["signature"] = sign_artifact_manifest(manifest, signing_key=signing_key, signing_key_id=signing_key_id)
-    return manifest
-
-
-def sign_artifact_manifest(
-    manifest_payload: dict[str, Any],
-    *,
-    signing_key: str | None = None,
-    signing_key_id: str | None = None,
-) -> dict[str, Any]:
-    key = signing_key if signing_key is not None else os.environ.get(MANIFEST_SIGNING_KEY_ENV)
-    if not key:
-        return {
-            "status": "not_signed",
-            "algorithm": "none",
-            "reason": f"{MANIFEST_SIGNING_KEY_ENV} is not set",
-        }
-
-    key_id = signing_key_id or os.environ.get(MANIFEST_SIGNING_KEY_ID_ENV, "local")
-    signature = hmac.new(key.encode("utf-8"), _canonical_json(manifest_payload), hashlib.sha256).hexdigest()
-    return {
-        "status": "signed",
-        "algorithm": "hmac-sha256",
-        "key_id": key_id,
-        "value": signature,
-    }
-
-
-def build_manifest_integrity(session_id: str, manifest_artifact: Path) -> dict[str, Any]:
-    return {
-        "manifest_ref": artifact_ref(session_id, manifest_artifact),
-        "manifest_digest": {
-            "algorithm": "sha256",
-            "value": artifact_sha256(manifest_artifact),
-        },
-    }
-
-
-def _canonical_json(content: dict[str, Any]) -> bytes:
-    return json.dumps(content, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
 
 def build_review_package(

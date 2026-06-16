@@ -661,3 +661,28 @@ Observed result:
 - `review_package.json` includes an `integrity.manifest_ref` and `integrity.manifest_digest`.
 - Default manifests are explicitly marked `not_signed` when `AGENTOS_MANIFEST_KEY` is not set.
 - Signed run-demo session `db0065fa53b9` produced `signature.status: signed`, `algorithm: hmac-sha256`, `key_id: dev-key`, and a 64-character signature.
+
+## 2026-06-16 Review Verification Command Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest prototype.tests.test_contracts prototype.tests.test_cli -v
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos verify-review "$review_package" --json
+AGENTOS_MANIFEST_KEY=test-secret PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos verify-review "$signed_review_package" --json
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests
+/home/ubuntu/.openclaw/workspace/scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos rehearse --state-dir /mnt/usb/projects/agentos/.agentos-state --output-dir /mnt/usb/projects/agentos/.agentos-output --docker-sudo --json
+```
+
+Observed result:
+
+- Focused integrity/CLI tests passed: 12 tests.
+- `agentos verify-review` returned `warning` for an explicitly unsigned manifest.
+- Signed verification returned `passed` with `signature verified for key id dev-key`.
+- Full unit suite passed: 44 tests.
+- Ruff passed.
+- Compileall passed.
+- Docker rehearsal `9bac1e24c16f` passed.
+- Manifest generation and verification logic now lives in `agentos.core.integrity`.

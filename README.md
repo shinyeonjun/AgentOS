@@ -51,6 +51,7 @@ The current executable prototype is intentionally small and deterministic:
 - syncs selected approved files to a safe target after approval
 - destroys the disposable workspace
 - supports JSON output for major automation-facing commands
+- verifies review package artifact integrity with `agentos verify-review`
 
 It proves the control-plane lifecycle without requiring a live LLM.
 
@@ -84,8 +85,9 @@ agentos run-demo \
 Without installation, the prototype still works with
 `PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos ...`.
 
-Add `--json` to `run-demo`, `run-doc-demo`, `rehearse`, `codex`,
-`codex-smoke`, or `docker-run` when another tool should consume the result.
+Add `--json` to `run-demo`, `run-doc-demo`, `rehearse`, `inspect`,
+`verify-review`, `codex`, `codex-smoke`, or `docker-run` when another tool
+should consume the result.
 
 ## Test
 
@@ -101,6 +103,21 @@ agentos inspect \
   --state-dir /mnt/usb/projects/agentos/.agentos-state \
   --json
 ```
+
+## Verify Review Package
+
+Review packages include an `artifact-manifest.json` reference. Verify that the
+manifest digest, artifact sizes, and artifact SHA-256 digests still match:
+
+```bash
+agentos verify-review \
+  /mnt/usb/projects/agentos/.agentos-state/artifacts/<session>/review_package.json \
+  --json
+```
+
+If `AGENTOS_MANIFEST_KEY` is set, `verify-review` also verifies the manifest
+HMAC-SHA256 signature. Without that key, unsigned manifests verify with a
+warning rather than a hard failure.
 
 ## Codex Prepare
 

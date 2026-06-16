@@ -11,10 +11,9 @@ from ..core.contracts import (
     TaskManifest,
     artifact_entry,
     artifact_ref,
-    build_artifact_manifest,
-    build_manifest_integrity,
     build_review_package,
 )
+from ..core.integrity import build_artifact_manifest, build_manifest_integrity
 from ..core.runtime import AgentOSRuntime, Session
 
 

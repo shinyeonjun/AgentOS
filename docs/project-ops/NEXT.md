@@ -32,13 +32,14 @@ The first contract slice now exists:
 - sandbox threat model documenting current claims, gaps, and roadmap
 - review package artifact entries include size and SHA-256 digest metadata
 - `artifact-manifest.json` with optional HMAC-SHA256 signature metadata
+- `agentos verify-review` for manifest and artifact integrity checks
 
-Next, continue real-worker rehearsal coverage and add manifest verification.
+Next, continue real-worker rehearsal coverage and improve runtime provenance.
 
 ## Next 7 Actions
 
 1. Add real-worker execution rehearsals after the deterministic demo story is stable.
-2. Add a manifest verification command for review packages.
+2. Pin Docker images by digest in policy artifacts.
 3. Continue polishing CLI failure messages as new commands appear.
 4. Document supported install/runtime paths for Linux and WSL2.
 5. Consider a minimal review dashboard only after the CLI demo is solid.

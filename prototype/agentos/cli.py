@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .core.inspector import inspect_state, render_inspection
+from .core.integrity import render_verification, verify_review_package
 from .core.platform_checks import render_doctor, run_doctor
 from .demos.demo import run_code_fix_demo
 from .demos.document_demo import run_markdown_document_demo
@@ -140,6 +141,17 @@ def _main_impl(argv: list[str]) -> int:
         "--json",
         action="store_true",
         help="Render inspection output as JSON",
+    )
+    verify_review = subparsers.add_parser("verify-review", help="Verify review package artifact integrity")
+    verify_review.add_argument(
+        "review_package",
+        type=Path,
+        help="Path to a review_package.json artifact",
+    )
+    verify_review.add_argument(
+        "--json",
+        action="store_true",
+        help="Render verification output as JSON",
     )
     codex = subparsers.add_parser("codex", help="Prepare or execute a Codex task inside AgentOS")
     codex.add_argument(
@@ -376,6 +388,14 @@ def _main_impl(argv: list[str]) -> int:
         data = inspect_state(args.state_dir, session_id=args.session)
         print(render_inspection(data, as_json=args.json))
         return 0
+
+    if args.command == "verify-review":
+        result = verify_review_package(args.review_package)
+        if args.json:
+            _print_json(result.to_dict())
+        else:
+            print(render_verification(result))
+        return 0 if result.passed else 1
 
     if args.command == "codex":
         result = run_codex_task(

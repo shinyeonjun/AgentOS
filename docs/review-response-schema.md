@@ -130,6 +130,9 @@ signature with the configured key id. If no key is configured, the manifest is
 explicitly marked `not_signed`; this is still useful for local hashing, but it
 is not a public cryptographic signature.
 
+Use `agentos verify-review <path-to-review_package.json>` to verify the manifest
+digest, artifact sizes, artifact SHA-256 digests, and optional HMAC signature.
+
 ## 4. Conversational Rendering
 
 External AI app should render a compact version:
