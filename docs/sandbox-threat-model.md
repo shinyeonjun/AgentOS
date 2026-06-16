@@ -92,7 +92,8 @@ Current mitigation:
 Remaining gaps:
 
 - there is no interactive approval UI yet
-- sync policy is still session-level, not fully per-scope enforced
+- approval scopes are enforced in the runtime, but there is no interactive
+  scope-selection UI yet
 
 ### Unsafe Docker Execution
 
@@ -171,6 +172,7 @@ Implemented:
 - copied workspace
 - approval-gated sync
 - signed approval record support
+- approval scope enforcement
 - selected-file sync path checks
 - Python-native patch apply with context checks
 - command timeout
@@ -196,7 +198,6 @@ Not implemented yet:
 - rootless Docker requirement
 - custom seccomp profile
 - AppArmor/SELinux profile
-- approval scope enforcement
 - public-key artifact signing
 - SBOM/image attestation records
 - interactive review dashboard
@@ -206,9 +207,9 @@ Not implemented yet:
 
 Next practical steps:
 
-1. Enforce approval scopes during sync operations.
-2. Add stronger SBOM/image provenance records.
-3. Add rootless Docker setup path.
+1. Add stronger SBOM/image provenance records.
+2. Add rootless Docker setup path.
+3. Add public-key artifact signing.
 4. Add a stricter seccomp/AppArmor profile.
 5. Add a review UI that shows changed files, validation, and sync scopes.
 

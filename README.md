@@ -50,6 +50,7 @@ The current executable prototype is intentionally small and deterministic:
 - applies approved unified diffs to a safe target after approval
 - syncs selected approved files to a safe target after approval
 - writes `approval-record.json` with approver, chosen scope, review digest, and optional HMAC signature
+- enforces approval scopes before sync, patch, or selected-file operations
 - destroys the disposable workspace
 - supports JSON output for major automation-facing commands
 - verifies review package artifact integrity with `agentos verify-review`

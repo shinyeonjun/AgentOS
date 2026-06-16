@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from .approvals import build_approval_record, default_approval_scope
+from .approvals import assert_scope_allows, build_approval_record, default_approval_scope
 from .storage import StateStore
 from .sync import PatchApplyResult, apply_patch_to_target
 
@@ -203,8 +203,7 @@ class AgentOSRuntime:
         return self.write_json_artifact(session, "approval-record.json", approval_record)
 
     def sync_approved(self, session: Session, workspace_path: Path) -> Path:
-        if not self._is_approved(session.session_id):
-            raise SyncNotApprovedError(f"session {session.session_id} has not been approved")
+        self._require_approval_scope(session, action="sync_all")
         sync_dir = self.output_dir / session.session_id
         if sync_dir.exists():
             shutil.rmtree(sync_dir)
@@ -222,8 +221,7 @@ class AgentOSRuntime:
         return sync_dir
 
     def sync_approved_patch(self, session: Session, patch_path: Path, target_dir: Path) -> PatchApplyResult:
-        if not self._is_approved(session.session_id):
-            raise SyncNotApprovedError(f"session {session.session_id} has not been approved")
+        self._require_approval_scope(session, action="sync_patch")
         result = apply_patch_to_target(patch_path=patch_path, target_dir=target_dir)
 
         self.store.record_sync(
@@ -241,8 +239,7 @@ class AgentOSRuntime:
         relative_paths: list[str],
         target_dir: Path,
     ) -> SelectedSyncResult:
-        if not self._is_approved(session.session_id):
-            raise SyncNotApprovedError(f"session {session.session_id} has not been approved")
+        self._require_approval_scope(session, action="sync_selected", paths=relative_paths)
         if target_dir.exists():
             shutil.rmtree(target_dir)
         target_dir.mkdir(parents=True)
@@ -273,6 +270,15 @@ class AgentOSRuntime:
 
     def _is_approved(self, session_id: str) -> bool:
         return self.store.is_approved(session_id)
+
+    def _require_approval_scope(self, session: Session, *, action: str, paths: list[str] | None = None) -> None:
+        if not self._is_approved(session.session_id):
+            raise SyncNotApprovedError(f"session {session.session_id} has not been approved")
+        approval_record_path = self.artifacts_dir / session.session_id / "approval-record.json"
+        if not approval_record_path.exists():
+            raise SyncNotApprovedError(f"session {session.session_id} has no approval record")
+        approval_record = json.loads(approval_record_path.read_text(encoding="utf-8"))
+        assert_scope_allows(approval_record["scope"], action=action, paths=paths)
 
 
 def _safe_relative_source(root: Path, relative_path: str) -> Path:

@@ -36,13 +36,14 @@ The first contract slice now exists:
 - Docker `image-provenance.json` and pinned runtime image references
 - worker `worker-env-policy.json` and allowlisted host-side worker environment
 - `approval-record.json` with chosen scope, review digest, and optional HMAC signature
+- approval scope enforcement for sync, patch, and selected-file operations
 
-Next, continue real-worker rehearsal coverage and enforce approval scopes.
+Next, promote real-worker evidence into the main rehearsal suite.
 
 ## Next 7 Actions
 
 1. Add real-worker execution rehearsals after the deterministic demo story is stable.
-2. Enforce approval scopes during sync, patch, and selected-file operations.
+2. Keep signed approval and scope enforcement covered by regression tests.
 3. Continue polishing CLI failure messages as new commands appear.
 4. Document supported install/runtime paths for Linux and WSL2.
 5. Consider a minimal review dashboard only after the CLI demo is solid.

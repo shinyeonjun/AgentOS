@@ -758,3 +758,26 @@ Observed result:
 - Full unit suite passed: 49 tests.
 - Compileall passed.
 - Docker rehearsal `735d02d9f3b2` passed.
+
+## 2026-06-17 Approval Scope Enforcement Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest prototype.tests.test_approval_scope prototype.tests.test_approvals prototype.tests.test_demo prototype.tests.test_document_demo -v
+/home/ubuntu/.openclaw/workspace/scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos rehearse --state-dir /mnt/usb/projects/agentos/.agentos-state --output-dir /mnt/usb/projects/agentos/.agentos-output --docker-sudo --json
+```
+
+Observed result:
+
+- Focused approval-scope/demo tests passed: 8 tests.
+- Selected-file approval scope allowed `approved.txt`.
+- Selected-file approval scope rejected `blocked.txt`.
+- Selected-file approval scope rejected full `sync_all`.
+- Ruff passed.
+- Full unit suite passed: 50 tests.
+- Compileall passed.
+- Docker rehearsal `3bef413c7c9b` passed.

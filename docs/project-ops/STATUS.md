@@ -58,6 +58,7 @@ core loop:
 - approved patch apply to safe target
 - approved selected-file sync to safe target
 - `approval.scopes` in `review_package.json` for all-changes and per-file selected sync
+- approval scope enforcement for sync, patch, and selected-file operations
 - Markdown document workflow demo with document diff, validation, review, approval, and selected sync
 - end-to-end `agentos rehearse` command with code, document, and Docker policy steps
 - Codex prepare wrapper with optional `--execute`
@@ -177,12 +178,12 @@ errors, Python-native approved patch apply, editable package install, a real
 Codex smoke path, worker evidence artifacts, artifact integrity metadata,
 artifact manifests, optional HMAC manifest signatures, review verification,
 Docker image provenance/pinning, worker environment allowlisting, signed
-approval record support, a Linux/WSL2 setup guide, sandbox threat model, and a
-separated SQLite storage boundary now exist.
+approval record support, approval scope enforcement, a Linux/WSL2 setup guide,
+sandbox threat model, and a separated SQLite storage boundary now exist.
 Next build:
 
 1. continuing real-worker rehearsal coverage
-2. approval scope enforcement
+2. real-worker rehearsal coverage in the main rehearsal suite
 3. continuing CLI UX polish as new commands appear
 
 ## Docker Image State

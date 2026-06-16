@@ -12,6 +12,10 @@ APPROVAL_SIGNING_KEY_ENV = "AGENTOS_APPROVAL_KEY"
 APPROVAL_SIGNING_KEY_ID_ENV = "AGENTOS_APPROVAL_KEY_ID"
 
 
+class ApprovalScopeError(ValueError):
+    pass
+
+
 def build_approval_record(
     *,
     session_id: str,
@@ -66,6 +70,24 @@ def default_approval_scope() -> dict[str, Any]:
         "paths": [],
         "description": "Approve the session for sync operations.",
     }
+
+
+def assert_scope_allows(scope: dict[str, Any], *, action: str, paths: list[str] | None = None) -> None:
+    scope_action = scope.get("action")
+    scope_paths = set(scope.get("paths") or [])
+    requested_paths = set(paths or [])
+
+    if scope_action == "sync_all":
+        return
+    if action == "sync_selected" and scope_action == "sync_selected" and requested_paths.issubset(scope_paths):
+        return
+    if action == "sync_patch" and scope_action == "sync_patch":
+        return
+
+    raise ApprovalScopeError(
+        f"approval scope {scope.get('id', '<unknown>')} does not allow {action}"
+        + (f" for {sorted(requested_paths)}" if requested_paths else "")
+    )
 
 
 def _review_package_entry(session_id: str, review_package_artifact: Path | None) -> dict[str, Any] | None:
