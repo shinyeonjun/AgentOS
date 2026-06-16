@@ -2,11 +2,11 @@
 
 ## One-Line Goal
 
-Build a v0 AI task runtime where agents work inside task-lifetime disposable sandboxes, produce artifacts/logs/diffs/previews, and only approved results sync back to the user's real environment.
+Build a plugin-style AI sandbox runtime that any AI agent can attach to, so tasks run inside an independent AI OS workspace and only approved results sync back to the user's real environment.
 
 ## Current Product Claim
 
-AgentDesk is not another AI coding agent or document summarizer. It is the execution layer that lets AI agents safely use tools without directly touching the user's host environment.
+AgentDesk is not another AI coding agent, document summarizer, or collection of tool plugins. It is the plugin-style execution layer that gives existing AI agents an independent task environment, so they do not directly mutate the user's host computer.
 
 ## v0 Success Definition
 
@@ -25,4 +25,4 @@ Session -> Tool Call -> Artifact -> Preview -> Approval -> Sync -> Destroy
 
 ## Strongest Demo Message
 
-AI should be allowed to experiment, but only inside a controlled workspace. The host environment changes only after human review and approval.
+AI agents can already perform many computer tasks. AgentDesk lets them do that work in an independent environment first, then cross the sync boundary only after human review and approval.

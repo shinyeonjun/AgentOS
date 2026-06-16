@@ -21,3 +21,5 @@
 - Store the v0 control-plane history in SQLite.
 - Initialize `/mnt/usb/projects/agentdesk/` as the local git repository for the capstone project.
 - Do not create a GitHub remote until the user explicitly asks for the external repo/push step.
+- Corrected the plugin concept: AgentDesk is not mainly a manager for external tool plugins. The AI OS image contains the tools. AgentDesk itself is the plugin-style sandbox runtime that can attach to any AI agent or host system.
+- Core purpose: prevent AI agents from directly touching the user's real computer while still allowing them to complete broad tasks inside an independent environment.

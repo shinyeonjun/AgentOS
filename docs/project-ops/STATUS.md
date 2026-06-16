@@ -25,6 +25,8 @@ v0 prototype started.
 The project is now a capstone-scale system project with the first executable
 core loop:
 
+- plugin-style runtime that can attach to external AI agents
+- independent AI OS workspace for task execution
 - task-lifetime sandbox runtime
 - tool call routing
 - artifact store
@@ -42,10 +44,17 @@ lives on the USB drive to reduce SD-card write pressure. The current sandbox is
 filesystem-disposable only because Docker is not installed on the host yet, so
 the security claim must stay demo-grade until container isolation is added.
 
-Initial local git commit exists:
+Local git commits exist:
 
 ```text
+2d61eb5 Document project operating state
 d9fceac Initial AgentDesk prototype
 ```
 
 No GitHub remote has been created yet.
+
+## Clarified Product Direction
+
+The tools are considered part of the AI OS image, not the main pluginization
+target. The pluginized product is AgentDesk itself: a sandbox lifecycle runtime
+that any AI agent can call to work safely away from the user's real computer.
