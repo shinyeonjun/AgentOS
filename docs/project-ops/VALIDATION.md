@@ -177,3 +177,26 @@ Observed result:
 - After approval, selected sync wrote only `calculator.py` to
   `/mnt/usb/projects/agentos/.agentos-output/33b494574350-selected`.
 - Inspect history recorded selected sync as `{"kind": "selected_files", "paths": ["calculator.py"]}`.
+
+## 2026-06-16 Codex Prepare Validation
+
+Commands run:
+
+```bash
+codex --version
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover /mnt/usb/projects/agentos/prototype/tests -v
+scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos codex --state-dir /tmp/agentos-codex-prepare/state --output-dir /tmp/agentos-codex-prepare/output --input /tmp/agentos-codex-prepare-input --task 'Summarize this project.'
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos codex --state-dir /mnt/usb/projects/agentos/.agentos-state --output-dir /mnt/usb/projects/agentos/.agentos-output --input /mnt/usb/projects/agentos/prototype/tests --task 'Review the AgentOS prototype tests.'
+```
+
+Observed result:
+
+- Codex CLI exists: `codex-cli 0.140.0`.
+- 4 unit tests passed.
+- Ruff passed.
+- Compileall passed.
+- Codex prepare mode created `task.json`, `codex-command.json`, and `review_package.json`.
+- USB state Codex prepare session: `63e4c87fd4f1`.
+- Codex was not executed because `--execute` was not provided.

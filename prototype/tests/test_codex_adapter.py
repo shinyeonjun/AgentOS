@@ -1,0 +1,53 @@
+from __future__ import annotations
+
+import json
+import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+from agentos.codex_adapter import run_codex_task
+from agentos.inspector import inspect_state
+
+
+class CodexAdapterTests(unittest.TestCase):
+    def test_codex_prepare_creates_session_without_execution(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            input_project = root / "input-project"
+            input_project.mkdir()
+            (input_project / "README.md").write_text("# Demo\n", encoding="utf-8")
+
+            result = run_codex_task(
+                state_dir=root / "state",
+                output_dir=root / "output",
+                input_path=input_project,
+                task="Summarize the project.",
+                execute=False,
+            )
+
+            self.assertFalse(result.executed)
+            self.assertIsNone(result.codex_result)
+            self.assertTrue((result.workspace_path / "README.md").exists())
+
+            task_manifest = json.loads(result.task_manifest_artifact.read_text())
+            command_artifact = json.loads(result.command_artifact.read_text())
+            review_package = json.loads(result.review_package_artifact.read_text())
+
+            self.assertEqual(task_manifest["host_agent"], "codex-cli")
+            self.assertEqual(command_artifact["execute"], False)
+            self.assertEqual(command_artifact["command"][0], "codex")
+            self.assertEqual(command_artifact["command"][-1], "Summarize the project.")
+            self.assertEqual(review_package["validation"]["status"], "not_run")
+
+            session_detail = inspect_state(root / "state", session_id=result.session_id)
+            session = session_detail["session"]
+            self.assertEqual(session["state"], "review_ready")
+            self.assertEqual(len(session["tool_calls"]), 0)
+            artifact_names = {artifact["name"] for artifact in session["artifacts"]}
+            self.assertIn("task.json", artifact_names)
+            self.assertIn("codex-command.json", artifact_names)
+            self.assertIn("review_package.json", artifact_names)
+
+
+if __name__ == "__main__":
+    unittest.main()

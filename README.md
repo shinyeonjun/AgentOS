@@ -80,6 +80,20 @@ python3 -m agentos inspect \
   --json
 ```
 
+## Codex Prepare
+
+By default this prepares a copied workspace and Codex command artifact without
+spending tokens. Add `--execute` only when you want AgentOS to run Codex.
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype \
+python3 -m agentos codex \
+  --state-dir /mnt/usb/projects/agentos/.agentos-state \
+  --output-dir /mnt/usb/projects/agentos/.agentos-output \
+  --input /path/to/project \
+  --task "Fix failing tests"
+```
+
 ## Project Notes
 
 - Requirements: `docs/requirements.md`

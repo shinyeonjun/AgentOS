@@ -32,6 +32,15 @@ Inspect sessions:
 PYTHONPATH=projects/agentos/prototype python3 -m agentos inspect --json
 ```
 
+Prepare a Codex task without execution:
+
+```bash
+PYTHONPATH=projects/agentos/prototype \
+python3 -m agentos codex --input /path/to/project --task "Fix failing tests"
+```
+
+Use `--execute` only when the copied workspace should actually run Codex.
+
 Run tests:
 
 ```bash

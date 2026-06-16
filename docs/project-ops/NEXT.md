@@ -11,13 +11,17 @@ The first contract slice now exists:
 - `agentos inspect`
 - approval-gated patch apply to a safe target
 - selected-file sync to a safe target
+- Codex prepare wrapper with optional execution
 
-Next, attach Codex through the same contract without letting it work directly in
-the host project.
+Next, collect Codex execution changes into the review package and then move
+execution into Docker.
 
 ## Next 7 Actions
 
-1. Add a Codex CLI wrapper that consumes the same task/review contract.
+1. Add Codex execution result collection:
+   - changed file detection
+   - diff artifacts
+   - validation summary
 2. Add Docker sandbox proof-of-concept:
    - create session
    - copy input into workspace
