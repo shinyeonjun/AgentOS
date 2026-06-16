@@ -155,3 +155,25 @@ Observed result:
 - Inspect history now records 2 sync events for the demo: safe copy sync and safe patch apply.
 - USB state demo session `b22265ed3d18` applied the approved patch to
   `/mnt/usb/projects/agentos/.agentos-output/b22265ed3d18-patch-apply`.
+
+## 2026-06-16 Selected Sync Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover /mnt/usb/projects/agentos/prototype/tests -v
+scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos run-demo --state-dir /mnt/usb/projects/agentos/.agentos-state --output-dir /mnt/usb/projects/agentos/.agentos-output
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos inspect --state-dir /mnt/usb/projects/agentos/.agentos-state --session 33b494574350 --json
+```
+
+Observed result:
+
+- 3 unit tests passed.
+- Ruff passed.
+- Compileall passed.
+- USB state demo session `33b494574350` blocked selected sync before approval.
+- After approval, selected sync wrote only `calculator.py` to
+  `/mnt/usb/projects/agentos/.agentos-output/33b494574350-selected`.
+- Inspect history recorded selected sync as `{"kind": "selected_files", "paths": ["calculator.py"]}`.

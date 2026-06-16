@@ -16,6 +16,7 @@ create_session
 -> approve
 -> sync to a safe output folder
 -> apply the approved patch to a safe target folder
+-> sync selected approved files to a safe target folder
 -> destroy the workspace
 ```
 

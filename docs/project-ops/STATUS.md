@@ -15,6 +15,7 @@ v0.2 contract and approval-gated patch sync slice implemented.
 - Contract modules:
   - `/mnt/usb/projects/agentos/prototype/agentos/contracts.py`
   - `/mnt/usb/projects/agentos/prototype/agentos/inspector.py`
+  - `/mnt/usb/projects/agentos/prototype/agentos/sync.py`
 - Current technical plan: `/mnt/usb/projects/agentos/docs/technical-plan.md`
 - Requirements draft: `/mnt/usb/projects/agentos/docs/requirements.md`
 - Architecture draft: `/mnt/usb/projects/agentos/docs/architecture.md`
@@ -49,6 +50,7 @@ core loop:
 - human approval
 - approved host sync
 - approved patch apply to safe target
+- approved selected-file sync to safe target
 - session destruction
 
 ## Current Verdict
@@ -119,11 +121,9 @@ baselines, not final specs.
 
 ## Next Build Slice
 
-Contract layer and safe patch apply now exist. Next build before more sandbox
-power:
+Contract layer, safe patch apply, and selected-file sync now exist. Next build:
 
-1. small module-boundary refactor
-2. selected-file sync policy
-3. Codex wrapper
-4. Docker execution
-5. Markdown document workflow
+1. Codex wrapper
+2. Docker execution
+3. Markdown document workflow
+4. policy checks for network and writable mounts

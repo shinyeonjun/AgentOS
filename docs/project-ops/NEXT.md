@@ -10,29 +10,25 @@ The first contract slice now exists:
 - `review_package.json` artifact
 - `agentos inspect`
 - approval-gated patch apply to a safe target
+- selected-file sync to a safe target
 
-Next, cleanly separate runtime boundaries enough that Codex can be attached
-without turning `runtime.py` into a junk drawer.
+Next, attach Codex through the same contract without letting it work directly in
+the host project.
 
 ## Next 7 Actions
 
-1. Refactor the prototype into clearer modules before it grows:
-   - runtime/session lifecycle
-   - persistence
-   - review package
-   - sync
-   - demo runner
-2. Add selected-file sync rules.
-3. Add a Codex CLI wrapper that consumes the same task/review contract.
-4. Add Docker sandbox proof-of-concept:
+1. Add a Codex CLI wrapper that consumes the same task/review contract.
+2. Add Docker sandbox proof-of-concept:
    - create session
    - copy input into workspace
    - run one safe command
    - collect artifact
    - destroy session
-5. Add Markdown document modification demo.
-6. Add first end-to-end demo script for exhibition rehearsal.
-7. Add minimal policy checks for network and writable mounts.
+3. Add Markdown document modification demo.
+4. Add first end-to-end demo script for exhibition rehearsal.
+5. Add minimal policy checks for network and writable mounts.
+6. Split persistence out of `runtime.py` when DB logic starts growing.
+7. Add selected-file approval scopes to `review_package.json`.
 
 ## Do Not Do Yet
 

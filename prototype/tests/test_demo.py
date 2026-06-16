@@ -23,12 +23,17 @@ class AgentOSDemoTests(unittest.TestCase):
             self.assertEqual(result.second_test_status, 0)
             self.assertTrue(result.sync_before_approval_blocked)
             self.assertTrue(result.patch_sync_before_approval_blocked)
+            self.assertTrue(result.selected_sync_before_approval_blocked)
             self.assertTrue(result.destroyed)
             self.assertTrue((result.approved_sync_dir / "calculator.py").exists())
             self.assertIn("return a + b", (result.approved_sync_dir / "calculator.py").read_text())
             patched_file = result.approved_patch_sync_dir / "buggy-calculator" / "calculator.py"
             self.assertTrue(patched_file.exists())
             self.assertIn("return a + b", patched_file.read_text())
+            selected_file = result.approved_selected_sync_dir / "calculator.py"
+            self.assertTrue(selected_file.exists())
+            self.assertIn("return a + b", selected_file.read_text())
+            self.assertFalse((result.approved_selected_sync_dir / "test_calculator.py").exists())
             self.assertIn("-    return a - b", result.diff_artifact.read_text())
             self.assertIn("+    return a + b", result.diff_artifact.read_text())
 
@@ -71,10 +76,12 @@ class AgentOSDemoTests(unittest.TestCase):
             self.assertEqual(session["state"], "destroyed")
             self.assertEqual(len(session["tool_calls"]), 2)
             self.assertEqual(len(session["approvals"]), 1)
-            self.assertEqual(len(session["syncs"]), 2)
+            self.assertEqual(len(session["syncs"]), 3)
             artifact_names = {artifact["name"] for artifact in session["artifacts"]}
             self.assertIn("task.json", artifact_names)
             self.assertIn("review_package.json", artifact_names)
+            selected_sync = session["syncs"][-1]
+            self.assertIn("selected_files", selected_sync["source_path"])
 
 
 if __name__ == "__main__":

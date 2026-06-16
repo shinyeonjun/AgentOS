@@ -15,8 +15,10 @@ class DemoResult:
     second_test_status: int
     sync_before_approval_blocked: bool
     patch_sync_before_approval_blocked: bool
+    selected_sync_before_approval_blocked: bool
     approved_sync_dir: Path
     approved_patch_sync_dir: Path
+    approved_selected_sync_dir: Path
     destroyed: bool
     diff_artifact: Path
     report_artifact: Path
@@ -126,6 +128,17 @@ def run_code_fix_demo(state_dir: Path, output_dir: Path, destroy_session: bool =
         patch_sync_blocked = True
     shutil.rmtree(preapproval_patch_target, ignore_errors=True)
 
+    try:
+        runtime.sync_approved_selected(
+            session=session,
+            workspace_root=workspace_project,
+            relative_paths=["calculator.py"],
+            target_dir=output_dir / f"{session.session_id}-preapproval-selected",
+        )
+        selected_sync_blocked = False
+    except SyncNotApprovedError:
+        selected_sync_blocked = True
+
     runtime.approve_session(session, approver="demo-human")
     approved_sync_dir = runtime.sync_approved(session, workspace_project)
     patch_target = _prepare_patch_target(
@@ -133,6 +146,12 @@ def run_code_fix_demo(state_dir: Path, output_dir: Path, destroy_session: bool =
         target_root=output_dir / f"{session.session_id}-patch-apply",
     )
     patch_result = runtime.sync_approved_patch(session, diff_artifact, patch_target)
+    selected_result = runtime.sync_approved_selected(
+        session=session,
+        workspace_root=workspace_project,
+        relative_paths=["calculator.py"],
+        target_dir=output_dir / f"{session.session_id}-selected",
+    )
 
     if destroy_session:
         runtime.destroy_session(session)
@@ -143,8 +162,10 @@ def run_code_fix_demo(state_dir: Path, output_dir: Path, destroy_session: bool =
         second_test_status=second.exit_code,
         sync_before_approval_blocked=copy_sync_blocked,
         patch_sync_before_approval_blocked=patch_sync_blocked,
+        selected_sync_before_approval_blocked=selected_sync_blocked,
         approved_sync_dir=approved_sync_dir,
         approved_patch_sync_dir=patch_result.target_dir,
+        approved_selected_sync_dir=selected_result.target_dir,
         destroyed=destroy_session and not session.session_dir.exists(),
         diff_artifact=diff_artifact,
         report_artifact=report_artifact,

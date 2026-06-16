@@ -110,7 +110,7 @@ def build_review_package(
         "risk_notes": risk_notes or [],
         "approval": {
             "required": True,
-            "options": ["sync_all", "discard", "keep_session"],
+            "options": ["sync_all", "sync_selected", "discard", "keep_session"],
             "recommended": "sync_all" if validation_status == "passed" else "keep_session",
         },
     }

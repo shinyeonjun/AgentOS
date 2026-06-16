@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+from .sync import PatchApplyResult, apply_patch_to_target
+
 
 def utc_now() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds")
@@ -32,18 +34,12 @@ class ToolResult:
 
 
 @dataclass(frozen=True)
-class PatchApplyResult:
+class SelectedSyncResult:
     target_dir: Path
-    exit_code: int
-    stdout_tail: str
-    stderr_tail: str
+    copied_paths: tuple[str, ...]
 
 
 class SyncNotApprovedError(RuntimeError):
-    pass
-
-
-class PatchApplyError(RuntimeError):
     pass
 
 
@@ -218,30 +214,7 @@ class AgentOSRuntime:
     def sync_approved_patch(self, session: Session, patch_path: Path, target_dir: Path) -> PatchApplyResult:
         if not self._is_approved(session.session_id):
             raise SyncNotApprovedError(f"session {session.session_id} has not been approved")
-        if not target_dir.is_dir():
-            raise PatchApplyError(f"patch target must be an existing directory: {target_dir}")
-
-        completed = subprocess.run(
-            [
-                "patch",
-                "--batch",
-                "--forward",
-                "--no-backup-if-mismatch",
-                "-p0",
-                "-i",
-                str(patch_path),
-            ],
-            cwd=target_dir,
-            text=True,
-            capture_output=True,
-            check=False,
-        )
-        stdout_tail = completed.stdout[-4000:]
-        stderr_tail = completed.stderr[-4000:]
-        if completed.returncode != 0:
-            raise PatchApplyError(
-                f"patch apply failed with exit code {completed.returncode}: {stderr_tail or stdout_tail}"
-            )
+        result = apply_patch_to_target(patch_path=patch_path, target_dir=target_dir)
 
         with self._connect() as conn:
             conn.execute(
@@ -252,12 +225,47 @@ class AgentOSRuntime:
                 "update sessions set state = ? where session_id = ?",
                 ("synced", session.session_id),
             )
-        return PatchApplyResult(
-            target_dir=target_dir,
-            exit_code=completed.returncode,
-            stdout_tail=stdout_tail,
-            stderr_tail=stderr_tail,
-        )
+        return result
+
+    def sync_approved_selected(
+        self,
+        session: Session,
+        workspace_root: Path,
+        relative_paths: list[str],
+        target_dir: Path,
+    ) -> SelectedSyncResult:
+        if not self._is_approved(session.session_id):
+            raise SyncNotApprovedError(f"session {session.session_id} has not been approved")
+        if target_dir.exists():
+            shutil.rmtree(target_dir)
+        target_dir.mkdir(parents=True)
+
+        copied_paths: list[str] = []
+        for relative_path in relative_paths:
+            source = _safe_relative_source(workspace_root, relative_path)
+            target = target_dir / relative_path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if source.is_dir():
+                shutil.copytree(source, target)
+            else:
+                shutil.copy2(source, target)
+            copied_paths.append(relative_path)
+
+        with self._connect() as conn:
+            conn.execute(
+                "insert into syncs(session_id, synced_at, source_path, target_path) values (?, ?, ?, ?)",
+                (
+                    session.session_id,
+                    utc_now(),
+                    json.dumps({"kind": "selected_files", "paths": copied_paths}),
+                    str(target_dir),
+                ),
+            )
+            conn.execute(
+                "update sessions set state = ? where session_id = ?",
+                ("synced", session.session_id),
+            )
+        return SelectedSyncResult(target_dir=target_dir, copied_paths=tuple(copied_paths))
 
     def destroy_session(self, session: Session) -> None:
         if session.session_dir.exists():
@@ -331,3 +339,15 @@ class AgentOSRuntime:
                 );
                 """
             )
+
+
+def _safe_relative_source(root: Path, relative_path: str) -> Path:
+    relative = Path(relative_path)
+    if relative.is_absolute() or ".." in relative.parts:
+        raise ValueError(f"selected sync path must stay inside workspace: {relative_path}")
+    root_resolved = root.resolve()
+    source = (root_resolved / relative).resolve()
+    source.relative_to(root_resolved)
+    if not source.exists():
+        raise FileNotFoundError(f"selected sync source does not exist: {relative_path}")
+    return source

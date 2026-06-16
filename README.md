@@ -48,6 +48,7 @@ The current executable prototype is intentionally small and deterministic:
 - blocks patch apply before approval
 - syncs only after approval
 - applies approved patch to a safe target after approval
+- syncs selected approved files to a safe target after approval
 - destroys the disposable workspace
 
 It proves the control-plane lifecycle without requiring a live LLM.
