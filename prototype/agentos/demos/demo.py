@@ -5,7 +5,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..core.contracts import TaskInput, TaskManifest, artifact_ref, build_review_package
+from ..core.contracts import TaskInput, TaskManifest, artifact_entry, artifact_ref, build_review_package
 from ..core.runtime import AgentOSRuntime, SyncNotApprovedError
 
 
@@ -93,21 +93,9 @@ def run_code_fix_demo(state_dir: Path, output_dir: Path, destroy_session: bool =
         validation_status="passed" if second.exit_code == 0 else "failed",
         capabilities=task_manifest.capabilities,
         artifacts=[
-            {
-                "name": diff_artifact.name,
-                "type": "text/x-diff",
-                "ref": artifact_ref(session.session_id, diff_artifact),
-            },
-            {
-                "name": report_artifact.name,
-                "type": "text/markdown",
-                "ref": artifact_ref(session.session_id, report_artifact),
-            },
-            {
-                "name": task_manifest_artifact.name,
-                "type": "application/json",
-                "ref": artifact_ref(session.session_id, task_manifest_artifact),
-            },
+            artifact_entry(session.session_id, diff_artifact, "text/x-diff"),
+            artifact_entry(session.session_id, report_artifact, "text/markdown"),
+            artifact_entry(session.session_id, task_manifest_artifact, "application/json"),
         ],
     )
     review_package_artifact = runtime.write_json_artifact(session, "review_package.json", review_package)

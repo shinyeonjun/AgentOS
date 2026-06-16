@@ -617,3 +617,24 @@ Observed result:
 - Threat model defines current security claim as demo-grade sandbox lifecycle, not production isolation.
 - Documented protected assets, trust boundaries, considered threats, current mitigations, remaining gaps, and security roadmap.
 - Recommended wording now avoids overclaiming "secure", "production sandbox", or "complete AI OS".
+
+## 2026-06-16 Artifact Integrity Metadata Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests
+/home/ubuntu/.openclaw/workspace/scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos rehearse --state-dir /mnt/usb/projects/agentos/.agentos-state --output-dir /mnt/usb/projects/agentos/.agentos-output --docker-sudo --json
+```
+
+Observed result:
+
+- Full unit suite passed: 40 tests.
+- Ruff passed.
+- Compileall passed.
+- Docker rehearsal `e174c60ad5b2` passed.
+- `review_package.json` artifact entries now include `size_bytes`.
+- `review_package.json` artifact entries now include a SHA-256 digest object.
+- Real generated code lifecycle package `364f5f44052f` recorded 64-character SHA-256 digests for `code-change.diff`, `final-report.md`, and `task.json`.

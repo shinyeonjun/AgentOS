@@ -148,11 +148,12 @@ Current mitigation:
 - artifacts include diffs, reports, commands, task manifests, and review package
 - worker runs write `worker-result.json`
 - review validation checks link to worker result artifacts
+- review package artifact entries record size and SHA-256 digest metadata
 
 Remaining gaps:
 
 - no human review UI yet
-- no cryptographic integrity checks for artifacts
+- no signed artifact manifest yet
 - stdout/stderr tails can truncate long output
 
 ## Current Hardening Checklist
@@ -173,6 +174,7 @@ Implemented:
 - Docker `/tmp` tmpfs
 - sandbox policy artifact
 - worker result artifact
+- artifact size and SHA-256 digest metadata in review packages
 
 Not implemented yet:
 
@@ -181,7 +183,7 @@ Not implemented yet:
 - AppArmor/SELinux profile
 - environment variable filtering
 - signed approval records
-- artifact integrity hashing
+- signed artifact manifest
 - image digest pinning
 - SBOM/image provenance
 - interactive review dashboard

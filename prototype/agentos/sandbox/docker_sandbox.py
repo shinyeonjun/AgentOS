@@ -6,7 +6,7 @@ from pathlib import Path
 
 from .sandbox_policy import PolicyValidation, assert_policy_passes, build_default_policy, validate_sandbox_policy
 from ..core.capabilities import image_capability_manifest
-from ..core.contracts import TaskInput, TaskManifest, artifact_ref, build_review_package
+from ..core.contracts import TaskInput, TaskManifest, artifact_entry, artifact_ref, build_review_package
 from ..core.runtime import AgentOSRuntime, Session
 
 
@@ -278,26 +278,10 @@ def _write_docker_review_package(
         validation_status=validation_status,
         capabilities=["base"],
         artifacts=[
-            {
-                "name": command_artifact.name,
-                "type": "application/json",
-                "ref": artifact_ref(session.session_id, command_artifact),
-            },
-            {
-                "name": policy_artifact.name,
-                "type": "application/json",
-                "ref": artifact_ref(session.session_id, policy_artifact),
-            },
-            {
-                "name": capability_artifact.name,
-                "type": "application/json",
-                "ref": artifact_ref(session.session_id, capability_artifact),
-            },
-            {
-                "name": report_artifact.name,
-                "type": "text/markdown",
-                "ref": artifact_ref(session.session_id, report_artifact),
-            },
+            artifact_entry(session.session_id, command_artifact, "application/json"),
+            artifact_entry(session.session_id, policy_artifact, "application/json"),
+            artifact_entry(session.session_id, capability_artifact, "application/json"),
+            artifact_entry(session.session_id, report_artifact, "text/markdown"),
         ],
         risk_notes=[
             {

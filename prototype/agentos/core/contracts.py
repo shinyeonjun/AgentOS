@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -60,6 +61,27 @@ class TaskManifest:
 
 def artifact_ref(session_id: str, artifact_path: Path) -> str:
     return f"artifact://{session_id}/{artifact_path.name}"
+
+
+def artifact_entry(session_id: str, artifact_path: Path, media_type: str) -> dict[str, Any]:
+    return {
+        "name": artifact_path.name,
+        "type": media_type,
+        "ref": artifact_ref(session_id, artifact_path),
+        "size_bytes": artifact_path.stat().st_size,
+        "digest": {
+            "algorithm": "sha256",
+            "value": artifact_sha256(artifact_path),
+        },
+    }
+
+
+def artifact_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as file:
+        for chunk in iter(lambda: file.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def build_review_package(

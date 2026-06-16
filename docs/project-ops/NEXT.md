@@ -30,13 +30,14 @@ The first contract slice now exists:
 - `worker-result.json` evidence artifact for host-side worker runs
 - review package validation checks link to worker result artifacts
 - sandbox threat model documenting current claims, gaps, and roadmap
+- review package artifact entries include size and SHA-256 digest metadata
 
-Next, continue real-worker rehearsal coverage and add artifact integrity metadata.
+Next, continue real-worker rehearsal coverage and add stronger integrity guarantees.
 
 ## Next 7 Actions
 
 1. Add real-worker execution rehearsals after the deterministic demo story is stable.
-2. Add artifact hashing / integrity metadata to review packages.
+2. Add signed artifact manifest / stronger integrity checks.
 3. Continue polishing CLI failure messages as new commands appear.
 4. Document supported install/runtime paths for Linux and WSL2.
 5. Consider a minimal review dashboard only after the CLI demo is solid.

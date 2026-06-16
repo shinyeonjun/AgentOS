@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from ..core.changes import FileChange, detect_file_changes
-from ..core.contracts import TaskInput, TaskManifest, artifact_ref, build_review_package
+from ..core.contracts import TaskInput, TaskManifest, artifact_entry, artifact_ref, build_review_package
 from ..core.runtime import AgentOSRuntime, Session, ToolResult
 
 
@@ -169,33 +169,13 @@ def _build_worker_review_package(
         for change in changes
     ]
     artifacts: list[dict[str, Any]] = [
-        {
-            "name": task_manifest_artifact.name,
-            "type": "application/json",
-            "ref": artifact_ref(session_id, task_manifest_artifact),
-        },
-        {
-            "name": command_artifact.name,
-            "type": "application/json",
-            "ref": artifact_ref(session_id, command_artifact),
-        },
-        {
-            "name": report_artifact.name,
-            "type": "text/markdown",
-            "ref": artifact_ref(session_id, report_artifact),
-        },
-        {
-            "name": worker_result_artifact.name,
-            "type": "application/json",
-            "ref": worker_result_ref,
-        },
+        artifact_entry(session_id, task_manifest_artifact, "application/json"),
+        artifact_entry(session_id, command_artifact, "application/json"),
+        artifact_entry(session_id, report_artifact, "text/markdown"),
+        artifact_entry(session_id, worker_result_artifact, "application/json"),
     ]
     artifacts.extend(
-        {
-            "name": artifact.name,
-            "type": "text/x-diff",
-            "ref": artifact_ref(session_id, artifact),
-        }
+        artifact_entry(session_id, artifact, "text/x-diff")
         for artifact in diff_artifacts.values()
     )
 

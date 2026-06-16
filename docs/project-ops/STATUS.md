@@ -83,6 +83,7 @@ core loop:
 - real Codex smoke execution passed with changed-file detection
 - worker execution evidence artifact: `worker-result.json`
 - review package validation checks reference worker result artifacts
+- review package artifact entries include size and SHA-256 digest metadata
 - sandbox threat model with current claims, gaps, and roadmap
 - package folders split into `core`, `sandbox`, `workers`, and `demos`
 - Linux/WSL2 setup guide from clone to rehearsal
@@ -165,11 +166,12 @@ Docker sandbox policy validation, selected-file approval scopes, Markdown
 document workflow, end-to-end rehearsal, first runtime hardening pass, doctor
 preflight, capability metadata, major-command JSON output, structured CLI
 errors, Python-native approved patch apply, editable package install, a real
-Codex smoke path, worker evidence artifacts, a Linux/WSL2 setup guide, sandbox
-threat model, and a separated SQLite storage boundary now exist. Next build:
+Codex smoke path, worker evidence artifacts, artifact integrity metadata, a
+Linux/WSL2 setup guide, sandbox threat model, and a separated SQLite storage
+boundary now exist. Next build:
 
 1. continuing real-worker rehearsal coverage
-2. artifact hashing / integrity metadata
+2. signed artifact manifest / stronger integrity checks
 3. continuing CLI UX polish as new commands appear
 
 ## Docker Image State

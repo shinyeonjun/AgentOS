@@ -73,7 +73,12 @@ human whether to sync approved results.
     {
       "name": "final-report.md",
       "type": "text/markdown",
-      "ref": "artifact://report/final-report.md"
+      "ref": "artifact://report/final-report.md",
+      "size_bytes": 512,
+      "digest": {
+        "algorithm": "sha256",
+        "value": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      }
     }
   ],
   "risk_notes": [],

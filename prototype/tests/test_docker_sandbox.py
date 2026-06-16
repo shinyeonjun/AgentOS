@@ -133,6 +133,7 @@ class DockerSandboxTests(unittest.TestCase):
             self.assertEqual(review_package["validation"]["checks"][0]["name"], "sandbox policy")
             self.assertEqual(review_package["validation"]["checks"][0]["status"], "passed")
             self.assertEqual(review_package["task"]["capabilities"], ["base"])
+            self.assertEqual(review_package["artifacts"][0]["digest"]["algorithm"], "sha256")
             self.assertEqual(review_package["approval"]["scopes"], [])
 
     def test_run_docker_task_requires_directory_input(self) -> None:
