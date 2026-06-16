@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import unittest
 import sys
+import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from unittest.mock import patch
 
 from agentos.runtime import COMMAND_TIMEOUT_EXIT_CODE, AgentOSRuntime
 from agentos.sync import PatchApplyError, apply_patch_to_target
@@ -43,17 +42,53 @@ class RuntimeHardeningTests(unittest.TestCase):
             with self.assertRaisesRegex(Exception, "closed"):
                 conn.execute("select 1")
 
-    def test_patch_apply_requires_patch_binary(self) -> None:
+    def test_patch_apply_uses_python_native_unified_diff(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
             target = root / "target"
             target.mkdir()
+            nested = target / "project"
+            nested.mkdir()
+            (nested / "calculator.py").write_text(
+                "def add(a, b):\n"
+                "    return a - b\n",
+                encoding="utf-8",
+            )
             patch_file = root / "change.diff"
-            patch_file.write_text("", encoding="utf-8")
+            patch_file.write_text(
+                "--- project/calculator.py\n"
+                "+++ project/calculator.py\n"
+                "@@ -1,2 +1,2 @@\n"
+                " def add(a, b):\n"
+                "-    return a - b\n"
+                "+    return a + b\n",
+                encoding="utf-8",
+            )
 
-            with patch("agentos.sync.shutil.which", return_value=None):
-                with self.assertRaisesRegex(PatchApplyError, "patch command is required"):
-                    apply_patch_to_target(patch_file, target)
+            result = apply_patch_to_target(patch_file, target)
+
+            self.assertEqual(result.exit_code, 0)
+            self.assertIn("project/calculator.py", result.stdout_tail)
+            self.assertIn("return a + b", (nested / "calculator.py").read_text(encoding="utf-8"))
+
+    def test_patch_apply_rejects_context_mismatch(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            target = root / "target"
+            target.mkdir()
+            (target / "README.md").write_text("actual\n", encoding="utf-8")
+            patch_file = root / "change.diff"
+            patch_file.write_text(
+                "--- README.md\n"
+                "+++ README.md\n"
+                "@@ -1 +1 @@\n"
+                "-expected\n"
+                "+updated\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(PatchApplyError, "context mismatch"):
+                apply_patch_to_target(patch_file, target)
 
 
 if __name__ == "__main__":

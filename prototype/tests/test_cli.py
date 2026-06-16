@@ -3,7 +3,7 @@ from __future__ import annotations
 import io
 import json
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -113,12 +113,77 @@ class AgentOSCliTests(unittest.TestCase):
             self.assertIsNone(data["codex_result"])
             self.assertEqual(data["changed_files"], [])
 
+    def test_missing_executable_json_outputs_cli_error(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            input_project = root / "input-project"
+            input_project.mkdir()
+            (input_project / "README.md").write_text("hello\n", encoding="utf-8")
+
+            exit_code, output, stderr = _run_cli_with_stderr(
+                [
+                    "docker-run",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--input",
+                    str(input_project),
+                    "--docker-bin",
+                    str(root / "missing-docker"),
+                    "--json",
+                    "--",
+                    "true",
+                ]
+            )
+
+            self.assertEqual(exit_code, 127)
+            self.assertEqual(stderr, "")
+            data = json.loads(output)
+            self.assertEqual(data["status"], "failed")
+            self.assertEqual(data["error"]["type"], "FileNotFoundError")
+            self.assertIn("agentos doctor", data["error"]["hint"])
+
+    def test_missing_executable_human_output_uses_stderr(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            input_project = root / "input-project"
+            input_project.mkdir()
+            (input_project / "README.md").write_text("hello\n", encoding="utf-8")
+
+            exit_code, output, stderr = _run_cli_with_stderr(
+                [
+                    "docker-run",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--input",
+                    str(input_project),
+                    "--docker-bin",
+                    str(root / "missing-docker"),
+                    "--",
+                    "true",
+                ]
+            )
+
+            self.assertEqual(exit_code, 127)
+            self.assertEqual(output, "")
+            self.assertIn("error:", stderr)
+            self.assertIn("hint:", stderr)
+
 
 def _run_cli(argv: list[str]) -> tuple[int, str]:
+    exit_code, stdout, _stderr = _run_cli_with_stderr(argv)
+    return exit_code, stdout
+
+
+def _run_cli_with_stderr(argv: list[str]) -> tuple[int, str, str]:
     stdout = io.StringIO()
-    with redirect_stdout(stdout):
+    stderr = io.StringIO()
+    with redirect_stdout(stdout), redirect_stderr(stderr):
         exit_code = main(argv)
-    return exit_code, stdout.getvalue()
+    return exit_code, stdout.getvalue(), stderr.getvalue()
 
 
 def _write_fake_docker(path: Path, *, exit_code: int) -> Path:

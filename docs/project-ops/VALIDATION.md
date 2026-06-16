@@ -442,3 +442,30 @@ Observed result:
 - Markdown document lifecycle session `19f86c293317` passed.
 - Docker sandbox policy session `99a87e6350b0` passed.
 - `docker-run` JSON mode now returns the sandbox command exit code.
+
+## 2026-06-16 CLI Failure UX and Native Patch Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests
+/home/ubuntu/.openclaw/workspace/scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos doctor --workspace /mnt/usb/projects/agentos --json
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos run-demo --state-dir /tmp/agentos-native-patch-state --output-dir /tmp/agentos-native-patch-output --json
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos docker-run --state-dir /tmp/agentos-input-error-state --output-dir /tmp/agentos-input-error-output --input README.md --json -- true
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos rehearse --state-dir /mnt/usb/projects/agentos/.agentos-state --output-dir /mnt/usb/projects/agentos/.agentos-output --docker-sudo --json
+```
+
+Observed result:
+
+- 35 unit tests passed.
+- Ruff passed.
+- Compileall passed.
+- `agentos doctor --json` now checks Linux/WSL, Python, Docker, and workspace path without requiring `patch`.
+- Approved patch sync passed through the Python-native unified diff applier.
+- `docker-run` rejects file inputs with a structured JSON error and a directory-input hint.
+- JSON rehearsal `5b4d888a9c7b` passed.
+- Code lifecycle session `0e31b1a625d6` passed.
+- Markdown document lifecycle session `ea6b2d29e91a` passed.
+- Docker sandbox policy session `f9596efb1214` passed.

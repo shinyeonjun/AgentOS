@@ -2,7 +2,7 @@
 
 ## Immediate Next Move
 
-Prepare for the CLI failure UX and packaging slice.
+Prepare for the packaging and install slice.
 
 The first contract slice now exists:
 
@@ -17,20 +17,21 @@ The first contract slice now exists:
 - selected-file approval scopes in `review_package.json`
 - Markdown document workflow demo
 - end-to-end `agentos rehearse` command
-- SQLite close, command timeout, patch dependency check, and Docker hardening flags
+- SQLite close, command timeout, Python-native patch apply, and Docker hardening flags
 - `agentos doctor` Linux/WSL environment preflight
 - base/code/document capability metadata
 - JSON output for `run-demo`, `run-doc-demo`, `rehearse`, `codex`, and `docker-run`
 - `docker-run` exits with the sandbox command exit code
+- structured CLI errors for environment/input failures
 
-Next, tighten failure messages, isolate host dependencies, and add an install path.
+Next, add an install path and keep tightening real-worker smoke coverage.
 
 ## Next 7 Actions
 
-1. Polish CLI failure messages and exit codes across all commands.
-2. Replace or isolate host `patch` dependency for cross-platform support.
-3. Add packaging/install flow.
-4. Add a real Codex execution smoke path that can be run on demand.
+1. Add packaging/install flow.
+2. Add a real Codex execution smoke path that can be run on demand.
+3. Continue polishing CLI failure messages as new commands appear.
+4. Document supported install/runtime paths for Linux and WSL2.
 5. Split persistence out of `runtime.py` when DB logic starts growing.
 6. Add a minimal review dashboard only after the CLI demo is solid.
 7. Add real-worker execution rehearsals after the deterministic demo story is stable.

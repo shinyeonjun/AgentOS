@@ -135,6 +135,20 @@ class DockerSandboxTests(unittest.TestCase):
             self.assertEqual(review_package["task"]["capabilities"], ["base"])
             self.assertEqual(review_package["approval"]["scopes"], [])
 
+    def test_run_docker_task_requires_directory_input(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            input_file = root / "README.md"
+            input_file.write_text("hello\n", encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "must be a directory"):
+                run_docker_task(
+                    state_dir=root / "state",
+                    output_dir=root / "output",
+                    input_path=input_file,
+                    command=["true"],
+                )
+
 
 if __name__ == "__main__":
     unittest.main()

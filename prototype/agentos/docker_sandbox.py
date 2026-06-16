@@ -96,6 +96,7 @@ def run_docker_task(
     docker_bin: str = "docker",
     use_sudo: bool = False,
 ) -> DockerRunResult:
+    _validate_docker_input_path(input_path)
     runtime = AgentOSRuntime(state_dir=state_dir, output_dir=output_dir)
     session = runtime.create_session()
     task_manifest = TaskManifest(
@@ -202,6 +203,13 @@ def run_docker_task(
         capability_artifact=capability_artifact,
         policy_status=policy_validation.status,
     )
+
+
+def _validate_docker_input_path(input_path: Path) -> None:
+    if not input_path.exists():
+        raise FileNotFoundError(f"Docker sandbox input does not exist: {input_path}")
+    if not input_path.is_dir():
+        raise ValueError(f"Docker sandbox input must be a directory: {input_path}")
 
 
 def _write_docker_report(

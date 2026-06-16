@@ -47,7 +47,7 @@ The current executable prototype is intentionally small and deterministic:
 - blocks sync before approval
 - blocks patch apply before approval
 - syncs only after approval
-- applies approved patch to a safe target after approval
+- applies approved unified diffs to a safe target after approval
 - syncs selected approved files to a safe target after approval
 - destroys the disposable workspace
 - supports JSON output for major automation-facing commands
@@ -143,7 +143,7 @@ runtime capability contract.
 
 The current prototype is tested on Linux and WSL-style environments. Native
 Windows support is not claimed yet because the prototype intentionally uses
-POSIX-oriented tools such as `python3`, Docker, and `patch`.
+POSIX-oriented runtime paths such as `python3` and Docker.
 For Windows users, the supported path is WSL2 with Docker Desktop WSL
 integration enabled, preferably with the project stored on the WSL/Linux
 filesystem rather than under `/mnt/c`.

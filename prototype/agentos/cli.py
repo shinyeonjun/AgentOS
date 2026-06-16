@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
 from typing import Any
@@ -16,6 +17,14 @@ from .rehearsal import run_rehearsal
 
 
 def main(argv: list[str] | None = None) -> int:
+    cli_argv = list(sys.argv[1:] if argv is None else argv)
+    try:
+        return _main_impl(cli_argv)
+    except (FileNotFoundError, NotADirectoryError, PermissionError, RuntimeError, ValueError) as exc:
+        return _render_cli_error(exc, as_json="--json" in cli_argv)
+
+
+def _main_impl(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="agentos", description="AgentOS v0.2 prototype CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -390,6 +399,45 @@ def main(argv: list[str] | None = None) -> int:
 
 def _print_json(data: dict[str, Any]) -> None:
     print(json.dumps(data, ensure_ascii=False, indent=2) + "\n", end="")
+
+
+def _render_cli_error(exc: Exception, *, as_json: bool) -> int:
+    message = str(exc) or type(exc).__name__
+    error = {
+        "status": "failed",
+        "error": {
+            "type": type(exc).__name__,
+            "message": message,
+            "hint": _error_hint(exc, message),
+        },
+    }
+    if as_json:
+        _print_json(error)
+    else:
+        print(f"error: {message}", file=sys.stderr)
+        if error["error"]["hint"]:
+            print(f"hint: {error['error']['hint']}", file=sys.stderr)
+    return _error_exit_code(exc)
+
+
+def _error_hint(exc: Exception, message: str) -> str | None:
+    if isinstance(exc, FileNotFoundError):
+        return "Check the path or executable name, then run agentos doctor if this is an environment dependency."
+    if isinstance(exc, PermissionError):
+        return "Check file permissions or use --docker-sudo for Docker commands when your shell lacks docker-group access."
+    if "Docker sandbox input must be a directory" in message:
+        return "Pass a project directory to docker-run, not a single file."
+    if "unsafe sandbox policy" in message:
+        return "Use the default Docker sandbox policy: network none, /agentos/work, and /agentos/artifacts only."
+    return None
+
+
+def _error_exit_code(exc: Exception) -> int:
+    if isinstance(exc, FileNotFoundError):
+        return 127
+    if isinstance(exc, PermissionError):
+        return 126
+    return 1
 
 
 def _result_to_dict(value: Any) -> dict[str, Any]:

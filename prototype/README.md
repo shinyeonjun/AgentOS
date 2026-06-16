@@ -15,7 +15,7 @@ create_session
 -> block patch apply before approval
 -> approve
 -> sync to a safe output folder
--> apply the approved patch to a safe target folder
+-> apply the approved unified diff to a safe target folder
 -> sync selected approved files to a safe target folder
 -> destroy the workspace
 ```
@@ -91,6 +91,8 @@ as `--cap-drop ALL`, `no-new-privileges`, PID/memory/CPU limits, a read-only
 root filesystem, and a small `/tmp` tmpfs.
 Docker runs also write `image-capabilities.json`; task and review packages
 include capability details for `base`, `code`, and `document` workflows.
+Approved patch sync uses a Python-native unified diff applier for AgentOS
+generated text diffs, so it does not require a host `patch` binary.
 
 Run tests:
 

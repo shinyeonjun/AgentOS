@@ -8,7 +8,7 @@ from agentos.platform_checks import render_doctor, run_doctor
 
 
 class PlatformChecksTests(unittest.TestCase):
-    def test_doctor_warns_for_missing_optional_tools(self) -> None:
+    def test_doctor_warns_for_missing_docker(self) -> None:
         with (
             patch("agentos.platform_checks.platform.system", return_value="Linux"),
             patch("agentos.platform_checks.is_wsl", return_value=False),
@@ -20,7 +20,7 @@ class PlatformChecksTests(unittest.TestCase):
         statuses = {check.name: check.status for check in result.checks}
         self.assertEqual(statuses["platform"], "passed")
         self.assertEqual(statuses["docker"], "warning")
-        self.assertEqual(statuses["patch"], "warning")
+        self.assertNotIn("patch", statuses)
 
     def test_doctor_fails_on_native_windows(self) -> None:
         with (

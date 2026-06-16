@@ -49,7 +49,6 @@ def run_doctor(workspace_path: Path | None = None) -> DoctorResult:
         _check_platform(),
         _check_python(),
         _check_docker_binary(),
-        _check_patch_binary(),
         _check_workspace_path(workspace_path),
     )
     status = "passed"
@@ -97,13 +96,6 @@ def _check_docker_binary() -> DoctorCheck:
     if docker is None:
         return DoctorCheck("docker", "warning", "Docker CLI not found. Docker sandbox steps need Docker.")
     return DoctorCheck("docker", "passed", f"Docker CLI found at {docker}.")
-
-
-def _check_patch_binary() -> DoctorCheck:
-    patch = shutil.which("patch")
-    if patch is None:
-        return DoctorCheck("patch", "warning", "patch command not found. Patch sync will be unavailable.")
-    return DoctorCheck("patch", "passed", f"patch command found at {patch}.")
 
 
 def _check_workspace_path(workspace_path: Path) -> DoctorCheck:

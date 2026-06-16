@@ -65,8 +65,8 @@ core loop:
 - Docker hardening flags: cap drop, no-new-privileges, PID/memory/CPU limits, read-only root, and `/tmp` tmpfs
 - command timeout handling with recorded timeout result
 - SQLite connections close after each operation
-- explicit `patch` command dependency check for patch sync
-- `agentos doctor` preflight checks for Linux/WSL, Python, Docker, patch, and workspace path
+- Python-native unified diff apply for approved patch sync
+- `agentos doctor` preflight checks for Linux/WSL, Python, Docker, and workspace path
 - demo validation commands use the current Python executable instead of hardcoded `python3`
 - base/code/document capability catalog
 - task and review package capability details
@@ -74,6 +74,7 @@ core loop:
 - Docker run `image-capabilities.json` artifact
 - JSON output for `run-demo`, `run-doc-demo`, `rehearse`, `codex`, and `docker-run`
 - `docker-run` returns the sandbox command exit code
+- structured CLI errors for common environment/input failures
 - common worker runtime used by the Codex adapter
 - Codex `--docker` records target AgentOS image metadata without running Codex inside the image
 - session destruction
@@ -150,12 +151,12 @@ Contract layer, safe patch apply, selected-file sync, Codex execute result
 collection, Docker command execution, host-side worker runtime extraction,
 Docker sandbox policy validation, selected-file approval scopes, Markdown
 document workflow, end-to-end rehearsal, first runtime hardening pass, doctor
-preflight, capability metadata, and major-command JSON output now exist. Next
-build:
+preflight, capability metadata, major-command JSON output, structured CLI
+errors, and Python-native approved patch apply now exist. Next build:
 
-1. CLI failure UX polish for marketplace-grade use
-2. replace or isolate host `patch` dependency for cross-platform support
-3. packaging/install flow
+1. packaging/install flow
+2. real Codex execution smoke path
+3. continuing CLI UX polish as new commands appear
 
 ## Docker Image State
 
