@@ -5,6 +5,7 @@ from pathlib import Path
 
 from .codex_adapter import run_codex_task
 from .demo import run_code_fix_demo
+from .document_demo import run_markdown_document_demo
 from .docker_sandbox import DEFAULT_IMAGE, run_docker_task
 from .inspector import inspect_state, render_inspection
 
@@ -27,6 +28,24 @@ def main(argv: list[str] | None = None) -> int:
         help="Safe approved-sync output directory",
     )
     demo.add_argument(
+        "--keep-session",
+        action="store_true",
+        help="Keep the disposable workspace for inspection instead of destroying it",
+    )
+    doc_demo = subparsers.add_parser("run-doc-demo", help="Run the deterministic Markdown document demo loop")
+    doc_demo.add_argument(
+        "--state-dir",
+        type=Path,
+        default=Path("projects/agentos/.agentos-state"),
+        help="Persistent control-plane state directory",
+    )
+    doc_demo.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("projects/agentos/.agentos-output"),
+        help="Safe approved-sync output directory",
+    )
+    doc_demo.add_argument(
         "--keep-session",
         action="store_true",
         help="Keep the disposable workspace for inspection instead of destroying it",
@@ -167,6 +186,26 @@ def main(argv: list[str] | None = None) -> int:
         print(f"selected_sync_before_approval_blocked: {result.selected_sync_before_approval_blocked}")
         print(f"approved_sync_dir: {result.approved_sync_dir}")
         print(f"approved_patch_sync_dir: {result.approved_patch_sync_dir}")
+        print(f"approved_selected_sync_dir: {result.approved_selected_sync_dir}")
+        print(f"destroyed: {result.destroyed}")
+        print(f"diff_artifact: {result.diff_artifact}")
+        print(f"report_artifact: {result.report_artifact}")
+        print(f"task_manifest_artifact: {result.task_manifest_artifact}")
+        print(f"review_package_artifact: {result.review_package_artifact}")
+        return 0
+
+    if args.command == "run-doc-demo":
+        result = run_markdown_document_demo(
+            state_dir=args.state_dir,
+            output_dir=args.output_dir,
+            destroy_session=not args.keep_session,
+        )
+        print(f"session: {result.session_id}")
+        print(f"first_validation_status: {result.first_validation_status}")
+        print(f"second_validation_status: {result.second_validation_status}")
+        print(f"sync_before_approval_blocked: {result.sync_before_approval_blocked}")
+        print(f"selected_sync_before_approval_blocked: {result.selected_sync_before_approval_blocked}")
+        print(f"approved_sync_dir: {result.approved_sync_dir}")
         print(f"approved_selected_sync_dir: {result.approved_selected_sync_dir}")
         print(f"destroyed: {result.destroyed}")
         print(f"diff_artifact: {result.diff_artifact}")

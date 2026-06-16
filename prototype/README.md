@@ -26,6 +26,12 @@ Run from the workspace root:
 PYTHONPATH=projects/agentos/prototype python3 -m agentos run-demo
 ```
 
+Run the Markdown document workflow demo:
+
+```bash
+PYTHONPATH=projects/agentos/prototype python3 -m agentos run-doc-demo
+```
+
 Inspect sessions:
 
 ```bash

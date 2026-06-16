@@ -304,3 +304,26 @@ Observed result:
 - `review_package.json` approval options include `sync_all`, `sync_selected`, `discard`, and `keep_session`.
 - `approval.scopes` includes `sync_all_changed_files`.
 - `approval.scopes` includes `sync_selected:calculator.py` with `diff_ref` pointing to `code-change.diff`.
+
+## 2026-06-16 Markdown Document Workflow Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover /mnt/usb/projects/agentos/prototype/tests -v
+scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos run-doc-demo --state-dir /mnt/usb/projects/agentos/.agentos-state --output-dir /mnt/usb/projects/agentos/.agentos-output
+```
+
+Observed result:
+
+- 15 unit tests passed.
+- Ruff passed.
+- Compileall passed.
+- Markdown document demo session `5c47fe2c5234` completed.
+- Baseline Markdown structure validation failed, final validation passed.
+- `meeting-notes.md` changed from raw notes into a structured Markdown summary.
+- `document-change.diff`, `final-report.md`, `task.json`, and `review_package.json` were written.
+- `approval.scopes` includes `sync_selected:meeting-notes.md`.
+- Approved selected sync wrote only `meeting-notes.md` to `.agentos-output/5c47fe2c5234-document-selected`.

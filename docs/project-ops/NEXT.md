@@ -2,7 +2,7 @@
 
 ## Immediate Next Move
 
-Prepare for the Markdown document workflow slice.
+Prepare for the end-to-end exhibition rehearsal slice.
 
 The first contract slice now exists:
 
@@ -15,18 +15,19 @@ The first contract slice now exists:
 - Codex prepare wrapper with optional execution through the worker runtime
 - Docker sandbox policy validation and `sandbox-policy.json`
 - selected-file approval scopes in `review_package.json`
+- Markdown document workflow demo
 
-Next, add the Markdown document workflow.
+Next, add the first end-to-end exhibition rehearsal script.
 
 ## Next 7 Actions
 
-1. Add Markdown document modification demo.
-2. Add first end-to-end demo script for exhibition rehearsal.
-3. Add image capability metadata for base/code/document layers.
-4. Add policy checks to host-side worker sessions once image execution expands.
-5. Split persistence out of `runtime.py` when DB logic starts growing.
-6. Add a minimal review dashboard only after the CLI demo is solid.
-7. Add richer adapter support after the document workflow proves the contract.
+1. Add first end-to-end demo script for exhibition rehearsal.
+2. Add image capability metadata for base/code/document layers.
+3. Add policy checks to host-side worker sessions once image execution expands.
+4. Split persistence out of `runtime.py` when DB logic starts growing.
+5. Add a minimal review dashboard only after the CLI demo is solid.
+6. Add richer adapter support after the document workflow proves the contract.
+7. Add real-worker execution rehearsals after the deterministic demo story is stable.
 
 ## Do Not Do Yet
 
