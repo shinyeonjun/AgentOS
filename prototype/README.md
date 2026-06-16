@@ -42,8 +42,9 @@ python3 -m agentos codex --input /path/to/project --task "Fix failing tests"
 Use `--execute` only when the copied workspace should actually run Codex.
 Execute mode records the Codex tool call, detects changed files, writes text
 diff artifacts, and updates `review_package.json`.
-Use `--docker` with `--execute` to route the Codex command through the Docker
-sandbox runner.
+Use `--docker` to record the target AgentOS runtime image contract for the
+session. Codex remains a host-side worker adapter; the AgentOS image is the
+sandboxed work environment contract, not a place where the Codex CLI is bundled.
 
 Run a Docker sandbox command:
 
@@ -59,6 +60,7 @@ PYTHONPATH=projects/agentos/prototype python3 -m unittest discover projects/agen
 ```
 
 This prototype does not claim production-grade isolation yet. Docker is
-installed on the host with data-root on `/mnt/usb/docker-data`, but this
-prototype still uses disposable filesystem workspaces to prove the
-control-plane loop before moving execution into containers.
+installed on the host with data-root on `/mnt/usb/docker-data`. The image is
+worker-agnostic by design: Codex, OpenCode, Claude Code, or a local model should
+all be host-side worker adapters that use the same AgentOS workspace, policy,
+artifact, and approval contracts.

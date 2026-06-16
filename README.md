@@ -138,4 +138,6 @@ python3 -m agentos docker-run \
 Docker is installed on the host and its data-root is on the ext4 USB project
 partition at `/mnt/usb/docker-data`. The first Docker-backed sandbox command
 runner exists, but the security claim remains demo-grade until policy hardening
-and Codex-in-Docker execution are completed.
+and worker-agnostic image policy enforcement are completed. Codex CLI stays a
+host-side worker adapter; the image is the sandboxed AgentOS work environment,
+not a bundled Codex runtime.

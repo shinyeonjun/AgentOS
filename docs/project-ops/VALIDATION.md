@@ -197,7 +197,7 @@ Observed result:
 - 4 unit tests passed.
 - Ruff passed.
 - Compileall passed.
-- Codex prepare mode created `task.json`, `codex-command.json`, and `review_package.json`.
+- Codex prepare mode created `task.json`, `worker-command.json`, and `review_package.json`.
 - USB state Codex prepare session: `63e4c87fd4f1`.
 - Codex was not executed because `--execute` was not provided.
 
@@ -247,7 +247,7 @@ Observed result:
 - Artifact directory was mounted at `/agentos/artifacts`.
 - Container wrote `/agentos/artifacts/readme.txt`, and the host artifact contained `hello docker sandbox`.
 
-## 2026-06-16 Codex Through Docker Routing Validation
+## 2026-06-16 Worker-Agnostic Codex Adapter Validation
 
 Commands run:
 
@@ -255,17 +255,14 @@ Commands run:
 PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover /mnt/usb/projects/agentos/prototype/tests -v
 scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
 python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
-PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos codex --state-dir /tmp/agentos-codex-docker/state --output-dir /tmp/agentos-codex-docker/output --input /tmp/agentos-codex-docker/input --task 'Update README in Docker.' --execute --docker --docker-bin /tmp/agentos-codex-docker/fake-docker --docker-image agentos-test:fake
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos codex --state-dir /mnt/usb/projects/agentos/.agentos-state --output-dir /mnt/usb/projects/agentos/.agentos-output --input /mnt/usb/projects/agentos/prototype --task 'Smoke prepare host-side Codex adapter' --docker
 ```
 
 Observed result:
 
 - 8 unit tests passed.
-- Ruff passed.
-- Compileall passed.
-- Fake Docker-routed Codex session `f7054175c732` exited with code 0.
-- Command artifact recorded Docker execution with `network: none`.
-- Review package reported `Docker execution: True`.
-- Review package reported 1 changed file: `README.md`.
-- Diff artifact was written: `diff-README.md.diff`.
+- Codex adapter now uses the common worker runtime.
+- `worker-command.json` is the command artifact for Codex sessions.
+- `--docker` records target AgentOS image metadata instead of wrapping Codex in Docker.
+- Host-side prepare smoke session `c427adbd77de` recorded `sandbox_image: agentos-base:0.1`.
 - No real Codex tokens were spent during this validation.

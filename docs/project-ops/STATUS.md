@@ -57,7 +57,8 @@ core loop:
 - Codex prepare wrapper with optional `--execute`
 - Codex execute result collection with changed-file detection and diff artifacts
 - Docker-backed sandbox command runner using `agentos-base:0.1`
-- Codex execute can route through Docker runner with `--docker`
+- common worker runtime used by the Codex adapter
+- Codex `--docker` records target AgentOS image metadata without running Codex inside the image
 - session destruction
 
 ## Current Verdict
@@ -129,12 +130,12 @@ baselines, not final specs.
 ## Next Build Slice
 
 Contract layer, safe patch apply, selected-file sync, Codex execute result
-collection, Docker command execution, and Docker-routed Codex execution now
-exist. Next build:
+collection, Docker command execution, and host-side worker runtime extraction
+now exist. Next build:
 
-1. real Codex-capable image/tool layer
+1. worker-agnostic image policy checks for network and writable mounts
 2. Markdown document workflow
-3. policy checks for network and writable mounts
+3. selected-file approval scopes in `review_package.json`
 
 ## Docker Image State
 

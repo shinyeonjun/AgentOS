@@ -39,8 +39,8 @@ Move patch/apply behind the review package and explicit approval boundary.
 
 ## Contract Drift
 
-Risk: Codex wrapper, Docker execution, and document tasks each invent their own
-result format.
+Risk: worker adapters, Docker execution, and document tasks each invent their
+own result format.
 
 Mitigation: Build `task.json` and `review_package.json` before adding more
 execution paths. Every adapter must speak the same contract.

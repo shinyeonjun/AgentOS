@@ -2,7 +2,7 @@
 
 ## Immediate Next Move
 
-Prepare for the Codex wrapper slice.
+Prepare for the worker-agnostic sandbox image slice.
 
 The first contract slice now exists:
 
@@ -11,20 +11,21 @@ The first contract slice now exists:
 - `agentos inspect`
 - approval-gated patch apply to a safe target
 - selected-file sync to a safe target
-- Codex prepare wrapper with optional execution
+- common worker runtime for host-side adapters
+- Codex prepare wrapper with optional execution through the worker runtime
 
-Next, make the Docker-backed path use a real Codex-capable image, then add the
-Markdown document workflow.
+Next, harden the Docker-backed AgentOS image contract without bundling Codex
+inside the image, then add the Markdown document workflow.
 
 ## Next 7 Actions
 
-1. Build a Codex-capable image or tool layer:
-   - Node/Codex CLI available inside container
-   - auth mount strategy documented
+1. Harden the worker-agnostic AgentOS image contract:
+   - standard `/agentos/...` paths documented and validated
+   - host-side worker adapter boundary documented
    - network policy explicit
-2. Add Markdown document modification demo.
-3. Add first end-to-end demo script for exhibition rehearsal.
-4. Add minimal policy checks for network and writable mounts.
+2. Add minimal policy checks for network and writable mounts.
+3. Add Markdown document modification demo.
+4. Add first end-to-end demo script for exhibition rehearsal.
 5. Split persistence out of `runtime.py` when DB logic starts growing.
 6. Add selected-file approval scopes to `review_package.json`.
 7. Add image capability metadata for base/code/document layers.

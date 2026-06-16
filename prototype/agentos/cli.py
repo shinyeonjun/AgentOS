@@ -84,7 +84,7 @@ def main(argv: list[str] | None = None) -> int:
     codex.add_argument(
         "--docker",
         action="store_true",
-        help="Run Codex through the Docker sandbox runner when --execute is set",
+        help="Record the target AgentOS Docker runtime image for this host-side Codex worker session",
     )
     codex.add_argument(
         "--docker-image",
@@ -94,17 +94,17 @@ def main(argv: list[str] | None = None) -> int:
     codex.add_argument(
         "--docker-bin",
         default="docker",
-        help="Docker executable name or path",
+        help="Deprecated for codex sessions; kept for CLI compatibility",
     )
     codex.add_argument(
         "--docker-sudo",
         action="store_true",
-        help="Run Docker through sudo for shells that do not have docker-group access yet",
+        help="Deprecated for codex sessions; kept for CLI compatibility",
     )
     codex.add_argument(
         "--docker-network",
         default="none",
-        help="Docker network mode for --docker. Default is none.",
+        help="Target AgentOS runtime network policy metadata for --docker. Default is none.",
     )
     codex.add_argument(
         "--destroy-session",
@@ -198,7 +198,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"session: {result.session_id}")
         print(f"workspace_path: {result.workspace_path}")
         print(f"executed: {result.executed}")
-        print(f"docker_used: {result.docker_used}")
+        print(f"sandbox_image: {result.sandbox_image}")
         if result.codex_result is not None:
             print(f"codex_exit_code: {result.codex_result.exit_code}")
         print(f"changed_files: {len(result.changed_files)}")
