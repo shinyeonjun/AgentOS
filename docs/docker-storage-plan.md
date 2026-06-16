@@ -18,7 +18,13 @@ Applied storage layout on 2026-06-16:
 /dev/sda2  exfat  USB_SHARE   33G   mounted at /mnt/usb-share
 ```
 
-Docker is still not installed yet.
+Docker was installed on 2026-06-16 from the Ubuntu repository:
+
+```text
+docker.io 29.1.3
+containerd 2.2.1
+runc 1.3.4
+```
 
 ## Key Constraint
 
@@ -111,9 +117,9 @@ Best if cross-platform USB use matters.
 
 For AgentOS:
 
-1. Install Docker engine on the system.
-2. Configure Docker data-root on the ext4 AgentOS partition.
-3. Keep `/mnt/usb-share` as the cross-platform file exchange partition.
+1. Docker engine is installed on the system.
+2. Docker data-root is configured on the ext4 AgentOS partition.
+3. `/mnt/usb-share` remains the cross-platform file exchange partition.
 
 Recommended durable path:
 
@@ -126,6 +132,11 @@ backup AgentOS repo
 ```
 
 The destructive USB repartition step was completed after explicit user approval.
+The actual Docker data-root path is:
+
+```text
+/mnt/usb/docker-data
+```
 
 ## Verification
 
@@ -143,3 +154,23 @@ Result:
 - `/mnt/usb` mounted as ext4 `AGENTOS`
 - `/mnt/usb-share` mounted as exFAT `USB_SHARE`
 - AgentOS prototype tests passed
+
+Docker verification:
+
+```bash
+sudo docker version
+sudo docker info --format 'DockerRootDir={{.DockerRootDir}} Driver={{.Driver}}'
+sudo docker run --rm hello-world
+sudo docker system df
+```
+
+Observed:
+
+```text
+DockerRootDir=/mnt/usb/docker-data
+Driver=overlay2
+hello-world ran successfully on linux/arm64
+docker service active/enabled
+containerd service active
+ubuntu user added to docker group
+```

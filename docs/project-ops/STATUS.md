@@ -72,6 +72,18 @@ USB was repartitioned on 2026-06-16:
 
 AgentOS repo was restored and tests passed after repartition.
 
+## Docker State
+
+Docker installed on 2026-06-16:
+
+- Docker Engine: `29.1.3`
+- containerd: `2.2.1`
+- data-root: `/mnt/usb/docker-data`
+- storage driver: `overlay2`
+- service: active/enabled
+
+`hello-world` ran successfully. `ubuntu` is in the `docker` group.
+
 ## Clarified Product Direction
 
 The tools are considered part of the AI OS image, not the main pluginization
