@@ -1,6 +1,6 @@
-# AgentDesk Prototype
+# AgentOS Prototype
 
-This is the first executable v0 of the AgentDesk core loop.
+This is the first executable v0.2 baseline of the AgentOS core loop.
 
 Current demo:
 
@@ -20,15 +20,16 @@ create_session
 Run from the workspace root:
 
 ```bash
-PYTHONPATH=projects/agentdesk/prototype python3 -m agentdesk run-demo
+PYTHONPATH=projects/agentos/prototype python3 -m agentos run-demo
 ```
 
 Run tests:
 
 ```bash
-PYTHONPATH=projects/agentdesk/prototype python3 -m unittest discover projects/agentdesk/prototype/tests -v
+PYTHONPATH=projects/agentos/prototype python3 -m unittest discover projects/agentos/prototype/tests -v
 ```
 
-This prototype does not claim production-grade isolation yet. Docker is not
-installed on the host, so the first version uses disposable filesystem
-workspaces to prove the control-plane loop before adding container isolation.
+This prototype does not claim production-grade isolation yet. Docker is
+installed on the host with data-root on `/mnt/usb/docker-data`, but this
+prototype still uses disposable filesystem workspaces to prove the
+control-plane loop before moving execution into containers.

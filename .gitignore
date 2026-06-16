@@ -1,5 +1,5 @@
-.agentdesk-state/
-.agentdesk-output/
+.agentos-state/
+.agentos-output/
 __pycache__/
 *.py[cod]
 .pytest_cache/

@@ -4,7 +4,7 @@ import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
-from .runtime import AgentDeskRuntime, SyncNotApprovedError
+from .runtime import AgentOSRuntime, SyncNotApprovedError
 
 
 @dataclass(frozen=True)
@@ -20,7 +20,7 @@ class DemoResult:
 
 
 def run_code_fix_demo(state_dir: Path, output_dir: Path, destroy_session: bool = True) -> DemoResult:
-    runtime = AgentDeskRuntime(state_dir=state_dir, output_dir=output_dir)
+    runtime = AgentOSRuntime(state_dir=state_dir, output_dir=output_dir)
     input_dir = _prepare_demo_input(state_dir / "demo-input" / "buggy-calculator")
     session = runtime.create_session()
     workspace_project = runtime.import_input(session, input_dir)
@@ -99,7 +99,7 @@ def _prepare_demo_input(input_dir: Path) -> Path:
 
 def _render_report(first_status: int, second_status: int, diff_artifact: Path) -> str:
     return (
-        "# AgentDesk Demo Report\n\n"
+        "# AgentOS Demo Report\n\n"
         "## Scenario\n\n"
         "A deterministic demo agent fixed a broken Python calculator inside a disposable workspace.\n\n"
         "## Evidence\n\n"

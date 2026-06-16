@@ -1,4 +1,4 @@
-# AgentDesk Risks
+# AgentOS Risks
 
 ## Scope Explosion
 
@@ -35,3 +35,12 @@ Mitigation: Use Demo Agent Runner first. Add real agent integration later.
 Risk: Bad sync logic could overwrite real files.
 
 Mitigation: Sync only to an explicit demo output folder until the flow is proven.
+Move patch/apply behind the review package and explicit approval boundary.
+
+## Contract Drift
+
+Risk: Codex wrapper, Docker execution, and document tasks each invent their own
+result format.
+
+Mitigation: Build `task.json` and `review_package.json` before adding more
+execution paths. Every adapter must speak the same contract.

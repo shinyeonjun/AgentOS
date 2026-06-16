@@ -1,4 +1,4 @@
-# AgentOS Docker Storage Plan v0.1
+# AgentOS Docker Storage Plan v0.2
 
 작성일: 2026-06-16
 
@@ -28,21 +28,13 @@ runc 1.3.4
 
 ## Key Constraint
 
-The current USB filesystem is `vfat`.
+Docker image/container storage needs Linux filesystem features such as
+permissions, links, extended attributes, and overlay filesystem support.
 
-This is good for broad compatibility, but it is not a good Docker data-root
-filesystem. Docker image/container storage generally needs Linux filesystem
-features such as permissions, links, extended attributes, and overlay
-filesystem support.
-
-Therefore, before repartition:
-
-```text
-Do not put Docker data-root directly on the current vfat /mnt/usb.
-```
-
-After repartition, `/mnt/usb` is ext4 and is suitable for AgentOS project files
-and future Docker data-root.
+The original USB partition was `vfat`, so it was not a correct Docker
+data-root target. That constraint has been resolved by repartitioning the USB:
+`/mnt/usb` is now ext4 and suitable for AgentOS project files, runtime
+artifacts, and Docker data.
 
 ## Options
 
@@ -121,14 +113,13 @@ For AgentOS:
 2. Docker data-root is configured on the ext4 AgentOS partition.
 3. `/mnt/usb-share` remains the cross-platform file exchange partition.
 
-Recommended durable path:
+Final durable path:
 
 ```text
-backup AgentOS repo
--> repartition USB into ext4 + exFAT
--> restore AgentOS repo to /mnt/usb/projects/agentdesk
+repartition USB into ext4 + exFAT
+-> keep AgentOS repo at /mnt/usb/projects/agentos
 -> install Docker engine on system
--> configure Docker data-root to /mnt/usb/docker
+-> configure Docker data-root to /mnt/usb/docker-data
 ```
 
 The destructive USB repartition step was completed after explicit user approval.
@@ -146,7 +137,7 @@ Verified after repartition:
 findmnt /mnt/usb
 findmnt /mnt/usb-share
 df -h /mnt/usb /mnt/usb-share
-PYTHONPATH=/mnt/usb/projects/agentdesk/prototype python3 -m unittest discover /mnt/usb/projects/agentdesk/prototype/tests -v
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover /mnt/usb/projects/agentos/prototype/tests -v
 ```
 
 Result:

@@ -7,20 +7,20 @@ from .demo import run_code_fix_demo
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="agentdesk", description="AgentDesk v0 prototype CLI")
+    parser = argparse.ArgumentParser(prog="agentos", description="AgentOS v0.2 prototype CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     demo = subparsers.add_parser("run-demo", help="Run the deterministic code-fix demo loop")
     demo.add_argument(
         "--state-dir",
         type=Path,
-        default=Path("projects/agentdesk/.agentdesk-state"),
+        default=Path("projects/agentos/.agentos-state"),
         help="Persistent control-plane state directory",
     )
     demo.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("projects/agentdesk/.agentdesk-output"),
+        default=Path("projects/agentos/.agentos-output"),
         help="Safe approved-sync output directory",
     )
     demo.add_argument(

@@ -1,4 +1,4 @@
-# AgentOS Diagrams v0.1
+# AgentOS Diagrams v0.2
 
 작성일: 2026-06-16
 

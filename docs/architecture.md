@@ -1,4 +1,4 @@
-# AgentOS Architecture v0.1
+# AgentOS Architecture v0.2
 
 작성일: 2026-06-16
 
@@ -284,11 +284,11 @@ Important boundaries:
 v0 local:
 
 ```text
-/mnt/usb/projects/agentdesk/
+/mnt/usb/projects/agentos/
   prototype/
   docs/
-  .agentdesk-state/
-  .agentdesk-output/
+  .agentos-state/
+  .agentos-output/
 ```
 
 Later:

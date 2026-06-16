@@ -1,10 +1,10 @@
-# AgentDesk Jarvis Routine
+# AgentOS Jarvis Routine
 
-## When The User Mentions AgentDesk
+## When The User Mentions AgentOS
 
-1. Read `projects/agentdesk/GOAL.md`.
-2. Read `projects/agentdesk/STATUS.md`.
-3. Read `projects/agentdesk/NEXT.md`.
+1. Read `projects/agentos/GOAL.md`.
+2. Read `projects/agentos/STATUS.md`.
+3. Read `projects/agentos/NEXT.md`.
 4. Check whether the user is asking for:
    - evaluation
    - research
@@ -19,7 +19,7 @@
 Use when the user asks for related work, papers, or market/technical validation.
 
 - Prefer primary papers, official repos, benchmarks, and standards.
-- Use `research/agentdesk-related-research/` for research artifacts.
+- Use `research/agentos-related-research/` for research artifacts.
 - Use PaperQA2 only when local PDFs/text documents have been collected and the user approves possible LLM/embedding calls.
 
 ## Build Mode

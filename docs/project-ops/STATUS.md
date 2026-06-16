@@ -1,33 +1,32 @@
-# AgentDesk Status
+# AgentOS Status
 
 Last updated: 2026-06-16
 
 ## Phase
 
-v0 prototype started.
+v0 prototype exists. v0.2 planning is aligned around the contract slice.
 
 ## Current Assets
 
-- Full technical plan: `capstone-radar/agentdesk-technical-plan.md`
-- PDF render: `capstone-radar/agentdesk-technical-plan.pdf`
-- Related research pack scaffold: `research/agentdesk-related-research/research-pack.md`
-- Related PaperQA evidence scaffold: `research/agentdesk-related-research/paperqa-evidence.md`
-- Canonical implementation root: `/mnt/usb/projects/agentdesk/`
-- Canonical local git repository: `/mnt/usb/projects/agentdesk/.git`
-- Executable v0 prototype: `/mnt/usb/projects/agentdesk/prototype/`
-- Requirements draft: `/mnt/usb/projects/agentdesk/docs/requirements.md`
-- Architecture draft: `/mnt/usb/projects/agentdesk/docs/architecture.md`
-- Functional spec draft: `/mnt/usb/projects/agentdesk/docs/functional-spec.md`
-- Database/table spec draft: `/mnt/usb/projects/agentdesk/docs/database-spec.md`
-- System flow draft: `/mnt/usb/projects/agentdesk/docs/system-flow.md`
-- Diagram draft: `/mnt/usb/projects/agentdesk/docs/diagrams.md`
-- Plugin API draft: `/mnt/usb/projects/agentdesk/docs/plugin-api.md`
-- Review schema draft: `/mnt/usb/projects/agentdesk/docs/review-response-schema.md`
-- Context efficiency draft: `/mnt/usb/projects/agentdesk/docs/context-efficiency.md`
-- Algorithms/data structures draft: `/mnt/usb/projects/agentdesk/docs/algorithms-data-structures.md`
-- Latest local control-plane run state: `/mnt/usb/projects/agentdesk/.agentdesk-state/`
-- Latest approved demo output: `/mnt/usb/projects/agentdesk/.agentdesk-output/`
-- Workspace links: `projects/agentdesk/prototype`, `.agentdesk-state`, and `.agentdesk-output`
+- Canonical implementation root: `/mnt/usb/projects/agentos/`
+- Canonical local git repository: `/mnt/usb/projects/agentos/.git`
+- GitHub remote: `https://github.com/shinyeonjun/AgentOS.git`
+- Executable v0 prototype: `/mnt/usb/projects/agentos/prototype/`
+- Current technical plan: `/mnt/usb/projects/agentos/docs/technical-plan.md`
+- Requirements draft: `/mnt/usb/projects/agentos/docs/requirements.md`
+- Architecture draft: `/mnt/usb/projects/agentos/docs/architecture.md`
+- Functional spec draft: `/mnt/usb/projects/agentos/docs/functional-spec.md`
+- Database/table spec draft: `/mnt/usb/projects/agentos/docs/database-spec.md`
+- System flow draft: `/mnt/usb/projects/agentos/docs/system-flow.md`
+- Diagram draft: `/mnt/usb/projects/agentos/docs/diagrams.md`
+- Plugin API draft: `/mnt/usb/projects/agentos/docs/plugin-api.md`
+- Review schema draft: `/mnt/usb/projects/agentos/docs/review-response-schema.md`
+- Context efficiency draft: `/mnt/usb/projects/agentos/docs/context-efficiency.md`
+- Algorithms/data structures draft: `/mnt/usb/projects/agentos/docs/algorithms-data-structures.md`
+- Latest local control-plane run state: `/mnt/usb/projects/agentos/.agentos-state/`
+- Latest approved demo output: `/mnt/usb/projects/agentos/.agentos-output/`
+- Archived old technical plan: `/mnt/usb/projects/agentos/docs/archive/legacy-technical-plan-v3.md`
+- Workspace links: `projects/agentos/prototype`, `.agentos-state`, and `.agentos-output`
   point to the USB paths above.
 
 ## Current Shape
@@ -49,19 +48,26 @@ core loop:
 
 Build forward from the CLI/core prototype.
 
-The first demo loop is now demoable without a live LLM. The implementation now
-lives on the USB drive to reduce SD-card write pressure. The current sandbox is
-filesystem-disposable only because Docker is not installed on the host yet, so
-the security claim must stay demo-grade until container isolation is added.
+The first demo loop is demoable without a live LLM. The implementation lives on
+the USB drive to reduce SD-card write pressure. Docker is installed and its
+data-root is on the USB ext4 partition, but the prototype has not yet moved
+execution into Docker, so the current security claim remains demo-grade.
 
 Local git commits exist:
 
 ```text
-2d61eb5 Document project operating state
-d9fceac Initial AgentDesk prototype
+1e370d4 Record Docker setup
+edd74cb Record USB ext4 storage setup
+18906b2 Document Docker storage decision
+922bf71 Add detailed design specifications
+a477baa Add AgentOS design docs
+24ed268 Add AgentOS requirements draft
+8cda106 Set Codex-first AgentOS scope
+af54d2c Clarify legacy plugin direction
 ```
 
-No GitHub remote has been created yet.
+GitHub remote is configured, but push is not automatic. Public pushes still
+require explicit user approval.
 
 ## Storage State
 
@@ -87,7 +93,7 @@ Docker installed on 2026-06-16:
 ## Clarified Product Direction
 
 The tools are considered part of the AI OS image, not the main pluginization
-target. The pluginized product is AgentDesk itself: a sandbox lifecycle runtime
+target. The pluginized product is AgentOS itself: a sandbox lifecycle runtime
 that any AI agent can call to work safely away from the user's real computer.
 
 ## Current Integration Stance
@@ -103,3 +109,14 @@ The project now has first-pass docs for requirements, architecture, functional
 spec, database/table design, system flow, diagrams, plugin API, review response
 schema, context efficiency, and algorithms/data structures. These are design
 baselines, not final specs.
+
+## Next Build Slice
+
+Build the contract layer before more sandbox power:
+
+1. `task.json`
+2. `review_package.json`
+3. `agentos inspect`
+4. approval-gated patch/apply sync
+5. Codex wrapper
+6. Docker execution

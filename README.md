@@ -1,6 +1,10 @@
-# AgentDesk
+# AgentOS
 
-AgentDesk is a v0 capstone project prototype for an AI task runtime.
+AgentOS is a plugin-style AI sandbox runtime for existing AI agents.
+
+The project is built around one rule: an AI agent may work inside an
+independent task environment, but the user's real project or computer changes
+only after an explicit approval step.
 
 The core idea is simple:
 
@@ -10,6 +14,24 @@ Session -> Tool Call -> Artifact -> Preview/Diff -> Approval -> Sync -> Destroy
 
 AI agents should be able to experiment inside a disposable task workspace, while
 the host environment changes only after human review and approval.
+
+## Current Direction
+
+AgentOS is not the primary AI brain and it is not mainly a tool-plugin manager.
+Codex CLI, Claude Code, Antigravity, Jarvis/OpenClaw, or another external agent
+does the thinking. AgentOS provides the work environment, lifecycle boundary,
+review package, approval gate, sync, and cleanup.
+
+First integration target: Codex CLI.
+
+Near-term implementation order:
+
+1. keep the deterministic lifecycle demo working
+2. add `task.json` and `review_package.json` contracts
+3. add `agentos inspect` for session/tool/artifact history
+4. add approval-gated patch/apply sync
+5. wrap Codex CLI inside the same contract
+6. move execution into Docker-backed sandboxes
 
 ## Current Prototype
 
@@ -25,22 +47,24 @@ The current executable prototype is intentionally small and deterministic:
 - syncs only after approval
 - destroys the disposable workspace
 
+It proves the control-plane lifecycle without requiring a live LLM.
+
 ## Run
 
 From any directory:
 
 ```bash
-PYTHONPATH=/mnt/usb/projects/agentdesk/prototype \
-python3 -m agentdesk run-demo \
-  --state-dir /mnt/usb/projects/agentdesk/.agentdesk-state \
-  --output-dir /mnt/usb/projects/agentdesk/.agentdesk-output
+PYTHONPATH=/mnt/usb/projects/agentos/prototype \
+python3 -m agentos run-demo \
+  --state-dir /mnt/usb/projects/agentos/.agentos-state \
+  --output-dir /mnt/usb/projects/agentos/.agentos-output
 ```
 
 ## Test
 
 ```bash
-PYTHONPATH=/mnt/usb/projects/agentdesk/prototype \
-python3 -m unittest discover /mnt/usb/projects/agentdesk/prototype/tests -v
+PYTHONPATH=/mnt/usb/projects/agentos/prototype \
+python3 -m unittest discover /mnt/usb/projects/agentos/prototype/tests -v
 ```
 
 ## Project Notes
@@ -62,6 +86,7 @@ python3 -m unittest discover /mnt/usb/projects/agentdesk/prototype/tests -v
 
 ## Current Limitation
 
-Docker is not installed on the host yet. This first version proves the
-control-plane lifecycle with disposable filesystem workspaces, but it does not
-claim production-grade sandbox isolation.
+Docker is installed on the host and its data-root is on the ext4 USB project
+partition at `/mnt/usb/docker-data`. The current Python prototype still uses a
+disposable filesystem workspace, so the current isolation claim remains
+demo-grade until the Docker sandbox slice is implemented.

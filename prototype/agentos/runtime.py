@@ -35,7 +35,7 @@ class SyncNotApprovedError(RuntimeError):
     pass
 
 
-class AgentDeskRuntime:
+class AgentOSRuntime:
     """Persistent control plane plus disposable task workspace."""
 
     def __init__(self, state_dir: Path, output_dir: Path) -> None:
@@ -43,7 +43,7 @@ class AgentDeskRuntime:
         self.output_dir = output_dir
         self.sessions_dir = state_dir / "sessions"
         self.artifacts_dir = state_dir / "artifacts"
-        self.db_path = state_dir / "agentdesk.sqlite3"
+        self.db_path = state_dir / "agentos.sqlite3"
         self.state_dir.mkdir(parents=True, exist_ok=True)
         self.sessions_dir.mkdir(parents=True, exist_ok=True)
         self.artifacts_dir.mkdir(parents=True, exist_ok=True)

@@ -1,4 +1,4 @@
-# AgentDesk Validation
+# AgentOS Validation
 
 ## v0 Core Validation
 
@@ -39,15 +39,23 @@ Before reporting progress, Jarvis should run the relevant checks:
 scripts/jarvis-quality-check.sh
 ```
 
-For AgentDesk implementation repos later, add project-specific commands here.
+For AgentOS implementation repos later, add project-specific commands here.
+
+For the current AgentOS prototype, use:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover /mnt/usb/projects/agentos/prototype/tests -v
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos run-demo --state-dir /mnt/usb/projects/agentos/.agentos-state --output-dir /mnt/usb/projects/agentos/.agentos-output
+scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+```
 
 ## 2026-06-16 Prototype Validation
 
 Commands run:
 
 ```bash
-PYTHONPATH=projects/agentdesk/prototype python3 -m unittest discover projects/agentdesk/prototype/tests -v
-PYTHONPATH=projects/agentdesk/prototype python3 -m agentdesk run-demo
+PYTHONPATH=projects/agentos/prototype python3 -m unittest discover projects/agentos/prototype/tests -v
+PYTHONPATH=projects/agentos/prototype python3 -m agentos run-demo
 ```
 
 Observed result:
@@ -56,21 +64,49 @@ Observed result:
 - Demo first test failed as expected.
 - Demo second test passed after deterministic code fix.
 - Sync before approval was blocked.
-- Approved sync wrote to `projects/agentdesk/.agentdesk-output/<session>/`.
+- Approved sync wrote to `projects/agentos/.agentos-output/<session>/`.
 - Disposable session workspace was destroyed.
 
 After moving the implementation to USB, these also passed:
 
 ```bash
-PYTHONPATH=/mnt/usb/projects/agentdesk/prototype python3 -m unittest discover /mnt/usb/projects/agentdesk/prototype/tests -v
-PYTHONPATH=/mnt/usb/projects/agentdesk/prototype python3 -m agentdesk run-demo --state-dir /mnt/usb/projects/agentdesk/.agentdesk-state --output-dir /mnt/usb/projects/agentdesk/.agentdesk-output
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover /mnt/usb/projects/agentos/prototype/tests -v
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos run-demo --state-dir /mnt/usb/projects/agentos/.agentos-state --output-dir /mnt/usb/projects/agentos/.agentos-output
 ```
 
 After initializing the local git repository, this also passed:
 
 ```bash
-PYTHONPATH=/mnt/usb/projects/agentdesk/prototype python3 -m unittest discover /mnt/usb/projects/agentdesk/prototype/tests -v
-git -C /mnt/usb/projects/agentdesk status --short
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover /mnt/usb/projects/agentos/prototype/tests -v
+git -C /mnt/usb/projects/agentos status --short
 ```
 
 `git status --short` was clean.
+
+## 2026-06-16 v0.2 Alignment Validation
+
+Commands run after AgentOS rename/version alignment:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover /mnt/usb/projects/agentos/prototype/tests -v
+scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos run-demo --state-dir /mnt/usb/projects/agentos/.agentos-state --output-dir /mnt/usb/projects/agentos/.agentos-output
+```
+
+Observed result:
+
+- Unit test passed.
+- Ruff passed.
+- Demo first test failed as expected.
+- Demo second test passed after deterministic code fix.
+- Sync before approval was blocked.
+- Approved sync wrote to `/mnt/usb/projects/agentos/.agentos-output/569f592c2dbe`.
+- Disposable session workspace was destroyed.
+
+Operational note:
+
+- The pre-existing runtime database at
+  `/mnt/usb/projects/agentos/.agentos-state/agentos.sqlite3` was malformed.
+- It was preserved as
+  `/mnt/usb/projects/agentos/.agentos-state/agentos.sqlite3.corrupt-20260616-1333`.
+- A fresh runtime database was created by the successful demo run.

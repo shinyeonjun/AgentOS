@@ -1,4 +1,4 @@
-# AgentOS Review Response Schema v0.1
+# AgentOS Review Response Schema v0.2
 
 작성일: 2026-06-16
 
@@ -22,7 +22,7 @@ human whether to sync approved results.
 
 ```json
 {
-  "schema_version": "0.1",
+  "schema_version": "0.2",
   "session_id": "s_123",
   "state": "REVIEW_READY",
   "task": {

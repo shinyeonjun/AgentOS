@@ -4,10 +4,10 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from agentdesk.demo import run_code_fix_demo
+from agentos.demo import run_code_fix_demo
 
 
-class AgentDeskDemoTests(unittest.TestCase):
+class AgentOSDemoTests(unittest.TestCase):
     def test_code_fix_demo_runs_full_lifecycle(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
