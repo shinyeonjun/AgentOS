@@ -2,7 +2,7 @@
 
 ## Immediate Next Move
 
-Prepare for the marketplace-grade CLI polish slice.
+Prepare for the image capability metadata slice.
 
 The first contract slice now exists:
 
@@ -17,16 +17,17 @@ The first contract slice now exists:
 - selected-file approval scopes in `review_package.json`
 - Markdown document workflow demo
 - end-to-end `agentos rehearse` command
+- SQLite close, command timeout, patch dependency check, and Docker hardening flags
 
-Next, add image capability metadata and polish CLI output/JSON mode for
-marketplace-grade use.
+Next, add image capability metadata for base/code/document layers, then polish
+CLI output/JSON mode for marketplace-grade use.
 
 ## Next 7 Actions
 
 1. Add image capability metadata for base/code/document layers.
 2. Add `--json` output mode to rehearsal and major CLI commands.
 3. Polish CLI failure messages and exit codes.
-4. Add policy checks to host-side worker sessions once image execution expands.
+4. Replace or isolate host `patch` dependency for cross-platform support.
 5. Split persistence out of `runtime.py` when DB logic starts growing.
 6. Add a minimal review dashboard only after the CLI demo is solid.
 7. Add real-worker execution rehearsals after the deterministic demo story is stable.

@@ -6,11 +6,16 @@ import shutil
 import sqlite3
 import subprocess
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
 from .sync import PatchApplyResult, apply_patch_to_target
+
+DEFAULT_COMMAND_TIMEOUT_SECONDS = 120
+COMMAND_TIMEOUT_EXIT_CODE = 124
 
 
 def utc_now() -> str:
@@ -31,6 +36,7 @@ class ToolResult:
     exit_code: int
     stdout_tail: str
     stderr_tail: str
+    timed_out: bool = False
 
 
 @dataclass(frozen=True)
@@ -46,9 +52,15 @@ class SyncNotApprovedError(RuntimeError):
 class AgentOSRuntime:
     """Persistent control plane plus disposable task workspace."""
 
-    def __init__(self, state_dir: Path, output_dir: Path) -> None:
+    def __init__(
+        self,
+        state_dir: Path,
+        output_dir: Path,
+        command_timeout_seconds: int = DEFAULT_COMMAND_TIMEOUT_SECONDS,
+    ) -> None:
         self.state_dir = state_dir
         self.output_dir = output_dir
+        self.command_timeout_seconds = command_timeout_seconds
         self.sessions_dir = state_dir / "sessions"
         self.artifacts_dir = state_dir / "artifacts"
         self.db_path = state_dir / "agentos.sqlite3"
@@ -92,15 +104,29 @@ class AgentOSRuntime:
 
     def run_command(self, session: Session, command: list[str], cwd: Path) -> ToolResult:
         started_at = utc_now()
-        completed = subprocess.run(
-            command,
-            cwd=cwd,
-            text=True,
-            capture_output=True,
-            check=False,
-        )
-        stdout_tail = completed.stdout[-4000:]
-        stderr_tail = completed.stderr[-4000:]
+        timed_out = False
+        try:
+            completed = subprocess.run(
+                command,
+                cwd=cwd,
+                text=True,
+                capture_output=True,
+                check=False,
+                timeout=self.command_timeout_seconds,
+            )
+            exit_code = completed.returncode
+            stdout = completed.stdout
+            stderr = completed.stderr
+        except subprocess.TimeoutExpired as exc:
+            timed_out = True
+            exit_code = COMMAND_TIMEOUT_EXIT_CODE
+            stdout = _timeout_output_to_text(exc.stdout)
+            stderr = _timeout_output_to_text(exc.stderr)
+            stderr = (
+                f"{stderr}\n" if stderr else ""
+            ) + f"command timed out after {self.command_timeout_seconds} seconds"
+        stdout_tail = stdout[-4000:]
+        stderr_tail = stderr[-4000:]
         with self._connect() as conn:
             cursor = conn.execute(
                 """
@@ -116,13 +142,13 @@ class AgentOSRuntime:
                     utc_now(),
                     json.dumps(command),
                     str(cwd),
-                    completed.returncode,
+                    exit_code,
                     stdout_tail,
                     stderr_tail,
                 ),
             )
             tool_call_id = int(cursor.lastrowid)
-        return ToolResult(tool_call_id, completed.returncode, stdout_tail, stderr_tail)
+        return ToolResult(tool_call_id, exit_code, stdout_tail, stderr_tail, timed_out=timed_out)
 
     def create_unified_diff_artifact(
         self,
@@ -284,8 +310,17 @@ class AgentOSRuntime:
             ).fetchone()
         return row is not None
 
-    def _connect(self) -> sqlite3.Connection:
-        return sqlite3.connect(self.db_path)
+    @contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
+        conn = sqlite3.connect(self.db_path)
+        try:
+            yield conn
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
 
     def _init_db(self) -> None:
         with self._connect() as conn:
@@ -351,3 +386,11 @@ def _safe_relative_source(root: Path, relative_path: str) -> Path:
     if not source.exists():
         raise FileNotFoundError(f"selected sync source does not exist: {relative_path}")
     return source
+
+
+def _timeout_output_to_text(value: str | bytes | None) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return value

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import subprocess
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -20,10 +21,13 @@ class PatchApplyError(RuntimeError):
 def apply_patch_to_target(patch_path: Path, target_dir: Path) -> PatchApplyResult:
     if not target_dir.is_dir():
         raise PatchApplyError(f"patch target must be an existing directory: {target_dir}")
+    patch_bin = shutil.which("patch")
+    if patch_bin is None:
+        raise PatchApplyError("patch command is required for patch sync but was not found on PATH")
 
     completed = subprocess.run(
         [
-            "patch",
+            patch_bin,
             "--batch",
             "--forward",
             "--no-backup-if-mismatch",

@@ -349,3 +349,25 @@ Observed result:
 - Markdown document lifecycle session `6fe7dc3ed9a8` passed.
 - Docker sandbox policy session `dac7dd892258` passed.
 - Summary written to `.agentos-output/rehearsals/209246f2623b.json`.
+
+## 2026-06-16 Runtime Hardening Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover /mnt/usb/projects/agentos/prototype/tests -v
+scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos rehearse --state-dir /mnt/usb/projects/agentos/.agentos-state --output-dir /mnt/usb/projects/agentos/.agentos-output --docker-sudo
+```
+
+Observed result:
+
+- 20 unit tests passed.
+- Ruff passed.
+- Compileall passed.
+- Runtime command timeout is recorded with exit code 124.
+- SQLite connections are closed after use.
+- Patch sync reports a clear error when the `patch` command is missing.
+- Docker command artifact records hardening flags: `--cap-drop ALL`, `no-new-privileges`, PID/memory/CPU limits, `--read-only`, and `/tmp` tmpfs.
+- Hardened rehearsal `8b85041ff2bd` passed with Docker sandbox policy session `3945d5475219`.

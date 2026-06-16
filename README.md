@@ -85,7 +85,8 @@ python3 -m agentos inspect \
 By default this prepares a copied workspace and Codex command artifact without
 spending tokens. Add `--execute` only when you want AgentOS to run Codex and
 collect changed files/diff artifacts into the review package.
-Add `--docker` to route that execution through the Docker sandbox runner.
+Add `--docker` to record the target AgentOS image metadata for the host-side
+Codex worker session. Codex CLI is not bundled into the image.
 
 ```bash
 PYTHONPATH=/mnt/usb/projects/agentos/prototype \
@@ -116,6 +117,17 @@ python3 -m agentos docker-run \
   -- sh -c 'cat README.md'
 ```
 
+Docker sandbox commands use `--network none`, `--cap-drop ALL`,
+`no-new-privileges`, PID/memory/CPU limits, a read-only root filesystem, and a
+small `/tmp` tmpfs while keeping only `/agentos/work` and `/agentos/artifacts`
+writable.
+
+## Supported Runtime
+
+The current prototype is tested on Linux and WSL-style environments. Native
+Windows support is not claimed yet because the prototype intentionally uses
+POSIX-oriented tools such as `python3`, Docker, and `patch`.
+
 ## Project Notes
 
 - Requirements: `docs/requirements.md`
@@ -136,8 +148,8 @@ python3 -m agentos docker-run \
 ## Current Limitation
 
 Docker is installed on the host and its data-root is on the ext4 USB project
-partition at `/mnt/usb/docker-data`. The first Docker-backed sandbox command
-runner exists, but the security claim remains demo-grade until policy hardening
-and worker-agnostic image policy enforcement are completed. Codex CLI stays a
-host-side worker adapter; the image is the sandboxed AgentOS work environment,
-not a bundled Codex runtime.
+partition at `/mnt/usb/docker-data`. The Docker-backed sandbox runner now has
+policy checks and hardening flags, but the security claim remains demo-grade
+until broader isolation review and cross-platform testing are completed. Codex
+CLI stays a host-side worker adapter; the image is the sandboxed AgentOS work
+environment, not a bundled Codex runtime.

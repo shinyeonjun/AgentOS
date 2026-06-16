@@ -70,7 +70,9 @@ python3 -m agentos docker-run --input /path/to/project --docker-sudo -- sh -c 'c
 Docker runs now write `sandbox-policy.json` and include the policy result in
 `review_package.json`. The default policy requires `--network none`,
 `/agentos/work` as the workdir, `/agentos/work` and `/agentos/artifacts` mounts,
-and no extra writable container mounts outside those paths.
+no extra writable container mounts outside those paths, and hardening flags such
+as `--cap-drop ALL`, `no-new-privileges`, PID/memory/CPU limits, a read-only
+root filesystem, and a small `/tmp` tmpfs.
 
 Run tests:
 
@@ -83,3 +85,6 @@ installed on the host with data-root on `/mnt/usb/docker-data`. The image is
 worker-agnostic by design: Codex, OpenCode, Claude Code, or a local model should
 all be host-side worker adapters that use the same AgentOS workspace, policy,
 artifact, and approval contracts.
+
+The current prototype is tested for Linux and WSL-style environments. Native
+Windows support is not claimed yet.

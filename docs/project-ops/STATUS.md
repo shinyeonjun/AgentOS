@@ -62,6 +62,10 @@ core loop:
 - Docker-backed sandbox command runner using `agentos-base:0.1`
 - `sandbox-policy.json` artifact for Docker sandbox runs
 - sandbox policy checks for network, workdir, required mounts, mount scope, writable mounts, and host path absoluteness
+- Docker hardening flags: cap drop, no-new-privileges, PID/memory/CPU limits, read-only root, and `/tmp` tmpfs
+- command timeout handling with recorded timeout result
+- SQLite connections close after each operation
+- explicit `patch` command dependency check for patch sync
 - common worker runtime used by the Codex adapter
 - Codex `--docker` records target AgentOS image metadata without running Codex inside the image
 - session destruction
@@ -137,11 +141,12 @@ baselines, not final specs.
 Contract layer, safe patch apply, selected-file sync, Codex execute result
 collection, Docker command execution, host-side worker runtime extraction,
 Docker sandbox policy validation, selected-file approval scopes, and Markdown
-document workflow, and end-to-end rehearsal now exist. Next build:
+document workflow, end-to-end rehearsal, and first runtime hardening pass now
+exist. Next build:
 
 1. image capability metadata for base/code/document layers
 2. CLI UX and JSON output polish for marketplace-grade use
-3. policy checks to host-side worker sessions once image execution expands
+3. replace or isolate host `patch` dependency for cross-platform support
 
 ## Docker Image State
 
@@ -157,6 +162,13 @@ document workflow, and end-to-end rehearsal now exist. Next build:
 - Runtime command uses:
   - `--network none`
   - `--rm`
+  - `--cap-drop ALL`
+  - `--security-opt no-new-privileges`
+  - `--pids-limit 256`
+  - `--memory 512m`
+  - `--cpus 1.0`
+  - `--read-only`
+  - `--tmpfs /tmp:rw,noexec,nosuid,size=16m`
   - host UID/GID
   - workspace mounted to `/agentos/work`
   - artifacts mounted to `/agentos/artifacts`

@@ -10,6 +10,10 @@ from .sandbox_policy import PolicyValidation, assert_policy_passes, build_defaul
 
 
 DEFAULT_IMAGE = "agentos-base:0.1"
+DEFAULT_PIDS_LIMIT = "256"
+DEFAULT_MEMORY_LIMIT = "512m"
+DEFAULT_CPU_LIMIT = "1.0"
+DEFAULT_TMPFS = "/tmp:rw,noexec,nosuid,size=16m"
 
 
 @dataclass(frozen=True)
@@ -54,6 +58,19 @@ def build_docker_run_command(
         "--rm",
         "--network",
         network,
+        "--cap-drop",
+        "ALL",
+        "--security-opt",
+        "no-new-privileges",
+        "--pids-limit",
+        DEFAULT_PIDS_LIMIT,
+        "--memory",
+        DEFAULT_MEMORY_LIMIT,
+        "--cpus",
+        DEFAULT_CPU_LIMIT,
+        "--read-only",
+        "--tmpfs",
+        DEFAULT_TMPFS,
         "--user",
         f"{os.getuid()}:{os.getgid()}",
         "-v",
@@ -120,6 +137,15 @@ def run_docker_task(
         {
             "image": image,
             "network": "none",
+            "hardening": {
+                "cap_drop": ["ALL"],
+                "security_opt": ["no-new-privileges"],
+                "pids_limit": DEFAULT_PIDS_LIMIT,
+                "memory": DEFAULT_MEMORY_LIMIT,
+                "cpus": DEFAULT_CPU_LIMIT,
+                "read_only_root": True,
+                "tmpfs": [DEFAULT_TMPFS],
+            },
             "policy_ref": artifact_ref(session.session_id, policy_artifact),
             "policy_status": policy_validation.status,
             "workspace_mount": "/agentos/work",
