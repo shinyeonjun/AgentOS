@@ -227,7 +227,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"workspace_path: {result.workspace_path}")
         print(f"artifact_dir: {result.artifact_dir}")
         print(f"exit_code: {result.exit_code}")
+        print(f"policy_status: {result.policy_status}")
         print(f"command_artifact: {result.command_artifact}")
+        print(f"policy_artifact: {result.policy_artifact}")
         print(f"report_artifact: {result.report_artifact}")
         print(f"review_package_artifact: {result.review_package_artifact}")
         return 0

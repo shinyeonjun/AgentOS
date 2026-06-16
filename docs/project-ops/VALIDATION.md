@@ -266,3 +266,24 @@ Observed result:
 - `--docker` records target AgentOS image metadata instead of wrapping Codex in Docker.
 - Host-side prepare smoke session `c427adbd77de` recorded `sandbox_image: agentos-base:0.1`.
 - No real Codex tokens were spent during this validation.
+
+## 2026-06-16 Docker Sandbox Policy Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover /mnt/usb/projects/agentos/prototype/tests -v
+scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos docker-run --state-dir /mnt/usb/projects/agentos/.agentos-state --output-dir /mnt/usb/projects/agentos/.agentos-output --input /tmp/agentos-policy-input.Y9nGvq --docker-sudo -- sh -c 'cat README.md > /agentos/artifacts/readme.txt && cat README.md'
+```
+
+Observed result:
+
+- 12 unit tests passed.
+- Ruff passed.
+- Compileall passed.
+- Docker sandbox session `1b25f9ede4e5` exited with code 0.
+- `sandbox-policy.json` recorded the image, network, workdir, standard dirs, and mount policy.
+- Policy validation passed for image, `network: none`, `/agentos/work`, `/agentos/artifacts`, mount scope, writable mounts, and absolute host paths.
+- `review_package.json` now includes a `sandbox policy` validation check before the `docker run` check.

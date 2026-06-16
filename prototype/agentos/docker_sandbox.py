@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .contracts import TaskInput, TaskManifest, artifact_ref, build_review_package
 from .runtime import AgentOSRuntime, Session
+from .sandbox_policy import PolicyValidation, assert_policy_passes, build_default_policy, validate_sandbox_policy
 
 
 DEFAULT_IMAGE = "agentos-base:0.1"
@@ -22,6 +23,8 @@ class DockerRunResult:
     exit_code: int
     stdout_tail: str
     stderr_tail: str
+    policy_artifact: Path
+    policy_status: str
 
 
 def docker_prefix(docker_bin: str = "docker", use_sudo: bool = False) -> list[str]:
@@ -38,6 +41,13 @@ def build_docker_run_command(
     use_sudo: bool = False,
     network: str = "none",
 ) -> list[str]:
+    policy = build_default_policy(
+        image=image,
+        network=network,
+        workspace_dir=workspace_dir,
+        artifact_dir=artifact_dir,
+    )
+    assert_policy_passes(policy)
     return [
         *docker_prefix(docker_bin=docker_bin, use_sudo=use_sudo),
         "run",
@@ -79,6 +89,23 @@ def run_docker_task(
     workspace_path = runtime.import_input(session, input_path)
     artifact_dir = runtime.artifacts_dir / session.session_id
     artifact_dir.mkdir(parents=True, exist_ok=True)
+    policy = build_default_policy(
+        image=image,
+        network="none",
+        workspace_dir=workspace_path,
+        artifact_dir=artifact_dir,
+    )
+    policy_validation = validate_sandbox_policy(policy)
+    policy_artifact = runtime.write_json_artifact(
+        session,
+        "sandbox-policy.json",
+        {
+            "policy": policy.to_dict(),
+            "validation": policy_validation.to_dict(),
+        },
+    )
+    if not policy_validation.passed:
+        raise ValueError("unsafe sandbox policy")
     docker_command = build_docker_run_command(
         workspace_dir=workspace_path,
         artifact_dir=artifact_dir,
@@ -93,6 +120,8 @@ def run_docker_task(
         {
             "image": image,
             "network": "none",
+            "policy_ref": artifact_ref(session.session_id, policy_artifact),
+            "policy_status": policy_validation.status,
             "workspace_mount": "/agentos/work",
             "artifact_mount": "/agentos/artifacts",
             "command": docker_command,
@@ -108,15 +137,18 @@ def run_docker_task(
         exit_code=docker_result.exit_code,
         stdout_tail=docker_result.stdout_tail,
         stderr_tail=docker_result.stderr_tail,
+        policy_validation=policy_validation,
     )
     review_package_artifact = _write_docker_review_package(
         runtime=runtime,
         session=session,
         command_artifact=command_artifact,
+        policy_artifact=policy_artifact,
         report_artifact=report_artifact,
         image=image,
         command=command,
         exit_code=docker_result.exit_code,
+        policy_validation=policy_validation,
     )
     runtime.mark_review_ready(session)
     runtime.destroy_session(session)
@@ -130,6 +162,8 @@ def run_docker_task(
         exit_code=docker_result.exit_code,
         stdout_tail=docker_result.stdout_tail,
         stderr_tail=docker_result.stderr_tail,
+        policy_artifact=policy_artifact,
+        policy_status=policy_validation.status,
     )
 
 
@@ -142,6 +176,7 @@ def _write_docker_report(
     exit_code: int,
     stdout_tail: str,
     stderr_tail: str,
+    policy_validation: PolicyValidation,
 ) -> Path:
     return runtime.write_artifact(
         session,
@@ -149,6 +184,7 @@ def _write_docker_report(
         "# Docker Sandbox Report\n\n"
         f"Image: `{image}`\n\n"
         f"Command: `{' '.join(command)}`\n\n"
+        f"Sandbox policy: `{policy_validation.status}`\n\n"
         f"Exit code: `{exit_code}`\n\n"
         "## Stdout Tail\n\n"
         f"```text\n{stdout_tail}\n```\n\n"
@@ -163,32 +199,47 @@ def _write_docker_review_package(
     runtime: AgentOSRuntime,
     session: Session,
     command_artifact: Path,
+    policy_artifact: Path,
     report_artifact: Path,
     image: str,
     command: list[str],
     exit_code: int,
+    policy_validation: PolicyValidation,
 ) -> Path:
-    validation_status = "passed" if exit_code == 0 else "failed"
+    validation_status = "passed" if exit_code == 0 and policy_validation.passed else "failed"
+    validation_checks = [
+        {
+            "name": "sandbox policy",
+            "status": policy_validation.status,
+            "exit_code": None,
+            "role": "policy_check",
+            "checks": [check.to_dict() for check in policy_validation.checks],
+        },
+        {
+            "name": "docker run",
+            "status": "passed" if exit_code == 0 else "failed",
+            "exit_code": exit_code,
+            "role": "sandbox_run",
+        },
+    ]
     review_package = build_review_package(
         session_id=session.session_id,
         title="Docker sandbox task",
         host_agent="docker-sandbox",
         summary=f"Docker sandbox command finished with exit code {exit_code}.",
         changed_files=[],
-        validation_checks=[
-            {
-                "name": "docker run",
-                "status": validation_status,
-                "exit_code": exit_code,
-                "role": "sandbox_run",
-            }
-        ],
+        validation_checks=validation_checks,
         validation_status=validation_status,
         artifacts=[
             {
                 "name": command_artifact.name,
                 "type": "application/json",
                 "ref": artifact_ref(session.session_id, command_artifact),
+            },
+            {
+                "name": policy_artifact.name,
+                "type": "application/json",
+                "ref": artifact_ref(session.session_id, policy_artifact),
             },
             {
                 "name": report_artifact.name,

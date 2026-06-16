@@ -53,6 +53,11 @@ PYTHONPATH=projects/agentos/prototype \
 python3 -m agentos docker-run --input /path/to/project --docker-sudo -- sh -c 'cat README.md'
 ```
 
+Docker runs now write `sandbox-policy.json` and include the policy result in
+`review_package.json`. The default policy requires `--network none`,
+`/agentos/work` as the workdir, `/agentos/work` and `/agentos/artifacts` mounts,
+and no extra writable container mounts outside those paths.
+
 Run tests:
 
 ```bash

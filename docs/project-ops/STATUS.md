@@ -57,6 +57,8 @@ core loop:
 - Codex prepare wrapper with optional `--execute`
 - Codex execute result collection with changed-file detection and diff artifacts
 - Docker-backed sandbox command runner using `agentos-base:0.1`
+- `sandbox-policy.json` artifact for Docker sandbox runs
+- sandbox policy checks for network, workdir, required mounts, mount scope, writable mounts, and host path absoluteness
 - common worker runtime used by the Codex adapter
 - Codex `--docker` records target AgentOS image metadata without running Codex inside the image
 - session destruction
@@ -130,12 +132,12 @@ baselines, not final specs.
 ## Next Build Slice
 
 Contract layer, safe patch apply, selected-file sync, Codex execute result
-collection, Docker command execution, and host-side worker runtime extraction
-now exist. Next build:
+collection, Docker command execution, host-side worker runtime extraction, and
+Docker sandbox policy validation now exist. Next build:
 
-1. worker-agnostic image policy checks for network and writable mounts
+1. selected-file approval scopes in `review_package.json`
 2. Markdown document workflow
-3. selected-file approval scopes in `review_package.json`
+3. first end-to-end exhibition rehearsal script
 
 ## Docker Image State
 
@@ -154,3 +156,11 @@ now exist. Next build:
   - host UID/GID
   - workspace mounted to `/agentos/work`
   - artifacts mounted to `/agentos/artifacts`
+- Policy validation records:
+  - image is set
+  - network is `none`
+  - workdir is `/agentos/work`
+  - `/agentos/work` and `/agentos/artifacts` are mounted
+  - container mounts stay under `/agentos/`
+  - writable mounts are limited to work and artifacts
+  - host mount paths are absolute
