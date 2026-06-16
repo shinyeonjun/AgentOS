@@ -82,8 +82,8 @@ agentos run-demo \
 Without installation, the prototype still works with
 `PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos ...`.
 
-Add `--json` to `run-demo`, `run-doc-demo`, `rehearse`, `codex`, or
-`docker-run` when another tool should consume the result.
+Add `--json` to `run-demo`, `run-doc-demo`, `rehearse`, `codex`,
+`codex-smoke`, or `docker-run` when another tool should consume the result.
 
 ## Test
 
@@ -116,6 +116,31 @@ agentos codex \
   --task "Fix failing tests" \
   --json
 ```
+
+## Codex Smoke
+
+Run the smoke path without spending Codex tokens:
+
+```bash
+agentos codex-smoke \
+  --state-dir /mnt/usb/projects/agentos/.agentos-state \
+  --output-dir /mnt/usb/projects/agentos/.agentos-output \
+  --json
+```
+
+Run the real host-side Codex execution smoke on demand:
+
+```bash
+agentos codex-smoke \
+  --state-dir /mnt/usb/projects/agentos/.agentos-state \
+  --output-dir /mnt/usb/projects/agentos/.agentos-output \
+  --execute \
+  --json
+```
+
+The smoke creates a tiny copied workspace, asks Codex to edit `README.md`, and
+checks that the expected line appears while recording the normal AgentOS task,
+command, diff, report, and review package artifacts.
 
 ## Docker Sandbox
 

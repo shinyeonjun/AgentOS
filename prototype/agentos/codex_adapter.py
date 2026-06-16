@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -49,6 +50,7 @@ def run_codex_task(
             title="Codex task",
             task=task,
             command=_codex_command(codex_bin=codex_bin, task=task),
+            env=_codex_env(),
             sandbox_image=sandbox_image,
             sandbox_network=sandbox_network,
         ),
@@ -65,11 +67,18 @@ def _codex_command(*, codex_bin: str, task: str) -> list[str]:
         "--json",
         "--sandbox",
         "workspace-write",
-        "--ask-for-approval",
-        "never",
+        "--skip-git-repo-check",
         "--ephemeral",
         task,
     ]
+
+
+def _codex_env() -> dict[str, str]:
+    codex_home = os.environ.get("CODEX_HOME")
+    home_codex = Path.home() / ".codex"
+    if codex_home and not (Path(codex_home) / "auth.json").is_file() and (home_codex / "auth.json").is_file():
+        return {"CODEX_HOME": str(home_codex)}
+    return {}
 
 
 def _to_codex_result(result: WorkerRunResult, *, sandbox_image: str | None) -> CodexRunResult:

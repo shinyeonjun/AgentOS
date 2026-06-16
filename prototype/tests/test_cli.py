@@ -113,6 +113,52 @@ class AgentOSCliTests(unittest.TestCase):
             self.assertIsNone(data["codex_result"])
             self.assertEqual(data["changed_files"], [])
 
+    def test_codex_smoke_prepare_json_outputs_validation_status(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            exit_code, output = _run_cli(
+                [
+                    "codex-smoke",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--json",
+                ]
+            )
+
+            self.assertEqual(exit_code, 0)
+            data = json.loads(output)
+            self.assertFalse(data["executed"])
+            self.assertEqual(data["validation_status"], "not_run")
+            self.assertFalse(data["expected_line_present"])
+
+    def test_codex_smoke_execute_json_fails_when_expected_change_is_missing(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            fake_codex = _write_fake_codex(root / "fake-codex", edit_readme=False)
+
+            exit_code, output = _run_cli(
+                [
+                    "codex-smoke",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--codex-bin",
+                    str(fake_codex),
+                    "--execute",
+                    "--json",
+                ]
+            )
+
+            self.assertEqual(exit_code, 1)
+            data = json.loads(output)
+            self.assertTrue(data["executed"])
+            self.assertEqual(data["codex_exit_code"], 0)
+            self.assertEqual(data["validation_status"], "failed")
+            self.assertFalse(data["expected_line_present"])
+
     def test_missing_executable_json_outputs_cli_error(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -203,6 +249,16 @@ def _write_fake_docker(path: Path, *, exit_code: int) -> Path:
         f"exit {exit_code}\n",
         encoding="utf-8",
     )
+    path.chmod(0o755)
+    return path
+
+
+def _write_fake_codex(path: Path, *, edit_readme: bool) -> Path:
+    body = "#!/bin/sh\n"
+    if edit_readme:
+        body += "printf 'updated\\n' >> README.md\n"
+    body += "exit 0\n"
+    path.write_text(body, encoding="utf-8")
     path.chmod(0o755)
     return path
 

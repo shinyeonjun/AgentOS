@@ -15,6 +15,7 @@ class WorkerSpec:
     title: str
     task: str
     command: list[str]
+    env: dict[str, str] | None = None
     sandbox_image: str | None = None
     sandbox_network: str | None = None
 
@@ -67,10 +68,11 @@ def run_worker_task(
             },
             "worker_command": worker.command,
             "execution_command": worker.command,
+            "env_overrides": sorted((worker.env or {}).keys()),
         },
     )
 
-    worker_result = runtime.run_command(session, worker.command, workspace_path) if execute else None
+    worker_result = runtime.run_command(session, worker.command, workspace_path, env=worker.env) if execute else None
     changes = detect_file_changes(original_path, workspace_path) if execute else []
     diff_artifacts = _write_diff_artifacts(runtime, session, changes)
     report_artifact = _write_worker_report(runtime, session, worker, execute, worker_result, changes)

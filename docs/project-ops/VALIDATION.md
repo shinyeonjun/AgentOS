@@ -495,3 +495,33 @@ Observed result:
 - Console script `agentos` ran `doctor --json` successfully from a fresh venv.
 - Console script `agentos` ran rehearsal `cc7d6d019ec5` successfully with Docker skipped.
 - Generated `prototype/agentos.egg-info/` was removed and `*.egg-info/` is ignored.
+
+## 2026-06-16 Real Codex Smoke Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest prototype.tests.test_codex_adapter prototype.tests.test_codex_smoke prototype.tests.test_cli -v
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos codex-smoke --state-dir /tmp/agentos-codex-smoke-state3 --output-dir /tmp/agentos-codex-smoke-output3 --json
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos codex-smoke --state-dir /tmp/agentos-real-codex-smoke-state3 --output-dir /tmp/agentos-real-codex-smoke-output3 --execute --json
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests
+/home/ubuntu/.openclaw/workspace/scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos rehearse --state-dir /mnt/usb/projects/agentos/.agentos-state --output-dir /mnt/usb/projects/agentos/.agentos-output --docker-sudo --json
+```
+
+Observed result:
+
+- 14 Codex/CLI focused tests passed.
+- `codex-smoke --json` prepare mode produced `validation_status: not_run`.
+- Initial real smoke exposed two useful issues:
+  - old Codex CLI option `--ask-for-approval never` no longer exists in `codex-cli 0.140.0`
+  - inherited `CODEX_HOME` lacked `auth.json` while `~/.codex/auth.json` existed
+- Codex command now uses `--skip-git-repo-check` and no removed approval flag.
+- Codex adapter now falls back to `~/.codex` when inherited `CODEX_HOME` has no auth file.
+- Real Codex smoke `03468cd055a6` passed with `codex_exit_code: 0`.
+- Real smoke changed `README.md` and validated the expected line `AgentOS Codex smoke passed.`
+- 40 full unit tests passed.
+- Ruff passed.
+- Compileall passed.
+- Docker rehearsal `fadd8fc27621` passed.

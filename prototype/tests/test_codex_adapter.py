@@ -4,6 +4,7 @@ import json
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 from agentos.codex_adapter import run_codex_task
 from agentos.inspector import inspect_state
@@ -134,6 +135,34 @@ class CodexAdapterTests(unittest.TestCase):
             review_package = json.loads(result.review_package_artifact.read_text())
             self.assertEqual(review_package["validation"]["status"], "passed")
             self.assertEqual(review_package["changes"]["changed_files"][0]["path"], "README.md")
+
+    def test_codex_uses_home_auth_when_inherited_codex_home_has_no_auth(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            input_project = root / "input-project"
+            input_project.mkdir()
+            (input_project / "README.md").write_text("# Demo\n", encoding="utf-8")
+            inherited_home = root / "empty-codex-home"
+            inherited_home.mkdir()
+            real_home = root / "home"
+            home_codex = real_home / ".codex"
+            home_codex.mkdir(parents=True)
+            (home_codex / "auth.json").write_text("{}", encoding="utf-8")
+
+            with (
+                patch.dict("os.environ", {"CODEX_HOME": str(inherited_home)}),
+                patch("pathlib.Path.home", return_value=real_home),
+            ):
+                result = run_codex_task(
+                    state_dir=root / "state",
+                    output_dir=root / "output",
+                    input_path=input_project,
+                    task="Summarize the project.",
+                    execute=False,
+                )
+
+            command_artifact = json.loads(result.command_artifact.read_text())
+            self.assertEqual(command_artifact["env_overrides"], ["CODEX_HOME"])
 
 
 if __name__ == "__main__":

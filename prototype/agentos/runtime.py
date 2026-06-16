@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import difflib
 import json
+import os
 import shutil
 import sqlite3
 import subprocess
@@ -102,13 +103,14 @@ class AgentOSRuntime:
             )
         return target
 
-    def run_command(self, session: Session, command: list[str], cwd: Path) -> ToolResult:
+    def run_command(self, session: Session, command: list[str], cwd: Path, env: dict[str, str] | None = None) -> ToolResult:
         started_at = utc_now()
         timed_out = False
         try:
             completed = subprocess.run(
                 command,
                 cwd=cwd,
+                env={**os.environ, **env} if env else None,
                 text=True,
                 capture_output=True,
                 check=False,

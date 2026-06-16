@@ -24,13 +24,14 @@ The first contract slice now exists:
 - `docker-run` exits with the sandbox command exit code
 - structured CLI errors for environment/input failures
 - editable Python package install with `agentos` console script
+- on-demand `agentos codex-smoke` path for real Codex adapter execution
 
-Next, keep tightening real-worker smoke coverage and install documentation.
+Next, document the clean Linux/WSL2 setup path and continue polishing real-worker evidence.
 
 ## Next 7 Actions
 
-1. Add a real Codex execution smoke path that can be run on demand.
-2. Document a clean Linux/WSL2 setup path from clone to rehearsal.
+1. Document a clean Linux/WSL2 setup path from clone to rehearsal.
+2. Improve real Codex smoke evidence in reports/review packages if needed.
 3. Continue polishing CLI failure messages as new commands appear.
 4. Document supported install/runtime paths for Linux and WSL2.
 5. Split persistence out of `runtime.py` when DB logic starts growing.

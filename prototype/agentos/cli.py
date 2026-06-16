@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .codex_adapter import run_codex_task
+from .codex_smoke import run_codex_smoke
 from .demo import run_code_fix_demo
 from .document_demo import run_markdown_document_demo
 from .docker_sandbox import DEFAULT_IMAGE, run_docker_task
@@ -209,6 +210,49 @@ def _main_impl(argv: list[str]) -> int:
         action="store_true",
         help="Render Codex task output as JSON",
     )
+    codex_smoke = subparsers.add_parser("codex-smoke", help="Run an on-demand Codex adapter smoke test")
+    codex_smoke.add_argument(
+        "--state-dir",
+        type=Path,
+        default=Path("projects/agentos/.agentos-state"),
+        help="Persistent control-plane state directory",
+    )
+    codex_smoke.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("projects/agentos/.agentos-output"),
+        help="Safe approved-sync output directory",
+    )
+    codex_smoke.add_argument(
+        "--codex-bin",
+        default="codex",
+        help="Codex executable name or path",
+    )
+    codex_smoke.add_argument(
+        "--execute",
+        action="store_true",
+        help="Actually run Codex. Without this flag, only prepare the smoke session.",
+    )
+    codex_smoke.add_argument(
+        "--docker",
+        action="store_true",
+        help="Record the target AgentOS Docker runtime image for this smoke session",
+    )
+    codex_smoke.add_argument(
+        "--docker-image",
+        default=DEFAULT_IMAGE,
+        help="Docker image metadata to use with --docker",
+    )
+    codex_smoke.add_argument(
+        "--docker-network",
+        default="none",
+        help="Target AgentOS runtime network policy metadata for --docker. Default is none.",
+    )
+    codex_smoke.add_argument(
+        "--json",
+        action="store_true",
+        help="Render smoke output as JSON",
+    )
     docker_run = subparsers.add_parser("docker-run", help="Run a command inside an AgentOS Docker sandbox")
     docker_run.add_argument(
         "--state-dir",
@@ -363,6 +407,31 @@ def _main_impl(argv: list[str]) -> int:
         print(f"review_package_artifact: {result.review_package_artifact}")
         print(f"destroyed: {result.destroyed}")
         return 0
+
+    if args.command == "codex-smoke":
+        result = run_codex_smoke(
+            state_dir=args.state_dir,
+            output_dir=args.output_dir,
+            execute=args.execute,
+            codex_bin=args.codex_bin,
+            use_docker=args.docker,
+            docker_image=args.docker_image,
+            docker_network=args.docker_network,
+        )
+        if args.json:
+            _print_json(_result_to_dict(result))
+            return 0 if result.validation_status in {"passed", "not_run"} else 1
+        print(f"session: {result.session_id}")
+        print(f"workspace_path: {result.workspace_path}")
+        print(f"executed: {result.executed}")
+        print(f"validation_status: {result.validation_status}")
+        print(f"expected_line_present: {result.expected_line_present}")
+        print(f"codex_exit_code: {result.codex_exit_code}")
+        print(f"changed_files: {len(result.changed_files)}")
+        print(f"task_manifest_artifact: {result.task_manifest_artifact}")
+        print(f"command_artifact: {result.command_artifact}")
+        print(f"review_package_artifact: {result.review_package_artifact}")
+        return 0 if result.validation_status in {"passed", "not_run"} else 1
 
     if args.command == "docker-run":
         sandbox_command = args.sandbox_command

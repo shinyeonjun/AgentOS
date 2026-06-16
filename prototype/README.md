@@ -76,6 +76,8 @@ python3 -m agentos codex --input /path/to/project --task "Fix failing tests"
 Use `--execute` only when the copied workspace should actually run Codex.
 Execute mode records the Codex tool call, detects changed files, writes text
 diff artifacts, and updates `review_package.json`.
+Run `agentos codex-smoke --execute --json` when you want an on-demand real
+Codex smoke test against a tiny generated README workspace.
 Review packages include `approval.scopes`, including a whole-change scope and
 one `sync_selected:<path>` scope per changed file.
 Use `--docker` to record the target AgentOS runtime image contract for the

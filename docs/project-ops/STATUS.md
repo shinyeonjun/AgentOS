@@ -77,6 +77,8 @@ core loop:
 - structured CLI errors for common environment/input failures
 - editable Python packaging through `pyproject.toml`
 - `agentos` console script entry point
+- on-demand `agentos codex-smoke` command
+- real Codex smoke execution passed with changed-file detection
 - common worker runtime used by the Codex adapter
 - Codex `--docker` records target AgentOS image metadata without running Codex inside the image
 - session destruction
@@ -154,11 +156,11 @@ collection, Docker command execution, host-side worker runtime extraction,
 Docker sandbox policy validation, selected-file approval scopes, Markdown
 document workflow, end-to-end rehearsal, first runtime hardening pass, doctor
 preflight, capability metadata, major-command JSON output, structured CLI
-errors, Python-native approved patch apply, and editable package install now
-exist. Next build:
+errors, Python-native approved patch apply, editable package install, and a
+real Codex smoke path now exist. Next build:
 
-1. real Codex execution smoke path
-2. clean Linux/WSL2 setup guide from clone to rehearsal
+1. clean Linux/WSL2 setup guide from clone to rehearsal
+2. richer real-worker evidence in reports/review packages
 3. continuing CLI UX polish as new commands appear
 
 ## Docker Image State
