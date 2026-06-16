@@ -47,7 +47,9 @@ class AgentOSDocumentDemoTests(unittest.TestCase):
 
             self.assertEqual(task_manifest["host_agent"], "demo-document-agent")
             self.assertEqual(task_manifest["capabilities"], ["base", "document"])
+            self.assertEqual(task_manifest["capability_details"][1]["name"], "document")
             self.assertEqual(review_package["validation"]["status"], "passed")
+            self.assertEqual(review_package["task"]["capabilities"], ["base", "document"])
             self.assertEqual(review_package["changes"]["changed_files"][0]["path"], DOCUMENT_NAME)
             scopes = review_package["approval"]["scopes"]
             self.assertEqual(scopes[0]["id"], "sync_all_changed_files")

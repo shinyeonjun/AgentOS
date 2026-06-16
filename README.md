@@ -129,6 +129,9 @@ Docker sandbox commands use `--network none`, `--cap-drop ALL`,
 `no-new-privileges`, PID/memory/CPU limits, a read-only root filesystem, and a
 small `/tmp` tmpfs while keeping only `/agentos/work` and `/agentos/artifacts`
 writable.
+The base image also includes `/agentos/capabilities.json`, and Docker runs
+write an `image-capabilities.json` artifact so review packages can describe the
+runtime capability contract.
 
 ## Supported Runtime
 

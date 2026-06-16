@@ -92,6 +92,7 @@ def run_markdown_document_demo(
             },
         ],
         validation_status="passed" if second.exit_code == 0 else "failed",
+        capabilities=task_manifest.capabilities,
         artifacts=[
             {
                 "name": diff_artifact.name,

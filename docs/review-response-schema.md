@@ -27,7 +27,16 @@ human whether to sync approved results.
   "state": "REVIEW_READY",
   "task": {
     "title": "Fix failing calculator test",
-    "host_agent": "codex-cli"
+    "host_agent": "codex-cli",
+    "capabilities": ["base", "code"],
+    "capability_details": [
+      {
+        "name": "base",
+        "kind": "runtime",
+        "description": "AgentOS workspace, artifact, policy, review, approval, and sync contract.",
+        "provides": ["/agentos/work", "/agentos/artifacts", "task.json", "review_package.json"]
+      }
+    ]
   },
   "safety": {
     "original_mutated": false,
@@ -148,6 +157,15 @@ Short decision-oriented summary.
 ### changes
 
 List of changed, added, and deleted files.
+
+### task.capabilities
+
+Machine-readable capability names used by the task. Current prototype
+capabilities include `base`, `code`, and `document`.
+
+### task.capability_details
+
+Expanded capability metadata from the AgentOS capability catalog.
 
 ### validation
 

@@ -91,6 +91,7 @@ def run_code_fix_demo(state_dir: Path, output_dir: Path, destroy_session: bool =
             },
         ],
         validation_status="passed" if second.exit_code == 0 else "failed",
+        capabilities=task_manifest.capabilities,
         artifacts=[
             {
                 "name": diff_artifact.name,

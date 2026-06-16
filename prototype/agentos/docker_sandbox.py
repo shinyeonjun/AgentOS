@@ -4,6 +4,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from .capabilities import image_capability_manifest
 from .contracts import TaskInput, TaskManifest, artifact_ref, build_review_package
 from .runtime import AgentOSRuntime, Session
 from .sandbox_policy import PolicyValidation, assert_policy_passes, build_default_policy, validate_sandbox_policy
@@ -28,6 +29,7 @@ class DockerRunResult:
     stdout_tail: str
     stderr_tail: str
     policy_artifact: Path
+    capability_artifact: Path
     policy_status: str
 
 
@@ -101,6 +103,7 @@ def run_docker_task(
         description="Run a command inside an AgentOS Docker sandbox.",
         host_agent="docker-sandbox",
         inputs=[TaskInput.from_path(input_path)],
+        capabilities=["base"],
     )
     runtime.write_json_artifact(session, "task.json", task_manifest.to_dict())
     workspace_path = runtime.import_input(session, input_path)
@@ -123,6 +126,11 @@ def run_docker_task(
     )
     if not policy_validation.passed:
         raise ValueError("unsafe sandbox policy")
+    capability_artifact = runtime.write_json_artifact(
+        session,
+        "image-capabilities.json",
+        image_capability_manifest(image=image, capability_names=("base",)),
+    )
     docker_command = build_docker_run_command(
         workspace_dir=workspace_path,
         artifact_dir=artifact_dir,
@@ -148,6 +156,7 @@ def run_docker_task(
             },
             "policy_ref": artifact_ref(session.session_id, policy_artifact),
             "policy_status": policy_validation.status,
+            "capabilities_ref": artifact_ref(session.session_id, capability_artifact),
             "workspace_mount": "/agentos/work",
             "artifact_mount": "/agentos/artifacts",
             "command": docker_command,
@@ -170,6 +179,7 @@ def run_docker_task(
         session=session,
         command_artifact=command_artifact,
         policy_artifact=policy_artifact,
+        capability_artifact=capability_artifact,
         report_artifact=report_artifact,
         image=image,
         command=command,
@@ -189,6 +199,7 @@ def run_docker_task(
         stdout_tail=docker_result.stdout_tail,
         stderr_tail=docker_result.stderr_tail,
         policy_artifact=policy_artifact,
+        capability_artifact=capability_artifact,
         policy_status=policy_validation.status,
     )
 
@@ -226,6 +237,7 @@ def _write_docker_review_package(
     session: Session,
     command_artifact: Path,
     policy_artifact: Path,
+    capability_artifact: Path,
     report_artifact: Path,
     image: str,
     command: list[str],
@@ -256,6 +268,7 @@ def _write_docker_review_package(
         changed_files=[],
         validation_checks=validation_checks,
         validation_status=validation_status,
+        capabilities=["base"],
         artifacts=[
             {
                 "name": command_artifact.name,
@@ -266,6 +279,11 @@ def _write_docker_review_package(
                 "name": policy_artifact.name,
                 "type": "application/json",
                 "ref": artifact_ref(session.session_id, policy_artifact),
+            },
+            {
+                "name": capability_artifact.name,
+                "type": "application/json",
+                "ref": artifact_ref(session.session_id, capability_artifact),
             },
             {
                 "name": report_artifact.name,

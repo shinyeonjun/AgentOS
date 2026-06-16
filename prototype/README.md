@@ -79,6 +79,8 @@ Docker runs now write `sandbox-policy.json` and include the policy result in
 no extra writable container mounts outside those paths, and hardening flags such
 as `--cap-drop ALL`, `no-new-privileges`, PID/memory/CPU limits, a read-only
 root filesystem, and a small `/tmp` tmpfs.
+Docker runs also write `image-capabilities.json`; task and review packages
+include capability details for `base`, `code`, and `document` workflows.
 
 Run tests:
 

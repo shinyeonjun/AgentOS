@@ -121,14 +121,18 @@ class DockerSandboxTests(unittest.TestCase):
             self.assertEqual(result.exit_code, 0)
             self.assertEqual(result.policy_status, "passed")
             policy_artifact = json.loads(result.policy_artifact.read_text())
+            capability_artifact = json.loads(result.capability_artifact.read_text())
             command_artifact = json.loads(result.command_artifact.read_text())
             review_package = json.loads(result.review_package_artifact.read_text())
 
             self.assertEqual(policy_artifact["validation"]["status"], "passed")
+            self.assertEqual(capability_artifact["capabilities"][0]["name"], "base")
             self.assertEqual(command_artifact["policy_status"], "passed")
             self.assertEqual(command_artifact["policy_ref"], f"artifact://{result.session_id}/sandbox-policy.json")
+            self.assertEqual(command_artifact["capabilities_ref"], f"artifact://{result.session_id}/image-capabilities.json")
             self.assertEqual(review_package["validation"]["checks"][0]["name"], "sandbox policy")
             self.assertEqual(review_package["validation"]["checks"][0]["status"], "passed")
+            self.assertEqual(review_package["task"]["capabilities"], ["base"])
             self.assertEqual(review_package["approval"]["scopes"], [])
 
 

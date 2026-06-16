@@ -68,6 +68,10 @@ core loop:
 - explicit `patch` command dependency check for patch sync
 - `agentos doctor` preflight checks for Linux/WSL, Python, Docker, patch, and workspace path
 - demo validation commands use the current Python executable instead of hardcoded `python3`
+- base/code/document capability catalog
+- task and review package capability details
+- Docker image `/agentos/capabilities.json`
+- Docker run `image-capabilities.json` artifact
 - common worker runtime used by the Codex adapter
 - Codex `--docker` records target AgentOS image metadata without running Codex inside the image
 - session destruction
@@ -144,18 +148,19 @@ Contract layer, safe patch apply, selected-file sync, Codex execute result
 collection, Docker command execution, host-side worker runtime extraction,
 Docker sandbox policy validation, selected-file approval scopes, and Markdown
 document workflow, end-to-end rehearsal, and first runtime hardening pass now
-exist. Environment preflight is now available through `agentos doctor`. Next
-build:
+exist. Environment preflight is now available through `agentos doctor`, and
+capability metadata now describes base/code/document workflows. Next build:
 
-1. image capability metadata for base/code/document layers
-2. CLI UX and JSON output polish for marketplace-grade use
-3. replace or isolate host `patch` dependency for cross-platform support
+1. CLI UX and JSON output polish for marketplace-grade use
+2. replace or isolate host `patch` dependency for cross-platform support
+3. packaging/install flow
 
 ## Docker Image State
 
 - Image: `agentos-base:0.1`
 - Base: `busybox:1.36`
 - Size observed: about 4.11 MB
+- Capability metadata: `/agentos/capabilities.json`
 - Standard directories created:
   - `/agentos/input`
   - `/agentos/work`

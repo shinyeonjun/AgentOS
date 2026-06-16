@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from .capabilities import capability_manifest
+
 
 SCHEMA_VERSION = "0.2"
 
@@ -39,6 +41,7 @@ class TaskManifest:
     original_mutation: str = "forbidden"
 
     def to_dict(self) -> dict[str, Any]:
+        capabilities = capability_manifest(self.capabilities)
         return {
             "schema_version": SCHEMA_VERSION,
             "title": self.title,
@@ -46,6 +49,7 @@ class TaskManifest:
             "host_agent": self.host_agent,
             "inputs": [item.to_dict() for item in self.inputs],
             "capabilities": self.capabilities,
+            "capability_details": capabilities["capabilities"],
             "policy": {
                 "network": self.network,
                 "sync_requires_approval": self.sync_requires_approval,
@@ -69,6 +73,7 @@ def build_review_package(
     artifacts: list[dict[str, Any]],
     validation_status: str | None = None,
     risk_notes: list[dict[str, Any]] | None = None,
+    capabilities: list[str] | None = None,
 ) -> dict[str, Any]:
     if validation_status is None:
         validation_status = "passed"
@@ -84,6 +89,8 @@ def build_review_package(
         "task": {
             "title": title,
             "host_agent": host_agent,
+            "capabilities": capabilities or [],
+            "capability_details": capability_manifest(capabilities or [])["capabilities"],
         },
         "safety": {
             "original_mutated": False,

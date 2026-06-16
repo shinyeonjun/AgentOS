@@ -1,0 +1,22 @@
+{
+  "schema_version": "0.2",
+  "image": "agentos-base:0.1",
+  "capabilities": [
+    {
+      "name": "base",
+      "kind": "runtime",
+      "description": "AgentOS workspace, artifact, policy, review, approval, and sync contract.",
+      "provides": [
+        "/agentos/work",
+        "/agentos/artifacts",
+        "task.json",
+        "review_package.json",
+        "approval-gated sync"
+      ]
+    }
+  ],
+  "notes": [
+    "Image capabilities describe the sandbox environment contract.",
+    "Worker binaries such as Codex remain host-side adapters unless a separate worker image is declared."
+  ]
+}

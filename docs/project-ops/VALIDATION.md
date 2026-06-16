@@ -393,3 +393,27 @@ Observed result:
 - `agentos doctor` reported passed checks for Linux, Python 3.12.3, Docker, patch, and workspace path.
 - JSON doctor output matched the human-readable status.
 - Rehearsal `81084a4918ad` passed after replacing internal demo `python3` calls with the current Python executable.
+
+## 2026-06-16 Capability Metadata Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover /mnt/usb/projects/agentos/prototype/tests -v
+scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+sudo docker build -t agentos-base:0.1 /mnt/usb/projects/agentos/docker/agentos-base
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos rehearse --state-dir /mnt/usb/projects/agentos/.agentos-state --output-dir /mnt/usb/projects/agentos/.agentos-output --docker-sudo
+sudo docker run --rm --network none agentos-base:0.1 cat /agentos/capabilities.json
+```
+
+Observed result:
+
+- 27 unit tests passed.
+- Ruff passed.
+- Compileall passed.
+- `agentos-base:0.1` rebuilt with `/agentos/capabilities.json`.
+- Rehearsal `ed44cb6a2a9c` passed.
+- Docker sandbox policy session `948371c1752c` wrote `image-capabilities.json`.
+- Image and artifact capability metadata both describe the `base` runtime capability.
+- Task and review packages now include capability details for `base`, `code`, and `document` workflows.

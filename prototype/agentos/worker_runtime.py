@@ -48,6 +48,7 @@ def run_worker_task(
         description=worker.task,
         host_agent=worker.name,
         inputs=[TaskInput.from_path(input_path)],
+        capabilities=task_manifest_capabilities(worker),
     )
     task_manifest_artifact = runtime.write_json_artifact(session, "task.json", task_manifest.to_dict())
     workspace_path = runtime.import_input(session, input_path)
@@ -198,9 +199,16 @@ def _build_worker_review_package(
         changed_files=changed_files,
         validation_checks=validation_checks,
         validation_status=validation_status,
+        capabilities=task_manifest_capabilities(worker),
         artifacts=artifacts,
         risk_notes=risk_notes,
     )
+
+
+def task_manifest_capabilities(worker: WorkerSpec) -> list[str]:
+    if worker.name == "codex-cli":
+        return ["base", "code"]
+    return ["base"]
 
 
 def _write_diff_artifacts(
