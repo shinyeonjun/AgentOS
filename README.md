@@ -159,7 +159,9 @@ agentos codex-smoke \
 
 The smoke creates a tiny copied workspace, asks Codex to edit `README.md`, and
 checks that the expected line appears while recording the normal AgentOS task,
-command, diff, report, and review package artifacts.
+command, worker environment policy, diff, report, and review package artifacts.
+Host-side workers run with an allowlisted environment instead of inheriting the
+full host environment.
 
 ## Docker Sandbox
 

@@ -84,6 +84,8 @@ core loop:
 - on-demand `agentos codex-smoke` command
 - real Codex smoke execution passed with changed-file detection
 - worker execution evidence artifact: `worker-result.json`
+- worker environment policy artifact: `worker-env-policy.json`
+- host-side workers use an allowlisted environment instead of inheriting full host env
 - review package validation checks reference worker result artifacts
 - review package artifact entries include size and SHA-256 digest metadata
 - `artifact-manifest.json` records review artifact integrity metadata
@@ -173,12 +175,13 @@ preflight, capability metadata, major-command JSON output, structured CLI
 errors, Python-native approved patch apply, editable package install, a real
 Codex smoke path, worker evidence artifacts, artifact integrity metadata,
 artifact manifests, optional HMAC manifest signatures, review verification,
-Docker image provenance/pinning, a Linux/WSL2 setup guide, sandbox threat
-model, and a separated SQLite storage boundary now exist.
+Docker image provenance/pinning, worker environment allowlisting, a Linux/WSL2
+setup guide, sandbox threat model, and a separated SQLite storage boundary now
+exist.
 Next build:
 
 1. continuing real-worker rehearsal coverage
-2. environment allowlist for worker execution
+2. signed approval records
 3. continuing CLI UX polish as new commands appear
 
 ## Docker Image State

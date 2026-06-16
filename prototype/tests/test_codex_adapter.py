@@ -32,6 +32,7 @@ class CodexAdapterTests(unittest.TestCase):
 
             task_manifest = json.loads(result.task_manifest_artifact.read_text())
             command_artifact = json.loads(result.command_artifact.read_text())
+            env_policy_artifact = json.loads(result.env_policy_artifact.read_text())
             review_package = json.loads(result.review_package_artifact.read_text())
 
             self.assertEqual(task_manifest["host_agent"], "codex-cli")
@@ -39,6 +40,8 @@ class CodexAdapterTests(unittest.TestCase):
             self.assertEqual(command_artifact["worker"], "codex-cli")
             self.assertEqual(command_artifact["worker_command"][0], "codex")
             self.assertEqual(command_artifact["execution_command"][-1], "Summarize the project.")
+            self.assertEqual(command_artifact["env_policy"]["mode"], "allowlist")
+            self.assertEqual(env_policy_artifact["mode"], "allowlist")
             self.assertEqual(review_package["validation"]["status"], "not_run")
 
             session_detail = inspect_state(root / "state", session_id=result.session_id)
@@ -48,6 +51,7 @@ class CodexAdapterTests(unittest.TestCase):
             artifact_names = {artifact["name"] for artifact in session["artifacts"]}
             self.assertIn("task.json", artifact_names)
             self.assertIn("worker-command.json", artifact_names)
+            self.assertIn("worker-env-policy.json", artifact_names)
             self.assertIn("worker-result.json", artifact_names)
             self.assertIn("review_package.json", artifact_names)
 
@@ -102,12 +106,47 @@ class CodexAdapterTests(unittest.TestCase):
             self.assertEqual(approval_scopes[1]["id"], "sync_selected:README.md")
             self.assertEqual(approval_scopes[1]["action"], "sync_selected")
 
+            env_check = next(check for check in review_package["validation"]["checks"] if check["name"] == "worker environment")
+            self.assertEqual(env_check["status"], "passed")
+            self.assertEqual(env_check["mode"], "allowlist")
+
             session_detail = inspect_state(root / "state", session_id=result.session_id)
             session = session_detail["session"]
             self.assertEqual(len(session["tool_calls"]), 1)
             artifact_names = {artifact["name"] for artifact in session["artifacts"]}
             self.assertIn("final-report.md", artifact_names)
             self.assertIn("diff-README.md.diff", artifact_names)
+
+    def test_codex_worker_env_does_not_inherit_blocked_host_keys(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            input_project = root / "input-project"
+            input_project.mkdir()
+            (input_project / "README.md").write_text("# Demo\n", encoding="utf-8")
+            fake_codex = root / "fake-codex"
+            fake_codex.write_text(
+                "#!/bin/sh\n"
+                "env > env.txt\n"
+                "exit 0\n",
+                encoding="utf-8",
+            )
+            fake_codex.chmod(0o755)
+
+            with patch.dict("os.environ", {"AGENTOS_SECRET_TOKEN": "do-not-pass", "PATH": "/usr/bin"}):
+                result = run_codex_task(
+                    state_dir=root / "state",
+                    output_dir=root / "output",
+                    input_path=input_project,
+                    task="Record the environment.",
+                    execute=True,
+                    codex_bin=str(fake_codex),
+                )
+
+            env_text = (result.workspace_path / "env.txt").read_text(encoding="utf-8")
+            env_policy = json.loads(result.env_policy_artifact.read_text())
+            self.assertIn("PATH=/usr/bin", env_text)
+            self.assertNotIn("AGENTOS_SECRET_TOKEN", env_text)
+            self.assertGreater(env_policy["blocked_host_key_count"], 0)
 
     def test_codex_docker_option_records_target_sandbox_without_wrapping_worker(self) -> None:
         with TemporaryDirectory() as tmp:

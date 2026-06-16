@@ -94,14 +94,21 @@ class AgentOSRuntime:
         self.store.mark_input_imported(session_id=session.session_id, input_path=source, workspace_path=target)
         return target
 
-    def run_command(self, session: Session, command: list[str], cwd: Path, env: dict[str, str] | None = None) -> ToolResult:
+    def run_command(
+        self,
+        session: Session,
+        command: list[str],
+        cwd: Path,
+        env: dict[str, str] | None = None,
+        inherit_env: bool = True,
+    ) -> ToolResult:
         started_at = utc_now()
         timed_out = False
         try:
             completed = subprocess.run(
                 command,
                 cwd=cwd,
-                env={**os.environ, **env} if env else None,
+                env=_command_env(env=env, inherit_env=inherit_env),
                 text=True,
                 capture_output=True,
                 check=False,
@@ -269,3 +276,9 @@ def _timeout_output_to_text(value: str | bytes | None) -> str:
     if isinstance(value, bytes):
         return value.decode("utf-8", errors="replace")
     return value
+
+
+def _command_env(*, env: dict[str, str] | None, inherit_env: bool) -> dict[str, str] | None:
+    if inherit_env:
+        return {**os.environ, **env} if env else None
+    return env or {}

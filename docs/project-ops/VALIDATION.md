@@ -709,3 +709,27 @@ Observed result:
 - `sandbox-policy.json`, `docker-command.json`, and `review_package.json` all reference the image provenance evidence.
 - Full unit suite passed: 46 tests.
 - Compileall passed.
+
+## 2026-06-16 Worker Environment Allowlist Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest prototype.tests.test_worker_env_policy prototype.tests.test_codex_adapter prototype.tests.test_codex_smoke prototype.tests.test_cli -v
+/home/ubuntu/.openclaw/workspace/scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos codex-smoke --state-dir /tmp/agentos-env-real-codex-state --output-dir /tmp/agentos-env-real-codex-output --execute --json
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos rehearse --state-dir /mnt/usb/projects/agentos/.agentos-state --output-dir /mnt/usb/projects/agentos/.agentos-output --docker-sudo --json
+```
+
+Observed result:
+
+- Focused worker-env/Codex/CLI tests passed: 17 tests.
+- Fake Codex env capture confirmed `AGENTOS_SECRET_TOKEN` is not inherited by the worker.
+- Ruff passed.
+- Real Codex smoke `47235da03168` passed with the allowlisted worker environment.
+- Full unit suite passed: 48 tests.
+- Compileall passed.
+- Docker rehearsal `75dc9c5169ea` passed.
+- Host-side worker review packages now include `worker-env-policy.json` and a `worker environment` validation check.

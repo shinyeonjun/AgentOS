@@ -127,10 +127,11 @@ Current mitigation:
 
 - AgentOS records env override key names, not secret values
 - Codex auth fallback only checks auth file existence
+- host-side worker environment is built from an allowlist instead of inheriting
+  the full host environment
 
 Remaining gaps:
 
-- environment allowlist/denylist is not implemented
 - worker credentials are still host-managed
 - host-side Codex may read more than the copied workspace depending on its own
   sandbox behavior
@@ -181,6 +182,8 @@ Implemented:
 - Docker runtime image reference pinned to repo digest or local image id when available
 - sandbox policy artifact
 - worker result artifact
+- worker environment policy artifact
+- host-side worker environment allowlist
 - artifact size and SHA-256 digest metadata in review packages
 - artifact manifest with optional HMAC-SHA256 signature metadata
 - manifest verification command
@@ -190,7 +193,6 @@ Not implemented yet:
 - rootless Docker requirement
 - custom seccomp profile
 - AppArmor/SELinux profile
-- environment variable filtering
 - signed approval records
 - public-key artifact signing
 - SBOM/image attestation records
@@ -201,13 +203,11 @@ Not implemented yet:
 
 Next practical steps:
 
-1. Add environment allowlist for worker execution.
+1. Add signed approval records with approver identity and chosen scope.
 2. Add stronger SBOM/image provenance records.
-3. Add signed approval records with approver identity and chosen scope.
-4. Add a rootless Docker setup path.
-5. Add a stricter seccomp/AppArmor profile.
-6. Add a review UI that shows changed files, validation, and sync scopes.
-7. Add SBOM/image provenance records.
+3. Add rootless Docker setup path.
+4. Add a stricter seccomp/AppArmor profile.
+5. Add a review UI that shows changed files, validation, and sync scopes.
 
 ## Recommended Wording
 

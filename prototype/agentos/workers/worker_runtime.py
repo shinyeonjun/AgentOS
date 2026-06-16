@@ -14,6 +14,7 @@ from ..core.contracts import (
 )
 from ..core.integrity import build_artifact_manifest, build_manifest_integrity
 from ..core.runtime import AgentOSRuntime, Session, ToolResult
+from .env_policy import WorkerEnvPolicy, build_worker_env
 
 
 @dataclass(frozen=True)
@@ -33,6 +34,7 @@ class WorkerRunResult:
     workspace_path: Path
     task_manifest_artifact: Path
     command_artifact: Path
+    env_policy_artifact: Path
     worker_result_artifact: Path
     review_package_artifact: Path
     executed: bool
@@ -62,6 +64,12 @@ def run_worker_task(
     task_manifest_artifact = runtime.write_json_artifact(session, "task.json", task_manifest.to_dict())
     workspace_path = runtime.import_input(session, input_path)
     original_path = session.original_dir / input_path.resolve().name
+    worker_env, env_policy = build_worker_env(worker.env)
+    env_policy_artifact = runtime.write_json_artifact(
+        session,
+        "worker-env-policy.json",
+        env_policy.to_dict(),
+    )
     command_artifact = runtime.write_json_artifact(
         session,
         "worker-command.json",
@@ -76,11 +84,17 @@ def run_worker_task(
             },
             "worker_command": worker.command,
             "execution_command": worker.command,
+            "env_policy_ref": artifact_ref(session.session_id, env_policy_artifact),
+            "env_policy": env_policy.to_dict(),
             "env_overrides": sorted((worker.env or {}).keys()),
         },
     )
 
-    worker_result = runtime.run_command(session, worker.command, workspace_path, env=worker.env) if execute else None
+    worker_result = (
+        runtime.run_command(session, worker.command, workspace_path, env=worker_env, inherit_env=False)
+        if execute
+        else None
+    )
     changes = detect_file_changes(original_path, workspace_path) if execute else []
     diff_artifacts = _write_diff_artifacts(runtime, session, changes)
     worker_result_artifact = _write_worker_result_artifact(
@@ -102,6 +116,8 @@ def run_worker_task(
         changes=changes,
         task_manifest_artifact=task_manifest_artifact,
         command_artifact=command_artifact,
+        env_policy_artifact=env_policy_artifact,
+        env_policy=env_policy,
         worker_result_artifact=worker_result_artifact,
         diff_artifacts=diff_artifacts,
         report_artifact=report_artifact,
@@ -117,6 +133,7 @@ def run_worker_task(
         workspace_path=workspace_path,
         task_manifest_artifact=task_manifest_artifact,
         command_artifact=command_artifact,
+        env_policy_artifact=env_policy_artifact,
         worker_result_artifact=worker_result_artifact,
         review_package_artifact=review_package_artifact,
         executed=execute,
@@ -137,6 +154,8 @@ def _build_worker_review_package(
     changes: list[FileChange],
     task_manifest_artifact: Path,
     command_artifact: Path,
+    env_policy_artifact: Path,
+    env_policy: WorkerEnvPolicy,
     worker_result_artifact: Path,
     diff_artifacts: dict[str, Path],
     report_artifact: Path,
@@ -168,6 +187,19 @@ def _build_worker_review_package(
                 "result_ref": worker_result_ref,
             }
         ]
+    validation_checks.append(
+        {
+            "name": "worker environment",
+            "status": "passed",
+            "exit_code": None,
+            "role": "env_policy",
+            "policy_ref": artifact_ref(session_id, env_policy_artifact),
+            "mode": "allowlist",
+            "inherited_keys": list(env_policy.inherited_keys),
+            "override_keys": list(env_policy.override_keys),
+            "blocked_host_key_count": env_policy.blocked_host_key_count,
+        }
+    )
 
     changed_files = [
         {
@@ -182,6 +214,7 @@ def _build_worker_review_package(
     artifacts: list[dict[str, Any]] = [
         artifact_entry(session_id, task_manifest_artifact, "application/json"),
         artifact_entry(session_id, command_artifact, "application/json"),
+        artifact_entry(session_id, env_policy_artifact, "application/json"),
         artifact_entry(session_id, report_artifact, "text/markdown"),
         artifact_entry(session_id, worker_result_artifact, "application/json"),
     ]
@@ -197,6 +230,10 @@ def _build_worker_review_package(
         {
             "severity": "low",
             "message": f"Task prompt: {worker.task}",
+        },
+        {
+            "severity": "low",
+            "message": "Worker environment uses an allowlist policy.",
         }
     ]
     if worker.sandbox_image:
