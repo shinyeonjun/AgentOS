@@ -31,12 +31,12 @@ class RuntimeHardeningTests(unittest.TestCase):
             self.assertTrue(result.timed_out)
             self.assertIn("command timed out after 1 seconds", result.stderr_tail)
 
-    def test_sqlite_connections_are_closed_after_context(self) -> None:
+    def test_sqlite_connections_are_closed_after_store_context(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
             runtime = AgentOSRuntime(state_dir=root / "state", output_dir=root / "output")
 
-            with runtime._connect() as conn:
+            with runtime.store.connect() as conn:
                 conn.execute("select 1")
 
             with self.assertRaisesRegex(Exception, "closed"):

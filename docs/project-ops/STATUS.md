@@ -30,6 +30,7 @@ v0.2 contract, sandbox, and CLI JSON polish slice implemented.
 - Review schema draft: `/mnt/usb/projects/agentos/docs/review-response-schema.md`
 - Context efficiency draft: `/mnt/usb/projects/agentos/docs/context-efficiency.md`
 - Algorithms/data structures draft: `/mnt/usb/projects/agentos/docs/algorithms-data-structures.md`
+- Linux/WSL2 setup guide: `/mnt/usb/projects/agentos/docs/setup-linux-wsl.md`
 - Latest local control-plane run state: `/mnt/usb/projects/agentos/.agentos-state/`
 - Latest approved demo output: `/mnt/usb/projects/agentos/.agentos-output/`
 - Archived old technical plan: `/mnt/usb/projects/agentos/docs/archive/legacy-technical-plan-v3.md`
@@ -80,6 +81,8 @@ core loop:
 - on-demand `agentos codex-smoke` command
 - real Codex smoke execution passed with changed-file detection
 - package folders split into `core`, `sandbox`, `workers`, and `demos`
+- Linux/WSL2 setup guide from clone to rehearsal
+- SQLite persistence isolated in `agentos.core.storage.StateStore`
 - common worker runtime used by the Codex adapter
 - Codex `--docker` records target AgentOS image metadata without running Codex inside the image
 - session destruction
@@ -157,11 +160,12 @@ collection, Docker command execution, host-side worker runtime extraction,
 Docker sandbox policy validation, selected-file approval scopes, Markdown
 document workflow, end-to-end rehearsal, first runtime hardening pass, doctor
 preflight, capability metadata, major-command JSON output, structured CLI
-errors, Python-native approved patch apply, editable package install, and a
-real Codex smoke path now exist. Next build:
+errors, Python-native approved patch apply, editable package install, a real
+Codex smoke path, a Linux/WSL2 setup guide, and a separated SQLite storage
+boundary now exist. Next build:
 
-1. clean Linux/WSL2 setup guide from clone to rehearsal
-2. richer real-worker evidence in reports/review packages
+1. richer real-worker evidence in reports/review packages
+2. explicit sandbox threat model
 3. continuing CLI UX polish as new commands appear
 
 ## Docker Image State

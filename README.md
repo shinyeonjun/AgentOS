@@ -56,6 +56,8 @@ It proves the control-plane lifecycle without requiring a live LLM.
 
 ## Run
 
+For a clean first-time setup, use `docs/setup-linux-wsl.md`.
+
 Install the prototype in editable mode when developing locally:
 
 ```bash
@@ -192,6 +194,7 @@ filesystem rather than under `/mnt/c`.
 - Context efficiency: `docs/context-efficiency.md`
 - Algorithms and data structures: `docs/algorithms-data-structures.md`
 - Docker storage plan: `docs/docker-storage-plan.md`
+- Linux/WSL2 setup: `docs/setup-linux-wsl.md`
 - Technical plan: `docs/technical-plan.md`
 - Operating notes: `docs/project-ops/`
 - Prototype code: `prototype/`

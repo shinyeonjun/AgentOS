@@ -2,7 +2,7 @@
 
 ## Immediate Next Move
 
-Prepare for the packaging and install slice.
+Prepare for real-worker evidence polish and storage cleanup.
 
 The first contract slice now exists:
 
@@ -25,18 +25,20 @@ The first contract slice now exists:
 - structured CLI errors for environment/input failures
 - editable Python package install with `agentos` console script
 - on-demand `agentos codex-smoke` path for real Codex adapter execution
+- Linux/WSL2 setup guide from clone to rehearsal
+- SQLite persistence split into `agentos.core.storage.StateStore`
 
-Next, document the clean Linux/WSL2 setup path and continue polishing real-worker evidence.
+Next, continue polishing real-worker evidence and write the sandbox threat model.
 
 ## Next 7 Actions
 
-1. Document a clean Linux/WSL2 setup path from clone to rehearsal.
-2. Improve real Codex smoke evidence in reports/review packages if needed.
+1. Improve real Codex smoke evidence in reports/review packages if needed.
+2. Add an explicit threat model for sandbox claims.
 3. Continue polishing CLI failure messages as new commands appear.
 4. Document supported install/runtime paths for Linux and WSL2.
-5. Split persistence out of `runtime.py` when DB logic starts growing.
-6. Add a minimal review dashboard only after the CLI demo is solid.
-7. Add real-worker execution rehearsals after the deterministic demo story is stable.
+5. Consider a minimal review dashboard only after the CLI demo is solid.
+6. Add real-worker execution rehearsals after the deterministic demo story is stable.
+7. Add release packaging only after the local install path is stable.
 
 ## Do Not Do Yet
 

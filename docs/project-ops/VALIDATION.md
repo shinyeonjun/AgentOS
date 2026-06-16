@@ -549,3 +549,30 @@ Observed result:
 - Compileall passed.
 - Editable install smoke passed with `agentos codex-smoke --json`.
 - Docker rehearsal `3913a09e54d6` passed.
+
+## 2026-06-16 Setup Guide and Storage Split Validation
+
+Commands run:
+
+```bash
+tmp=$(mktemp -d)
+python3 -m venv "$tmp/venv"
+"$tmp/venv/bin/python" -m pip install -e /mnt/usb/projects/agentos
+"$tmp/venv/bin/agentos" doctor --workspace /mnt/usb/projects/agentos
+"$tmp/venv/bin/agentos" rehearse --state-dir "$tmp/state" --output-dir "$tmp/output" --skip-docker --json
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests
+/home/ubuntu/.openclaw/workspace/scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos rehearse --state-dir /mnt/usb/projects/agentos/.agentos-state --output-dir /mnt/usb/projects/agentos/.agentos-output --docker-sudo --json
+```
+
+Observed result:
+
+- Fresh editable install from the setup guide passed.
+- Installed `agentos doctor` passed.
+- Installed skip-Docker rehearsal `3af797f0b18b` passed.
+- SQLite persistence is now isolated in `agentos.core.storage.StateStore`.
+- 40 unit tests passed after the storage split.
+- Ruff passed.
+- Compileall passed.
+- Docker rehearsal `a3f72c501409` passed.
