@@ -10,7 +10,7 @@ create_session
 -> run a failing test command
 -> apply a deterministic demo-agent code fix
 -> run tests again
--> create diff/report artifacts
+-> create diff/report/task/review artifacts
 -> block sync before approval
 -> approve
 -> sync to a safe output folder
@@ -21,6 +21,12 @@ Run from the workspace root:
 
 ```bash
 PYTHONPATH=projects/agentos/prototype python3 -m agentos run-demo
+```
+
+Inspect sessions:
+
+```bash
+PYTHONPATH=projects/agentos/prototype python3 -m agentos inspect --json
 ```
 
 Run tests:

@@ -4,6 +4,7 @@ import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
+from .contracts import TaskInput, TaskManifest, artifact_ref, build_review_package
 from .runtime import AgentOSRuntime, SyncNotApprovedError
 
 
@@ -17,12 +18,21 @@ class DemoResult:
     destroyed: bool
     diff_artifact: Path
     report_artifact: Path
+    task_manifest_artifact: Path
+    review_package_artifact: Path
 
 
 def run_code_fix_demo(state_dir: Path, output_dir: Path, destroy_session: bool = True) -> DemoResult:
     runtime = AgentOSRuntime(state_dir=state_dir, output_dir=output_dir)
     input_dir = _prepare_demo_input(state_dir / "demo-input" / "buggy-calculator")
     session = runtime.create_session()
+    task_manifest = TaskManifest(
+        title="Fix failing calculator test",
+        description="Find and fix the calculator bug, then run unittest validation.",
+        host_agent="demo-agent",
+        inputs=[TaskInput.from_path(input_dir)],
+    )
+    task_manifest_artifact = runtime.write_json_artifact(session, "task.json", task_manifest.to_dict())
     workspace_project = runtime.import_input(session, input_dir)
 
     first = runtime.run_command(session, ["python3", "-m", "unittest", "discover", "-v"], workspace_project)
@@ -49,6 +59,53 @@ def run_code_fix_demo(state_dir: Path, output_dir: Path, destroy_session: bool =
         _render_report(first.exit_code, second.exit_code, diff_artifact),
         "text/markdown",
     )
+    review_package = build_review_package(
+        session_id=session.session_id,
+        title=task_manifest.title,
+        host_agent=task_manifest.host_agent,
+        summary="Fixed the calculator bug and unittest now passes.",
+        changed_files=[
+            {
+                "path": "calculator.py",
+                "change_type": "modified",
+                "diff_ref": artifact_ref(session.session_id, diff_artifact),
+            }
+        ],
+        validation_checks=[
+            {
+                "name": "unittest before fix",
+                "status": "failed" if first.exit_code else "passed",
+                "exit_code": first.exit_code,
+                "role": "baseline",
+            },
+            {
+                "name": "unittest after fix",
+                "status": "passed" if second.exit_code == 0 else "failed",
+                "exit_code": second.exit_code,
+                "role": "final",
+            },
+        ],
+        validation_status="passed" if second.exit_code == 0 else "failed",
+        artifacts=[
+            {
+                "name": diff_artifact.name,
+                "type": "text/x-diff",
+                "ref": artifact_ref(session.session_id, diff_artifact),
+            },
+            {
+                "name": report_artifact.name,
+                "type": "text/markdown",
+                "ref": artifact_ref(session.session_id, report_artifact),
+            },
+            {
+                "name": task_manifest_artifact.name,
+                "type": "application/json",
+                "ref": artifact_ref(session.session_id, task_manifest_artifact),
+            },
+        ],
+    )
+    review_package_artifact = runtime.write_json_artifact(session, "review_package.json", review_package)
+    runtime.mark_review_ready(session)
 
     try:
         runtime.sync_approved(session, workspace_project)
@@ -71,6 +128,8 @@ def run_code_fix_demo(state_dir: Path, output_dir: Path, destroy_session: bool =
         destroyed=destroy_session and not session.session_dir.exists(),
         diff_artifact=diff_artifact,
         report_artifact=report_artifact,
+        task_manifest_artifact=task_manifest_artifact,
+        review_package_artifact=review_package_artifact,
     )
 
 

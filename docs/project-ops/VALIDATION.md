@@ -110,3 +110,27 @@ Operational note:
 - It was preserved as
   `/mnt/usb/projects/agentos/.agentos-state/agentos.sqlite3.corrupt-20260616-1333`.
 - A fresh runtime database was created by the successful demo run.
+
+## 2026-06-16 Contract Slice Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover /mnt/usb/projects/agentos/prototype/tests -v
+scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos run-demo --state-dir /tmp/agentos-contract-check/state --output-dir /tmp/agentos-contract-check/output
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos inspect --state-dir /tmp/agentos-contract-check/state --json
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos run-demo --state-dir /mnt/usb/projects/agentos/.agentos-state --output-dir /mnt/usb/projects/agentos/.agentos-output
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos inspect --state-dir /mnt/usb/projects/agentos/.agentos-state --session 740df3f68966 --json
+```
+
+Observed result:
+
+- 3 unit tests passed.
+- Ruff passed.
+- Demo wrote `task.json`.
+- Demo wrote `review_package.json`.
+- `agentos inspect --json` listed the demo session with 2 tool calls, 4 artifacts, 1 approval, and 1 sync.
+- USB state demo session `740df3f68966` also wrote `task.json` and
+  `review_package.json`, and `agentos inspect --session 740df3f68966 --json`
+  returned the full session history.

@@ -27,8 +27,8 @@ First integration target: Codex CLI.
 Near-term implementation order:
 
 1. keep the deterministic lifecycle demo working
-2. add `task.json` and `review_package.json` contracts
-3. add `agentos inspect` for session/tool/artifact history
+2. write `task.json` and `review_package.json` contracts
+3. expose `agentos inspect` for session/tool/artifact history
 4. add approval-gated patch/apply sync
 5. wrap Codex CLI inside the same contract
 6. move execution into Docker-backed sandboxes
@@ -43,6 +43,7 @@ The current executable prototype is intentionally small and deterministic:
 - applies a no-LLM demo-agent code fix
 - runs tests again
 - writes diff and report artifacts
+- writes `task.json` and `review_package.json` contract artifacts
 - blocks sync before approval
 - syncs only after approval
 - destroys the disposable workspace
@@ -65,6 +66,15 @@ python3 -m agentos run-demo \
 ```bash
 PYTHONPATH=/mnt/usb/projects/agentos/prototype \
 python3 -m unittest discover /mnt/usb/projects/agentos/prototype/tests -v
+```
+
+## Inspect
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype \
+python3 -m agentos inspect \
+  --state-dir /mnt/usb/projects/agentos/.agentos-state \
+  --json
 ```
 
 ## Project Notes

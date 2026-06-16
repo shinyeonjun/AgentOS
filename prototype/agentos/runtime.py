@@ -155,6 +155,21 @@ class AgentOSRuntime:
             )
         return artifact_path
 
+    def write_json_artifact(self, session: Session, name: str, content: dict) -> Path:
+        return self.write_artifact(
+            session=session,
+            name=name,
+            content=json.dumps(content, ensure_ascii=False, indent=2) + "\n",
+            media_type="application/json",
+        )
+
+    def mark_review_ready(self, session: Session) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                "update sessions set state = ? where session_id = ?",
+                ("review_ready", session.session_id),
+            )
+
     def approve_session(self, session: Session, approver: str = "human") -> None:
         with self._connect() as conn:
             conn.execute(

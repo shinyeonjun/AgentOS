@@ -4,7 +4,7 @@ Last updated: 2026-06-16
 
 ## Phase
 
-v0 prototype exists. v0.2 planning is aligned around the contract slice.
+v0.2 contract slice implemented.
 
 ## Current Assets
 
@@ -12,6 +12,9 @@ v0 prototype exists. v0.2 planning is aligned around the contract slice.
 - Canonical local git repository: `/mnt/usb/projects/agentos/.git`
 - GitHub remote: `https://github.com/shinyeonjun/AgentOS.git`
 - Executable v0 prototype: `/mnt/usb/projects/agentos/prototype/`
+- Contract modules:
+  - `/mnt/usb/projects/agentos/prototype/agentos/contracts.py`
+  - `/mnt/usb/projects/agentos/prototype/agentos/inspector.py`
 - Current technical plan: `/mnt/usb/projects/agentos/docs/technical-plan.md`
 - Requirements draft: `/mnt/usb/projects/agentos/docs/requirements.md`
 - Architecture draft: `/mnt/usb/projects/agentos/docs/architecture.md`
@@ -40,6 +43,9 @@ core loop:
 - tool call routing
 - artifact store
 - preview/diff generation
+- `task.json` artifact
+- `review_package.json` artifact
+- `agentos inspect`
 - human approval
 - approved host sync
 - session destruction
@@ -112,11 +118,10 @@ baselines, not final specs.
 
 ## Next Build Slice
 
-Build the contract layer before more sandbox power:
+Contract layer now exists. Next build before more sandbox power:
 
-1. `task.json`
-2. `review_package.json`
-3. `agentos inspect`
-4. approval-gated patch/apply sync
-5. Codex wrapper
-6. Docker execution
+1. approval-gated patch/apply sync
+2. selected-file sync policy
+3. Codex wrapper
+4. Docker execution
+5. Markdown document workflow

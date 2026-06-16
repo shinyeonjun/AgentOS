@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 
 from .demo import run_code_fix_demo
+from .inspector import inspect_state, render_inspection
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -28,6 +29,22 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Keep the disposable workspace for inspection instead of destroying it",
     )
+    inspect = subparsers.add_parser("inspect", help="Inspect AgentOS sessions and artifacts")
+    inspect.add_argument(
+        "--state-dir",
+        type=Path,
+        default=Path("projects/agentos/.agentos-state"),
+        help="Persistent control-plane state directory",
+    )
+    inspect.add_argument(
+        "--session",
+        help="Session ID to inspect. If omitted, list sessions.",
+    )
+    inspect.add_argument(
+        "--json",
+        action="store_true",
+        help="Render inspection output as JSON",
+    )
 
     args = parser.parse_args(argv)
 
@@ -45,6 +62,13 @@ def main(argv: list[str] | None = None) -> int:
         print(f"destroyed: {result.destroyed}")
         print(f"diff_artifact: {result.diff_artifact}")
         print(f"report_artifact: {result.report_artifact}")
+        print(f"task_manifest_artifact: {result.task_manifest_artifact}")
+        print(f"review_package_artifact: {result.review_package_artifact}")
+        return 0
+
+    if args.command == "inspect":
+        data = inspect_state(args.state_dir, session_id=args.session)
+        print(render_inspection(data, as_json=args.json))
         return 0
 
     parser.error(f"unknown command: {args.command}")
