@@ -4,15 +4,15 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from agentos.platform_checks import render_doctor, run_doctor
+from agentos.core.platform_checks import render_doctor, run_doctor
 
 
 class PlatformChecksTests(unittest.TestCase):
     def test_doctor_warns_for_missing_docker(self) -> None:
         with (
-            patch("agentos.platform_checks.platform.system", return_value="Linux"),
-            patch("agentos.platform_checks.is_wsl", return_value=False),
-            patch("agentos.platform_checks.shutil.which", return_value=None),
+            patch("agentos.core.platform_checks.platform.system", return_value="Linux"),
+            patch("agentos.core.platform_checks.is_wsl", return_value=False),
+            patch("agentos.core.platform_checks.shutil.which", return_value=None),
         ):
             result = run_doctor(workspace_path=Path("/home/user/project"))
 
@@ -24,8 +24,8 @@ class PlatformChecksTests(unittest.TestCase):
 
     def test_doctor_fails_on_native_windows(self) -> None:
         with (
-            patch("agentos.platform_checks.platform.system", return_value="Windows"),
-            patch("agentos.platform_checks.shutil.which", return_value="/usr/bin/tool"),
+            patch("agentos.core.platform_checks.platform.system", return_value="Windows"),
+            patch("agentos.core.platform_checks.shutil.which", return_value="/usr/bin/tool"),
         ):
             result = run_doctor(workspace_path=Path("C:/project"))
 
@@ -36,9 +36,9 @@ class PlatformChecksTests(unittest.TestCase):
 
     def test_doctor_warns_for_windows_mounted_wsl_workspace(self) -> None:
         with (
-            patch("agentos.platform_checks.platform.system", return_value="Linux"),
-            patch("agentos.platform_checks.is_wsl", return_value=True),
-            patch("agentos.platform_checks.shutil.which", return_value="/usr/bin/tool"),
+            patch("agentos.core.platform_checks.platform.system", return_value="Linux"),
+            patch("agentos.core.platform_checks.is_wsl", return_value=True),
+            patch("agentos.core.platform_checks.shutil.which", return_value="/usr/bin/tool"),
             patch("pathlib.Path.resolve", return_value=Path("/mnt/c/projects/agentos")),
         ):
             result = run_doctor(workspace_path=Path("/mnt/c/projects/agentos"))
@@ -50,9 +50,9 @@ class PlatformChecksTests(unittest.TestCase):
 
     def test_render_doctor_is_human_readable(self) -> None:
         with (
-            patch("agentos.platform_checks.platform.system", return_value="Linux"),
-            patch("agentos.platform_checks.is_wsl", return_value=False),
-            patch("agentos.platform_checks.shutil.which", return_value="/usr/bin/tool"),
+            patch("agentos.core.platform_checks.platform.system", return_value="Linux"),
+            patch("agentos.core.platform_checks.is_wsl", return_value=False),
+            patch("agentos.core.platform_checks.shutil.which", return_value="/usr/bin/tool"),
         ):
             result = run_doctor(workspace_path=Path("/home/user/project"))
 

@@ -5,8 +5,8 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from agentos.document_demo import DOCUMENT_NAME, run_markdown_document_demo
-from agentos.inspector import inspect_state
+from agentos.core.inspector import inspect_state
+from agentos.demos.document_demo import DOCUMENT_NAME, run_markdown_document_demo
 
 
 class AgentOSDocumentDemoTests(unittest.TestCase):

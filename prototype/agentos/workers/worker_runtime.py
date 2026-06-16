@@ -4,9 +4,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .changes import FileChange, detect_file_changes
-from .contracts import TaskInput, TaskManifest, artifact_ref, build_review_package
-from .runtime import AgentOSRuntime, Session, ToolResult
+from ..core.changes import FileChange, detect_file_changes
+from ..core.contracts import TaskInput, TaskManifest, artifact_ref, build_review_package
+from ..core.runtime import AgentOSRuntime, Session, ToolResult
 
 
 @dataclass(frozen=True)

@@ -13,12 +13,12 @@ v0.2 contract, sandbox, and CLI JSON polish slice implemented.
 - GitHub remote: `https://github.com/shinyeonjun/AgentOS.git`
 - Executable v0 prototype: `/mnt/usb/projects/agentos/prototype/`
 - Docker image definition: `/mnt/usb/projects/agentos/docker/agentos-base/Dockerfile`
-- Contract modules:
-  - `/mnt/usb/projects/agentos/prototype/agentos/changes.py`
-  - `/mnt/usb/projects/agentos/prototype/agentos/contracts.py`
-  - `/mnt/usb/projects/agentos/prototype/agentos/inspector.py`
-  - `/mnt/usb/projects/agentos/prototype/agentos/sync.py`
-  - `/mnt/usb/projects/agentos/prototype/agentos/codex_adapter.py`
+- Prototype package layout:
+  - `/mnt/usb/projects/agentos/prototype/agentos/cli.py`
+  - `/mnt/usb/projects/agentos/prototype/agentos/core/`
+  - `/mnt/usb/projects/agentos/prototype/agentos/sandbox/`
+  - `/mnt/usb/projects/agentos/prototype/agentos/workers/`
+  - `/mnt/usb/projects/agentos/prototype/agentos/demos/`
 - Current technical plan: `/mnt/usb/projects/agentos/docs/technical-plan.md`
 - Requirements draft: `/mnt/usb/projects/agentos/docs/requirements.md`
 - Architecture draft: `/mnt/usb/projects/agentos/docs/architecture.md`
@@ -79,6 +79,7 @@ core loop:
 - `agentos` console script entry point
 - on-demand `agentos codex-smoke` command
 - real Codex smoke execution passed with changed-file detection
+- package folders split into `core`, `sandbox`, `workers`, and `demos`
 - common worker runtime used by the Codex adapter
 - Codex `--docker` records target AgentOS image metadata without running Codex inside the image
 - session destruction

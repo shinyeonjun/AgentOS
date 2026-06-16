@@ -5,8 +5,8 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from agentos.docker_sandbox import DEFAULT_IMAGE, build_docker_run_command, run_docker_task
-from agentos.sandbox_policy import (
+from agentos.sandbox.docker_sandbox import DEFAULT_IMAGE, build_docker_run_command, run_docker_task
+from agentos.sandbox.sandbox_policy import (
     MountPolicy,
     SandboxPolicy,
     build_default_policy,

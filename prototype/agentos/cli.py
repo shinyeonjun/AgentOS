@@ -7,14 +7,14 @@ from dataclasses import asdict, is_dataclass
 from pathlib import Path
 from typing import Any
 
-from .codex_adapter import run_codex_task
-from .codex_smoke import run_codex_smoke
-from .demo import run_code_fix_demo
-from .document_demo import run_markdown_document_demo
-from .docker_sandbox import DEFAULT_IMAGE, run_docker_task
-from .inspector import inspect_state, render_inspection
-from .platform_checks import render_doctor, run_doctor
-from .rehearsal import run_rehearsal
+from .core.inspector import inspect_state, render_inspection
+from .core.platform_checks import render_doctor, run_doctor
+from .demos.demo import run_code_fix_demo
+from .demos.document_demo import run_markdown_document_demo
+from .demos.rehearsal import run_rehearsal
+from .sandbox.docker_sandbox import DEFAULT_IMAGE, run_docker_task
+from .workers.codex_adapter import run_codex_task
+from .workers.codex_smoke import run_codex_smoke
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -2,6 +2,17 @@
 
 This is the first executable v0.2 baseline of the AgentOS core loop.
 
+Package layout:
+
+```text
+agentos/
+  cli.py            command-line entrypoint
+  core/             contracts, runtime, inspection, sync, capability metadata
+  sandbox/          Docker sandbox runner and policy validation
+  workers/          host-side worker adapters such as Codex
+  demos/            deterministic demos and end-to-end rehearsal
+```
+
 Current demo:
 
 ```text

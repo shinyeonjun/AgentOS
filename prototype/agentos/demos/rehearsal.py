@@ -9,8 +9,8 @@ from pathlib import Path
 from typing import Any
 
 from .demo import run_code_fix_demo
-from .docker_sandbox import DEFAULT_IMAGE, run_docker_task
 from .document_demo import run_markdown_document_demo
+from ..sandbox.docker_sandbox import DEFAULT_IMAGE, run_docker_task
 
 
 @dataclass(frozen=True)

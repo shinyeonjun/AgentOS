@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from agentos.rehearsal import run_rehearsal
+from agentos.demos.rehearsal import run_rehearsal
 
 
 class AgentOSRehearsalTests(unittest.TestCase):

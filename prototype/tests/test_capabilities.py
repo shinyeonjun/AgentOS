@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from agentos.capabilities import capability_manifest, image_capability_manifest
+from agentos.core.capabilities import capability_manifest, image_capability_manifest
 
 
 class CapabilityTests(unittest.TestCase):

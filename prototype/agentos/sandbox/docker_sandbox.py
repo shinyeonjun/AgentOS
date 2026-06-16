@@ -4,10 +4,10 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from .capabilities import image_capability_manifest
-from .contracts import TaskInput, TaskManifest, artifact_ref, build_review_package
-from .runtime import AgentOSRuntime, Session
 from .sandbox_policy import PolicyValidation, assert_policy_passes, build_default_policy, validate_sandbox_policy
+from ..core.capabilities import image_capability_manifest
+from ..core.contracts import TaskInput, TaskManifest, artifact_ref, build_review_package
+from ..core.runtime import AgentOSRuntime, Session
 
 
 DEFAULT_IMAGE = "agentos-base:0.1"

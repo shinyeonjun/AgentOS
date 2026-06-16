@@ -6,8 +6,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from agentos.codex_adapter import run_codex_task
-from agentos.inspector import inspect_state
+from agentos.core.inspector import inspect_state
+from agentos.workers.codex_adapter import run_codex_task
 
 
 class CodexAdapterTests(unittest.TestCase):

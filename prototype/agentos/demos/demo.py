@@ -5,8 +5,8 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from .contracts import TaskInput, TaskManifest, artifact_ref, build_review_package
-from .runtime import AgentOSRuntime, SyncNotApprovedError
+from ..core.contracts import TaskInput, TaskManifest, artifact_ref, build_review_package
+from ..core.runtime import AgentOSRuntime, SyncNotApprovedError
 
 
 @dataclass(frozen=True)

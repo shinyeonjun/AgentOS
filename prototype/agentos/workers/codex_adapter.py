@@ -4,9 +4,9 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from .docker_sandbox import DEFAULT_IMAGE
-from .runtime import ToolResult
 from .worker_runtime import WorkerRunResult, WorkerSpec, run_worker_task
+from ..core.runtime import ToolResult
+from ..sandbox.docker_sandbox import DEFAULT_IMAGE
 
 
 @dataclass(frozen=True)

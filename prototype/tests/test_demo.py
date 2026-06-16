@@ -5,8 +5,8 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from agentos.demo import run_code_fix_demo
-from agentos.inspector import inspect_state
+from agentos.core.inspector import inspect_state
+from agentos.demos.demo import run_code_fix_demo
 
 
 class AgentOSDemoTests(unittest.TestCase):

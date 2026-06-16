@@ -525,3 +525,27 @@ Observed result:
 - Ruff passed.
 - Compileall passed.
 - Docker rehearsal `fadd8fc27621` passed.
+
+## 2026-06-16 Package Folder Reorganization Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests
+/home/ubuntu/.openclaw/workspace/scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+tmp=$(mktemp -d)
+python3 -m venv "$tmp/venv"
+"$tmp/venv/bin/python" -m pip install -e /mnt/usb/projects/agentos
+"$tmp/venv/bin/agentos" codex-smoke --state-dir "$tmp/state" --output-dir "$tmp/output" --json
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos rehearse --state-dir /mnt/usb/projects/agentos/.agentos-state --output-dir /mnt/usb/projects/agentos/.agentos-output --docker-sudo --json
+```
+
+Observed result:
+
+- Prototype package is now grouped into `core`, `sandbox`, `workers`, and `demos`.
+- 40 unit tests passed after import updates.
+- Ruff passed.
+- Compileall passed.
+- Editable install smoke passed with `agentos codex-smoke --json`.
+- Docker rehearsal `3913a09e54d6` passed.

@@ -5,8 +5,8 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from agentos.runtime import COMMAND_TIMEOUT_EXIT_CODE, AgentOSRuntime
-from agentos.sync import PatchApplyError, apply_patch_to_target
+from agentos.core.runtime import COMMAND_TIMEOUT_EXIT_CODE, AgentOSRuntime
+from agentos.core.sync import PatchApplyError, apply_patch_to_target
 
 
 class RuntimeHardeningTests(unittest.TestCase):

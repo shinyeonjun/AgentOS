@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .codex_adapter import CodexRunResult, run_codex_task
-from .docker_sandbox import DEFAULT_IMAGE
+from ..sandbox.docker_sandbox import DEFAULT_IMAGE
 
 
 SMOKE_LINE = "AgentOS Codex smoke passed."

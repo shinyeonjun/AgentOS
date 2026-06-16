@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from agentos.codex_smoke import SMOKE_LINE, run_codex_smoke
+from agentos.workers.codex_smoke import SMOKE_LINE, run_codex_smoke
 
 
 class CodexSmokeTests(unittest.TestCase):
