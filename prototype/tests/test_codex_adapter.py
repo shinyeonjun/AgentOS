@@ -82,6 +82,11 @@ class CodexAdapterTests(unittest.TestCase):
             self.assertEqual(review_package["validation"]["status"], "passed")
             self.assertEqual(review_package["changes"]["changed_files"][0]["path"], "README.md")
             self.assertIn("diff-README.md.diff", review_package["changes"]["changed_files"][0]["diff_ref"])
+            approval_scopes = review_package["approval"]["scopes"]
+            self.assertEqual(approval_scopes[0]["id"], "sync_all_changed_files")
+            self.assertEqual(approval_scopes[0]["paths"], ["README.md"])
+            self.assertEqual(approval_scopes[1]["id"], "sync_selected:README.md")
+            self.assertEqual(approval_scopes[1]["action"], "sync_selected")
 
             session_detail = inspect_state(root / "state", session_id=result.session_id)
             session = session_detail["session"]

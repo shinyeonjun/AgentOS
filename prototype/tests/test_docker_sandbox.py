@@ -123,6 +123,7 @@ class DockerSandboxTests(unittest.TestCase):
             self.assertEqual(command_artifact["policy_ref"], f"artifact://{result.session_id}/sandbox-policy.json")
             self.assertEqual(review_package["validation"]["checks"][0]["name"], "sandbox policy")
             self.assertEqual(review_package["validation"]["checks"][0]["status"], "passed")
+            self.assertEqual(review_package["approval"]["scopes"], [])
 
 
 if __name__ == "__main__":

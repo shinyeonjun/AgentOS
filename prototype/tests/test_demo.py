@@ -57,6 +57,12 @@ class AgentOSDemoTests(unittest.TestCase):
             self.assertFalse(review_package["safety"]["original_mutated"])
             self.assertEqual(review_package["validation"]["status"], "passed")
             self.assertEqual(review_package["approval"]["recommended"], "sync_all")
+            scopes = review_package["approval"]["scopes"]
+            self.assertEqual(scopes[0]["id"], "sync_all_changed_files")
+            self.assertEqual(scopes[0]["paths"], ["calculator.py"])
+            self.assertEqual(scopes[1]["id"], "sync_selected:calculator.py")
+            self.assertEqual(scopes[1]["action"], "sync_selected")
+            self.assertEqual(scopes[1]["diff_ref"], f"artifact://{result.session_id}/code-change.diff")
 
     def test_inspect_state_returns_session_history(self) -> None:
         with TemporaryDirectory() as tmp:

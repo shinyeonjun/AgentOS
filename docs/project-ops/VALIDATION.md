@@ -287,3 +287,20 @@ Observed result:
 - `sandbox-policy.json` recorded the image, network, workdir, standard dirs, and mount policy.
 - Policy validation passed for image, `network: none`, `/agentos/work`, `/agentos/artifacts`, mount scope, writable mounts, and absolute host paths.
 - `review_package.json` now includes a `sandbox policy` validation check before the `docker run` check.
+
+## 2026-06-16 Review Approval Scope Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover /mnt/usb/projects/agentos/prototype/tests -v
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos run-demo --state-dir /mnt/usb/projects/agentos/.agentos-state --output-dir /mnt/usb/projects/agentos/.agentos-output
+```
+
+Observed result:
+
+- 12 unit tests passed.
+- Demo session `200d866e23c8` completed with selected sync enabled.
+- `review_package.json` approval options include `sync_all`, `sync_selected`, `discard`, and `keep_session`.
+- `approval.scopes` includes `sync_all_changed_files`.
+- `approval.scopes` includes `sync_selected:calculator.py` with `diff_ref` pointing to `code-change.diff`.

@@ -70,8 +70,25 @@ human whether to sync approved results.
   "risk_notes": [],
   "approval": {
     "required": true,
-    "options": ["sync_all", "discard", "keep_session"],
-    "recommended": "sync_all"
+    "options": ["sync_all", "sync_selected", "discard", "keep_session"],
+    "recommended": "sync_all",
+    "scopes": [
+      {
+        "id": "sync_all_changed_files",
+        "action": "sync_all",
+        "paths": ["calculator.py"],
+        "change_count": 1,
+        "description": "Approve every changed file in this review package."
+      },
+      {
+        "id": "sync_selected:calculator.py",
+        "action": "sync_selected",
+        "paths": ["calculator.py"],
+        "change_type": "modified",
+        "diff_ref": "artifact://diffs/calculator.py.diff",
+        "description": "Approve only calculator.py."
+      }
+    ]
   }
 }
 ```
@@ -147,6 +164,10 @@ not_run
 
 Options available to the human.
 
+`approval.scopes` lists concrete sync scopes derived from the changed files.
+External apps can render these as "sync all" and "sync selected files" choices
+without re-parsing diffs.
+
 ## 6. Risk Notes
 
 Risk notes should be short and practical.
@@ -178,11 +199,13 @@ keep_session
 request_revision
 ```
 
-v0 may support only:
+v0 supports:
 
 ```text
 sync_all
+sync_selected
 discard
+keep_session
 ```
 
 ## 8. Token Efficiency Rules

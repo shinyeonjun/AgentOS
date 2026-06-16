@@ -112,5 +112,34 @@ def build_review_package(
             "required": True,
             "options": ["sync_all", "sync_selected", "discard", "keep_session"],
             "recommended": "sync_all" if validation_status == "passed" else "keep_session",
+            "scopes": build_approval_scopes(changed_files),
         },
     }
+
+
+def build_approval_scopes(changed_files: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if not changed_files:
+        return []
+
+    paths = [item["path"] for item in changed_files]
+    scopes: list[dict[str, Any]] = [
+        {
+            "id": "sync_all_changed_files",
+            "action": "sync_all",
+            "paths": paths,
+            "change_count": len(paths),
+            "description": "Approve every changed file in this review package.",
+        }
+    ]
+    scopes.extend(
+        {
+            "id": f"sync_selected:{item['path']}",
+            "action": "sync_selected",
+            "paths": [item["path"]],
+            "change_type": item.get("change_type", "unknown"),
+            "diff_ref": item.get("diff_ref"),
+            "description": f"Approve only {item['path']}.",
+        }
+        for item in changed_files
+    )
+    return scopes

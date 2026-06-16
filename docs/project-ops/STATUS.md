@@ -54,6 +54,7 @@ core loop:
 - approved host sync
 - approved patch apply to safe target
 - approved selected-file sync to safe target
+- `approval.scopes` in `review_package.json` for all-changes and per-file selected sync
 - Codex prepare wrapper with optional `--execute`
 - Codex execute result collection with changed-file detection and diff artifacts
 - Docker-backed sandbox command runner using `agentos-base:0.1`
@@ -133,11 +134,12 @@ baselines, not final specs.
 
 Contract layer, safe patch apply, selected-file sync, Codex execute result
 collection, Docker command execution, host-side worker runtime extraction, and
-Docker sandbox policy validation now exist. Next build:
+Docker sandbox policy validation, and selected-file approval scopes now exist.
+Next build:
 
-1. selected-file approval scopes in `review_package.json`
-2. Markdown document workflow
-3. first end-to-end exhibition rehearsal script
+1. Markdown document workflow
+2. first end-to-end exhibition rehearsal script
+3. image capability metadata for base/code/document layers
 
 ## Docker Image State
 
