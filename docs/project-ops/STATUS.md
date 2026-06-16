@@ -63,6 +63,15 @@ d9fceac Initial AgentDesk prototype
 
 No GitHub remote has been created yet.
 
+## Storage State
+
+USB was repartitioned on 2026-06-16:
+
+- `/mnt/usb`: ext4 `AGENTOS`, project and future Docker data
+- `/mnt/usb-share`: exFAT `USB_SHARE`, general file exchange
+
+AgentOS repo was restored and tests passed after repartition.
+
 ## Clarified Product Direction
 
 The tools are considered part of the AI OS image, not the main pluginization

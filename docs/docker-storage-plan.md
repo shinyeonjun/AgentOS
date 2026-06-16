@@ -4,14 +4,21 @@
 
 ## Current Host State
 
-Observed:
+Initial state before repartition:
 
 ```text
 root: /dev/mmcblk1p2, ext4, about 13G free
 usb:  /dev/sda1, vfat, about 234G free, mounted at /mnt/usb
 ```
 
-Docker is not installed yet.
+Applied storage layout on 2026-06-16:
+
+```text
+/dev/sda1  ext4   AGENTOS    200G   mounted at /mnt/usb
+/dev/sda2  exfat  USB_SHARE   33G   mounted at /mnt/usb-share
+```
+
+Docker is still not installed yet.
 
 ## Key Constraint
 
@@ -22,11 +29,14 @@ filesystem. Docker image/container storage generally needs Linux filesystem
 features such as permissions, links, extended attributes, and overlay
 filesystem support.
 
-Therefore:
+Therefore, before repartition:
 
 ```text
 Do not put Docker data-root directly on the current vfat /mnt/usb.
 ```
+
+After repartition, `/mnt/usb` is ext4 and is suitable for AgentOS project files
+and future Docker data-root.
 
 ## Options
 
@@ -101,19 +111,35 @@ Best if cross-platform USB use matters.
 
 For AgentOS:
 
-1. Do not install Docker data-root on the current vfat USB.
-2. If speed matters right now, install Docker on SD/root temporarily.
-3. If doing it properly for the project, reformat or repartition the USB to
-   ext4 first, then place Docker data-root on USB.
+1. Install Docker engine on the system.
+2. Configure Docker data-root on the ext4 AgentOS partition.
+3. Keep `/mnt/usb-share` as the cross-platform file exchange partition.
 
 Recommended durable path:
 
 ```text
 backup AgentOS repo
--> reformat USB as ext4
+-> repartition USB into ext4 + exFAT
 -> restore AgentOS repo to /mnt/usb/projects/agentdesk
 -> install Docker engine on system
 -> configure Docker data-root to /mnt/usb/docker
 ```
 
-Do not execute the destructive USB format step without explicit user approval.
+The destructive USB repartition step was completed after explicit user approval.
+
+## Verification
+
+Verified after repartition:
+
+```bash
+findmnt /mnt/usb
+findmnt /mnt/usb-share
+df -h /mnt/usb /mnt/usb-share
+PYTHONPATH=/mnt/usb/projects/agentdesk/prototype python3 -m unittest discover /mnt/usb/projects/agentdesk/prototype/tests -v
+```
+
+Result:
+
+- `/mnt/usb` mounted as ext4 `AGENTOS`
+- `/mnt/usb-share` mounted as exFAT `USB_SHARE`
+- AgentOS prototype tests passed
