@@ -130,6 +130,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"executed: {result.executed}")
         if result.codex_result is not None:
             print(f"codex_exit_code: {result.codex_result.exit_code}")
+        print(f"changed_files: {len(result.changed_files)}")
         print(f"task_manifest_artifact: {result.task_manifest_artifact}")
         print(f"command_artifact: {result.command_artifact}")
         print(f"review_package_artifact: {result.review_package_artifact}")

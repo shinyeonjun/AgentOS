@@ -83,7 +83,8 @@ python3 -m agentos inspect \
 ## Codex Prepare
 
 By default this prepares a copied workspace and Codex command artifact without
-spending tokens. Add `--execute` only when you want AgentOS to run Codex.
+spending tokens. Add `--execute` only when you want AgentOS to run Codex and
+collect changed files/diff artifacts into the review package.
 
 ```bash
 PYTHONPATH=/mnt/usb/projects/agentos/prototype \

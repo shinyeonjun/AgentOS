@@ -48,6 +48,47 @@ class CodexAdapterTests(unittest.TestCase):
             self.assertIn("codex-command.json", artifact_names)
             self.assertIn("review_package.json", artifact_names)
 
+    def test_codex_execute_collects_changed_files(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            input_project = root / "input-project"
+            input_project.mkdir()
+            (input_project / "README.md").write_text("# Demo\n", encoding="utf-8")
+            fake_codex = root / "fake-codex"
+            fake_codex.write_text(
+                "#!/bin/sh\n"
+                "printf '# Demo\\n\\nUpdated by fake Codex.\\n' > README.md\n"
+                "exit 0\n",
+                encoding="utf-8",
+            )
+            fake_codex.chmod(0o755)
+
+            result = run_codex_task(
+                state_dir=root / "state",
+                output_dir=root / "output",
+                input_path=input_project,
+                task="Update README.",
+                execute=True,
+                codex_bin=str(fake_codex),
+            )
+
+            self.assertTrue(result.executed)
+            self.assertIsNotNone(result.codex_result)
+            self.assertEqual(result.codex_result.exit_code, 0)
+            self.assertEqual(result.changed_files, ("README.md",))
+
+            review_package = json.loads(result.review_package_artifact.read_text())
+            self.assertEqual(review_package["validation"]["status"], "passed")
+            self.assertEqual(review_package["changes"]["changed_files"][0]["path"], "README.md")
+            self.assertIn("diff-README.md.diff", review_package["changes"]["changed_files"][0]["diff_ref"])
+
+            session_detail = inspect_state(root / "state", session_id=result.session_id)
+            session = session_detail["session"]
+            self.assertEqual(len(session["tool_calls"]), 1)
+            artifact_names = {artifact["name"] for artifact in session["artifacts"]}
+            self.assertIn("final-report.md", artifact_names)
+            self.assertIn("diff-README.md.diff", artifact_names)
+
 
 if __name__ == "__main__":
     unittest.main()

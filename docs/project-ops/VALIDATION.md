@@ -200,3 +200,24 @@ Observed result:
 - Codex prepare mode created `task.json`, `codex-command.json`, and `review_package.json`.
 - USB state Codex prepare session: `63e4c87fd4f1`.
 - Codex was not executed because `--execute` was not provided.
+
+## 2026-06-16 Codex Execute Collection Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover /mnt/usb/projects/agentos/prototype/tests -v
+scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos codex --state-dir /tmp/agentos-codex-exec/state --output-dir /tmp/agentos-codex-exec/output --input /tmp/agentos-codex-exec/input --task 'Update README.' --codex-bin /tmp/agentos-codex-exec/fake-codex --execute
+```
+
+Observed result:
+
+- 5 unit tests passed.
+- Ruff passed.
+- Compileall passed.
+- Fake Codex execute session `db7eebee936b` exited with code 0.
+- Review package reported 1 changed file: `README.md`.
+- Diff artifact was written: `diff-README.md.diff`.
+- No real Codex tokens were spent during this validation.

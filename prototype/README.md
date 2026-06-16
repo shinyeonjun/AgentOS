@@ -40,6 +40,8 @@ python3 -m agentos codex --input /path/to/project --task "Fix failing tests"
 ```
 
 Use `--execute` only when the copied workspace should actually run Codex.
+Execute mode records the Codex tool call, detects changed files, writes text
+diff artifacts, and updates `review_package.json`.
 
 Run tests:
 

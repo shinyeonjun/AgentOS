@@ -13,6 +13,7 @@ v0.2 contract and approval-gated patch sync slice implemented.
 - GitHub remote: `https://github.com/shinyeonjun/AgentOS.git`
 - Executable v0 prototype: `/mnt/usb/projects/agentos/prototype/`
 - Contract modules:
+  - `/mnt/usb/projects/agentos/prototype/agentos/changes.py`
   - `/mnt/usb/projects/agentos/prototype/agentos/contracts.py`
   - `/mnt/usb/projects/agentos/prototype/agentos/inspector.py`
   - `/mnt/usb/projects/agentos/prototype/agentos/sync.py`
@@ -53,6 +54,7 @@ core loop:
 - approved patch apply to safe target
 - approved selected-file sync to safe target
 - Codex prepare wrapper with optional `--execute`
+- Codex execute result collection with changed-file detection and diff artifacts
 - session destruction
 
 ## Current Verdict
@@ -123,10 +125,9 @@ baselines, not final specs.
 
 ## Next Build Slice
 
-Contract layer, safe patch apply, selected-file sync, and Codex prepare wrapper
-now exist. Next build:
+Contract layer, safe patch apply, selected-file sync, and Codex execute result
+collection now exist. Next build:
 
-1. Codex execution result collection
-2. Docker execution
-3. Markdown document workflow
-4. policy checks for network and writable mounts
+1. Docker execution
+2. Markdown document workflow
+3. policy checks for network and writable mounts

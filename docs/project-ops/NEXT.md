@@ -13,21 +13,18 @@ The first contract slice now exists:
 - selected-file sync to a safe target
 - Codex prepare wrapper with optional execution
 
-Next, collect Codex execution changes into the review package and then move
-execution into Docker.
+Next, move execution into Docker so the Codex wrapper runs in a stronger
+sandbox boundary.
 
 ## Next 7 Actions
 
-1. Add Codex execution result collection:
-   - changed file detection
-   - diff artifacts
-   - validation summary
-2. Add Docker sandbox proof-of-concept:
+1. Add Docker sandbox proof-of-concept:
    - create session
    - copy input into workspace
    - run one safe command
    - collect artifact
    - destroy session
+2. Run Codex execute mode inside Docker-backed workspace.
 3. Add Markdown document modification demo.
 4. Add first end-to-end demo script for exhibition rehearsal.
 5. Add minimal policy checks for network and writable mounts.
