@@ -4,6 +4,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from .image_provenance import ImageProvenance, inspect_image_provenance
 from .sandbox_policy import PolicyValidation, assert_policy_passes, build_default_policy, validate_sandbox_policy
 from ..core.capabilities import image_capability_manifest
 from ..core.contracts import (
@@ -37,7 +38,10 @@ class DockerRunResult:
     stderr_tail: str
     policy_artifact: Path
     capability_artifact: Path
+    provenance_artifact: Path
     policy_status: str
+    image_provenance_status: str
+    pinned_image_ref: str | None
 
 
 def docker_prefix(docker_bin: str = "docker", use_sudo: bool = False) -> list[str]:
@@ -117,8 +121,18 @@ def run_docker_task(
     workspace_path = runtime.import_input(session, input_path)
     artifact_dir = runtime.artifacts_dir / session.session_id
     artifact_dir.mkdir(parents=True, exist_ok=True)
-    policy = build_default_policy(
+    image_provenance = inspect_image_provenance(
         image=image,
+        docker_prefix=docker_prefix(docker_bin=docker_bin, use_sudo=use_sudo),
+    )
+    run_image = image_provenance.pinned_reference or image
+    provenance_artifact = runtime.write_json_artifact(
+        session,
+        "image-provenance.json",
+        image_provenance.to_dict(),
+    )
+    policy = build_default_policy(
+        image=run_image,
         network="none",
         workspace_dir=workspace_path,
         artifact_dir=artifact_dir,
@@ -130,6 +144,8 @@ def run_docker_task(
         {
             "policy": policy.to_dict(),
             "validation": policy_validation.to_dict(),
+            "image_provenance_ref": artifact_ref(session.session_id, provenance_artifact),
+            "image_provenance": image_provenance.to_dict(),
         },
     )
     if not policy_validation.passed:
@@ -137,13 +153,13 @@ def run_docker_task(
     capability_artifact = runtime.write_json_artifact(
         session,
         "image-capabilities.json",
-        image_capability_manifest(image=image, capability_names=("base",)),
+        image_capability_manifest(image=run_image, capability_names=("base",)),
     )
     docker_command = build_docker_run_command(
         workspace_dir=workspace_path,
         artifact_dir=artifact_dir,
         command=command,
-        image=image,
+        image=run_image,
         docker_bin=docker_bin,
         use_sudo=use_sudo,
     )
@@ -151,7 +167,10 @@ def run_docker_task(
         session,
         "docker-command.json",
         {
-            "image": image,
+            "requested_image": image,
+            "image": run_image,
+            "image_provenance_ref": artifact_ref(session.session_id, provenance_artifact),
+            "image_provenance": image_provenance.to_dict(),
             "network": "none",
             "hardening": {
                 "cap_drop": ["ALL"],
@@ -176,11 +195,13 @@ def run_docker_task(
         runtime=runtime,
         session=session,
         command=command,
-        image=image,
+        requested_image=image,
+        run_image=run_image,
         exit_code=docker_result.exit_code,
         stdout_tail=docker_result.stdout_tail,
         stderr_tail=docker_result.stderr_tail,
         policy_validation=policy_validation,
+        image_provenance=image_provenance,
     )
     review_package_artifact = _write_docker_review_package(
         runtime=runtime,
@@ -188,11 +209,14 @@ def run_docker_task(
         command_artifact=command_artifact,
         policy_artifact=policy_artifact,
         capability_artifact=capability_artifact,
+        provenance_artifact=provenance_artifact,
         report_artifact=report_artifact,
-        image=image,
+        requested_image=image,
+        run_image=run_image,
         command=command,
         exit_code=docker_result.exit_code,
         policy_validation=policy_validation,
+        image_provenance=image_provenance,
     )
     runtime.mark_review_ready(session)
     runtime.destroy_session(session)
@@ -208,7 +232,10 @@ def run_docker_task(
         stderr_tail=docker_result.stderr_tail,
         policy_artifact=policy_artifact,
         capability_artifact=capability_artifact,
+        provenance_artifact=provenance_artifact,
         policy_status=policy_validation.status,
+        image_provenance_status=image_provenance.status,
+        pinned_image_ref=image_provenance.pinned_reference,
     )
 
 
@@ -224,17 +251,21 @@ def _write_docker_report(
     runtime: AgentOSRuntime,
     session: Session,
     command: list[str],
-    image: str,
+    requested_image: str,
+    run_image: str,
     exit_code: int,
     stdout_tail: str,
     stderr_tail: str,
     policy_validation: PolicyValidation,
+    image_provenance: ImageProvenance,
 ) -> Path:
     return runtime.write_artifact(
         session,
         "final-report.md",
         "# Docker Sandbox Report\n\n"
-        f"Image: `{image}`\n\n"
+        f"Requested image: `{requested_image}`\n\n"
+        f"Run image: `{run_image}`\n\n"
+        f"Image provenance: `{image_provenance.status}`\n\n"
         f"Command: `{' '.join(command)}`\n\n"
         f"Sandbox policy: `{policy_validation.status}`\n\n"
         f"Exit code: `{exit_code}`\n\n"
@@ -253,11 +284,14 @@ def _write_docker_review_package(
     command_artifact: Path,
     policy_artifact: Path,
     capability_artifact: Path,
+    provenance_artifact: Path,
     report_artifact: Path,
-    image: str,
+    requested_image: str,
+    run_image: str,
     command: list[str],
     exit_code: int,
     policy_validation: PolicyValidation,
+    image_provenance: ImageProvenance,
 ) -> Path:
     validation_status = "passed" if exit_code == 0 and policy_validation.passed else "failed"
     validation_checks = [
@@ -267,6 +301,14 @@ def _write_docker_review_package(
             "exit_code": None,
             "role": "policy_check",
             "checks": [check.to_dict() for check in policy_validation.checks],
+        },
+        {
+            "name": "image provenance",
+            "status": "passed" if image_provenance.resolved else "warning",
+            "exit_code": None,
+            "role": "image_inspect",
+            "pinned_reference": image_provenance.pinned_reference,
+            "error": image_provenance.error,
         },
         {
             "name": "docker run",
@@ -279,6 +321,7 @@ def _write_docker_review_package(
         artifact_entry(session.session_id, command_artifact, "application/json"),
         artifact_entry(session.session_id, policy_artifact, "application/json"),
         artifact_entry(session.session_id, capability_artifact, "application/json"),
+        artifact_entry(session.session_id, provenance_artifact, "application/json"),
         artifact_entry(session.session_id, report_artifact, "text/markdown"),
     ]
     manifest = build_artifact_manifest(session_id=session.session_id, artifacts=artifacts)
@@ -299,7 +342,11 @@ def _write_docker_review_package(
         risk_notes=[
             {
                 "severity": "low",
-                "message": f"Docker image: {image}",
+                "message": f"Requested Docker image: {requested_image}",
+            },
+            {
+                "severity": "low",
+                "message": f"Run Docker image reference: {run_image}",
             },
             {
                 "severity": "low",

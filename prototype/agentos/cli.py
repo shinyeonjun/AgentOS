@@ -478,8 +478,11 @@ def _main_impl(argv: list[str]) -> int:
         print(f"artifact_dir: {result.artifact_dir}")
         print(f"exit_code: {result.exit_code}")
         print(f"policy_status: {result.policy_status}")
+        print(f"image_provenance_status: {result.image_provenance_status}")
+        print(f"pinned_image_ref: {result.pinned_image_ref}")
         print(f"command_artifact: {result.command_artifact}")
         print(f"policy_artifact: {result.policy_artifact}")
+        print(f"provenance_artifact: {result.provenance_artifact}")
         print(f"report_artifact: {result.report_artifact}")
         print(f"review_package_artifact: {result.review_package_artifact}")
         return result.exit_code

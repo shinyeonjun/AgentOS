@@ -85,6 +85,8 @@ class AgentOSCliTests(unittest.TestCase):
             data = json.loads(output)
             self.assertEqual(data["exit_code"], 7)
             self.assertEqual(data["policy_status"], "passed")
+            self.assertEqual(data["image_provenance_status"], "unavailable")
+            self.assertIsNone(data["pinned_image_ref"])
 
     def test_codex_prepare_json_outputs_session_metadata(self) -> None:
         with TemporaryDirectory() as tmp:

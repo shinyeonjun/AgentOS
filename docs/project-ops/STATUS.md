@@ -74,6 +74,8 @@ core loop:
 - task and review package capability details
 - Docker image `/agentos/capabilities.json`
 - Docker run `image-capabilities.json` artifact
+- Docker run `image-provenance.json` artifact
+- Docker runner pins execution to a repo digest or local image id when available
 - JSON output for `run-demo`, `run-doc-demo`, `rehearse`, `codex`, and `docker-run`
 - `docker-run` returns the sandbox command exit code
 - structured CLI errors for common environment/input failures
@@ -170,13 +172,13 @@ document workflow, end-to-end rehearsal, first runtime hardening pass, doctor
 preflight, capability metadata, major-command JSON output, structured CLI
 errors, Python-native approved patch apply, editable package install, a real
 Codex smoke path, worker evidence artifacts, artifact integrity metadata,
-artifact manifests, optional HMAC manifest signatures, review verification, a
-Linux/WSL2 setup guide, sandbox threat model, and a separated SQLite storage
-boundary now exist.
+artifact manifests, optional HMAC manifest signatures, review verification,
+Docker image provenance/pinning, a Linux/WSL2 setup guide, sandbox threat
+model, and a separated SQLite storage boundary now exist.
 Next build:
 
 1. continuing real-worker rehearsal coverage
-2. Docker image digest pinning / stronger runtime provenance
+2. environment allowlist for worker execution
 3. continuing CLI UX polish as new commands appear
 
 ## Docker Image State

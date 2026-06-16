@@ -187,7 +187,9 @@ small `/tmp` tmpfs while keeping only `/agentos/work` and `/agentos/artifacts`
 writable.
 The base image also includes `/agentos/capabilities.json`, and Docker runs
 write an `image-capabilities.json` artifact so review packages can describe the
-runtime capability contract.
+runtime capability contract. Before running the container, AgentOS records
+`image-provenance.json` and uses a repo digest or local image id as the pinned
+runtime image reference when Docker exposes one.
 
 ## Supported Runtime
 

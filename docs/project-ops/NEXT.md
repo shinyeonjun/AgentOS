@@ -33,13 +33,14 @@ The first contract slice now exists:
 - review package artifact entries include size and SHA-256 digest metadata
 - `artifact-manifest.json` with optional HMAC-SHA256 signature metadata
 - `agentos verify-review` for manifest and artifact integrity checks
+- Docker `image-provenance.json` and pinned runtime image references
 
-Next, continue real-worker rehearsal coverage and improve runtime provenance.
+Next, continue real-worker rehearsal coverage and add worker environment controls.
 
 ## Next 7 Actions
 
 1. Add real-worker execution rehearsals after the deterministic demo story is stable.
-2. Pin Docker images by digest in policy artifacts.
+2. Add an environment allowlist for worker execution.
 3. Continue polishing CLI failure messages as new commands appear.
 4. Document supported install/runtime paths for Linux and WSL2.
 5. Consider a minimal review dashboard only after the CLI demo is solid.

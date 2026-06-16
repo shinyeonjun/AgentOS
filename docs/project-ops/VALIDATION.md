@@ -686,3 +686,26 @@ Observed result:
 - Compileall passed.
 - Docker rehearsal `9bac1e24c16f` passed.
 - Manifest generation and verification logic now lives in `agentos.core.integrity`.
+
+## 2026-06-16 Docker Image Provenance Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest prototype.tests.test_image_provenance prototype.tests.test_docker_sandbox prototype.tests.test_cli -v
+/home/ubuntu/.openclaw/workspace/scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos rehearse --state-dir /mnt/usb/projects/agentos/.agentos-state --output-dir /mnt/usb/projects/agentos/.agentos-output --docker-sudo --json
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+```
+
+Observed result:
+
+- Focused image provenance/Docker/CLI tests passed: 18 tests.
+- Ruff passed.
+- Docker rehearsal `c2df9ea2bf40` passed.
+- Real Docker policy session `d71cd5e89795` recorded `image-provenance.json`.
+- Real Docker command used pinned runtime image reference `sha256:95dcd6b9016c...` instead of only the tag `agentos-base:0.1`.
+- `sandbox-policy.json`, `docker-command.json`, and `review_package.json` all reference the image provenance evidence.
+- Full unit suite passed: 46 tests.
+- Compileall passed.

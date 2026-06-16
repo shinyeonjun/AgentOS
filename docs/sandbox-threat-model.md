@@ -177,6 +177,8 @@ Implemented:
 - Docker resource limits
 - Docker read-only root
 - Docker `/tmp` tmpfs
+- Docker image provenance artifact
+- Docker runtime image reference pinned to repo digest or local image id when available
 - sandbox policy artifact
 - worker result artifact
 - artifact size and SHA-256 digest metadata in review packages
@@ -191,8 +193,7 @@ Not implemented yet:
 - environment variable filtering
 - signed approval records
 - public-key artifact signing
-- image digest pinning
-- SBOM/image provenance
+- SBOM/image attestation records
 - interactive review dashboard
 - production installer
 
@@ -201,7 +202,7 @@ Not implemented yet:
 Next practical steps:
 
 1. Add environment allowlist for worker execution.
-2. Pin Docker image by digest in policy artifacts.
+2. Add stronger SBOM/image provenance records.
 3. Add signed approval records with approver identity and chosen scope.
 4. Add a rootless Docker setup path.
 5. Add a stricter seccomp/AppArmor profile.
