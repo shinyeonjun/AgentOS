@@ -31,7 +31,19 @@ class ToolResult:
     stderr_tail: str
 
 
+@dataclass(frozen=True)
+class PatchApplyResult:
+    target_dir: Path
+    exit_code: int
+    stdout_tail: str
+    stderr_tail: str
+
+
 class SyncNotApprovedError(RuntimeError):
+    pass
+
+
+class PatchApplyError(RuntimeError):
     pass
 
 
@@ -202,6 +214,50 @@ class AgentOSRuntime:
                 ("synced", session.session_id),
             )
         return sync_dir
+
+    def sync_approved_patch(self, session: Session, patch_path: Path, target_dir: Path) -> PatchApplyResult:
+        if not self._is_approved(session.session_id):
+            raise SyncNotApprovedError(f"session {session.session_id} has not been approved")
+        if not target_dir.is_dir():
+            raise PatchApplyError(f"patch target must be an existing directory: {target_dir}")
+
+        completed = subprocess.run(
+            [
+                "patch",
+                "--batch",
+                "--forward",
+                "--no-backup-if-mismatch",
+                "-p0",
+                "-i",
+                str(patch_path),
+            ],
+            cwd=target_dir,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        stdout_tail = completed.stdout[-4000:]
+        stderr_tail = completed.stderr[-4000:]
+        if completed.returncode != 0:
+            raise PatchApplyError(
+                f"patch apply failed with exit code {completed.returncode}: {stderr_tail or stdout_tail}"
+            )
+
+        with self._connect() as conn:
+            conn.execute(
+                "insert into syncs(session_id, synced_at, source_path, target_path) values (?, ?, ?, ?)",
+                (session.session_id, utc_now(), str(patch_path), str(target_dir)),
+            )
+            conn.execute(
+                "update sessions set state = ? where session_id = ?",
+                ("synced", session.session_id),
+            )
+        return PatchApplyResult(
+            target_dir=target_dir,
+            exit_code=completed.returncode,
+            stdout_tail=stdout_tail,
+            stderr_tail=stderr_tail,
+        )
 
     def destroy_session(self, session: Session) -> None:
         if session.session_dir.exists():

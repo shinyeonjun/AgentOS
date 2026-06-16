@@ -2,16 +2,17 @@
 
 ## Immediate Next Move
 
-Start the approval-gated sync slice.
+Prepare for the Codex wrapper slice.
 
 The first contract slice now exists:
 
 - `task.json` artifact
 - `review_package.json` artifact
 - `agentos inspect`
+- approval-gated patch apply to a safe target
 
-Next, make sync more realistic without letting it touch host originals
-recklessly.
+Next, cleanly separate runtime boundaries enough that Codex can be attached
+without turning `runtime.py` into a junk drawer.
 
 ## Next 7 Actions
 
@@ -21,17 +22,17 @@ recklessly.
    - review package
    - sync
    - demo runner
-2. Add approval-gated patch/apply sync after the review package exists.
-3. Add selected-file sync rules.
-4. Add a Codex CLI wrapper that consumes the same task/review contract.
-5. Add Docker sandbox proof-of-concept:
+2. Add selected-file sync rules.
+3. Add a Codex CLI wrapper that consumes the same task/review contract.
+4. Add Docker sandbox proof-of-concept:
    - create session
    - copy input into workspace
    - run one safe command
    - collect artifact
    - destroy session
-6. Add Markdown document modification demo.
-7. Add first end-to-end demo script for exhibition rehearsal.
+5. Add Markdown document modification demo.
+6. Add first end-to-end demo script for exhibition rehearsal.
+7. Add minimal policy checks for network and writable mounts.
 
 ## Do Not Do Yet
 

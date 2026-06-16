@@ -134,3 +134,24 @@ Observed result:
 - USB state demo session `740df3f68966` also wrote `task.json` and
   `review_package.json`, and `agentos inspect --session 740df3f68966 --json`
   returned the full session history.
+
+## 2026-06-16 Patch Sync Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover /mnt/usb/projects/agentos/prototype/tests -v
+scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos run-demo --state-dir /mnt/usb/projects/agentos/.agentos-state --output-dir /mnt/usb/projects/agentos/.agentos-output
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos inspect --state-dir /mnt/usb/projects/agentos/.agentos-state --session b22265ed3d18 --json
+```
+
+Observed result:
+
+- 3 unit tests passed.
+- Ruff passed.
+- Demo blocks patch apply before approval.
+- Demo applies the approved patch to a safe output target after approval.
+- Inspect history now records 2 sync events for the demo: safe copy sync and safe patch apply.
+- USB state demo session `b22265ed3d18` applied the approved patch to
+  `/mnt/usb/projects/agentos/.agentos-output/b22265ed3d18-patch-apply`.

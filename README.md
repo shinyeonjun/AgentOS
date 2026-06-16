@@ -45,7 +45,9 @@ The current executable prototype is intentionally small and deterministic:
 - writes diff and report artifacts
 - writes `task.json` and `review_package.json` contract artifacts
 - blocks sync before approval
+- blocks patch apply before approval
 - syncs only after approval
+- applies approved patch to a safe target after approval
 - destroys the disposable workspace
 
 It proves the control-plane lifecycle without requiring a live LLM.

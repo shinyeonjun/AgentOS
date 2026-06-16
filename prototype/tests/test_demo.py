@@ -22,9 +22,13 @@ class AgentOSDemoTests(unittest.TestCase):
             self.assertNotEqual(result.first_test_status, 0)
             self.assertEqual(result.second_test_status, 0)
             self.assertTrue(result.sync_before_approval_blocked)
+            self.assertTrue(result.patch_sync_before_approval_blocked)
             self.assertTrue(result.destroyed)
             self.assertTrue((result.approved_sync_dir / "calculator.py").exists())
             self.assertIn("return a + b", (result.approved_sync_dir / "calculator.py").read_text())
+            patched_file = result.approved_patch_sync_dir / "buggy-calculator" / "calculator.py"
+            self.assertTrue(patched_file.exists())
+            self.assertIn("return a + b", patched_file.read_text())
             self.assertIn("-    return a - b", result.diff_artifact.read_text())
             self.assertIn("+    return a + b", result.diff_artifact.read_text())
 
@@ -67,7 +71,7 @@ class AgentOSDemoTests(unittest.TestCase):
             self.assertEqual(session["state"], "destroyed")
             self.assertEqual(len(session["tool_calls"]), 2)
             self.assertEqual(len(session["approvals"]), 1)
-            self.assertEqual(len(session["syncs"]), 1)
+            self.assertEqual(len(session["syncs"]), 2)
             artifact_names = {artifact["name"] for artifact in session["artifacts"]}
             self.assertIn("task.json", artifact_names)
             self.assertIn("review_package.json", artifact_names)

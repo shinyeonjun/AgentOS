@@ -12,8 +12,10 @@ create_session
 -> run tests again
 -> create diff/report/task/review artifacts
 -> block sync before approval
+-> block patch apply before approval
 -> approve
 -> sync to a safe output folder
+-> apply the approved patch to a safe target folder
 -> destroy the workspace
 ```
 

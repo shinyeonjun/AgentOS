@@ -4,7 +4,7 @@ Last updated: 2026-06-16
 
 ## Phase
 
-v0.2 contract slice implemented.
+v0.2 contract and approval-gated patch sync slice implemented.
 
 ## Current Assets
 
@@ -48,6 +48,7 @@ core loop:
 - `agentos inspect`
 - human approval
 - approved host sync
+- approved patch apply to safe target
 - session destruction
 
 ## Current Verdict
@@ -118,9 +119,10 @@ baselines, not final specs.
 
 ## Next Build Slice
 
-Contract layer now exists. Next build before more sandbox power:
+Contract layer and safe patch apply now exist. Next build before more sandbox
+power:
 
-1. approval-gated patch/apply sync
+1. small module-boundary refactor
 2. selected-file sync policy
 3. Codex wrapper
 4. Docker execution
