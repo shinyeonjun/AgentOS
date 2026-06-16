@@ -2,13 +2,11 @@
 
 ## Immediate Next Move
 
-Review the first-pass docs as a coherent design set, then choose the next build slice.
+Review the expanded design set for concept drift, then choose the next build slice.
 
 ## Next 7 Actions
 
-1. Review `docs/requirements.md`, `docs/system-flow.md`, `docs/plugin-api.md`,
-   `docs/review-response-schema.md`, and `docs/context-efficiency.md` for
-   concept drift.
+1. Review docs for concept drift and missing graduation-project requirements.
 2. Decide the next build slice: Codex wrapper, inspect CLI, or Docker sandbox.
 3. Add a `status` or `inspect` CLI command that prints session/tool/artifact history from SQLite.
 4. Add a first `task.json` manifest format.

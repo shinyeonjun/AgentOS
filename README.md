@@ -46,10 +46,15 @@ python3 -m unittest discover /mnt/usb/projects/agentdesk/prototype/tests -v
 ## Project Notes
 
 - Requirements: `docs/requirements.md`
+- Architecture: `docs/architecture.md`
+- Functional spec: `docs/functional-spec.md`
+- Database/table spec: `docs/database-spec.md`
 - System flow: `docs/system-flow.md`
+- Diagrams: `docs/diagrams.md`
 - Plugin API: `docs/plugin-api.md`
 - Review response schema: `docs/review-response-schema.md`
 - Context efficiency: `docs/context-efficiency.md`
+- Algorithms and data structures: `docs/algorithms-data-structures.md`
 - Technical plan: `docs/technical-plan.md`
 - Operating notes: `docs/project-ops/`
 - Prototype code: `prototype/`

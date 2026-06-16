@@ -16,10 +16,15 @@ v0 prototype started.
 - Canonical local git repository: `/mnt/usb/projects/agentdesk/.git`
 - Executable v0 prototype: `/mnt/usb/projects/agentdesk/prototype/`
 - Requirements draft: `/mnt/usb/projects/agentdesk/docs/requirements.md`
+- Architecture draft: `/mnt/usb/projects/agentdesk/docs/architecture.md`
+- Functional spec draft: `/mnt/usb/projects/agentdesk/docs/functional-spec.md`
+- Database/table spec draft: `/mnt/usb/projects/agentdesk/docs/database-spec.md`
 - System flow draft: `/mnt/usb/projects/agentdesk/docs/system-flow.md`
+- Diagram draft: `/mnt/usb/projects/agentdesk/docs/diagrams.md`
 - Plugin API draft: `/mnt/usb/projects/agentdesk/docs/plugin-api.md`
 - Review schema draft: `/mnt/usb/projects/agentdesk/docs/review-response-schema.md`
 - Context efficiency draft: `/mnt/usb/projects/agentdesk/docs/context-efficiency.md`
+- Algorithms/data structures draft: `/mnt/usb/projects/agentdesk/docs/algorithms-data-structures.md`
 - Latest local control-plane run state: `/mnt/usb/projects/agentdesk/.agentdesk-state/`
 - Latest approved demo output: `/mnt/usb/projects/agentdesk/.agentdesk-output/`
 - Workspace links: `projects/agentdesk/prototype`, `.agentdesk-state`, and `.agentdesk-output`
@@ -73,6 +78,7 @@ that any AI agent can call to work safely away from the user's real computer.
 
 ## Current Documentation State
 
-The project now has first-pass docs for requirements, system flow, plugin API,
-review response schema, and context efficiency. These are design baselines, not
-final specs.
+The project now has first-pass docs for requirements, architecture, functional
+spec, database/table design, system flow, diagrams, plugin API, review response
+schema, context efficiency, and algorithms/data structures. These are design
+baselines, not final specs.
