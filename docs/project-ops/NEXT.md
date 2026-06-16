@@ -2,16 +2,18 @@
 
 ## Immediate Next Move
 
-Review and refine `docs/requirements.md`, then write system flow and plugin API docs.
+Review the first-pass docs as a coherent design set, then choose the next build slice.
 
 ## Next 7 Actions
 
-1. Review `docs/requirements.md` against the user's intended concept.
-2. Write `docs/system-flow.md`.
-3. Write `docs/plugin-api.md` for the Codex CLI-first integration.
-4. Write `docs/review-response-schema.md`.
-5. Write `docs/context-efficiency.md` with simple token-waste reduction techniques.
-6. Add a `status` or `inspect` CLI command that prints session/tool/artifact history from SQLite.
+1. Review `docs/requirements.md`, `docs/system-flow.md`, `docs/plugin-api.md`,
+   `docs/review-response-schema.md`, and `docs/context-efficiency.md` for
+   concept drift.
+2. Decide the next build slice: Codex wrapper, inspect CLI, or Docker sandbox.
+3. Add a `status` or `inspect` CLI command that prints session/tool/artifact history from SQLite.
+4. Add a first `task.json` manifest format.
+5. Add a review package JSON output command.
+6. Add a Codex CLI wrapper path that forces work into the sandbox copy.
 7. Add Docker sandbox proof-of-concept after installing Docker:
    - create session
    - copy input into workspace

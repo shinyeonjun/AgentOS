@@ -46,6 +46,10 @@ python3 -m unittest discover /mnt/usb/projects/agentdesk/prototype/tests -v
 ## Project Notes
 
 - Requirements: `docs/requirements.md`
+- System flow: `docs/system-flow.md`
+- Plugin API: `docs/plugin-api.md`
+- Review response schema: `docs/review-response-schema.md`
+- Context efficiency: `docs/context-efficiency.md`
 - Technical plan: `docs/technical-plan.md`
 - Operating notes: `docs/project-ops/`
 - Prototype code: `prototype/`
