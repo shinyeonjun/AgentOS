@@ -19,3 +19,5 @@
 - Accept the vfat inconvenience for now because the first Python prototype does not need Unix permissions or symlinks inside the USB project tree.
 - Because Docker is not installed yet, the first prototype uses disposable filesystem workspaces and honest demo-grade isolation language.
 - Store the v0 control-plane history in SQLite.
+- Initialize `/mnt/usb/projects/agentdesk/` as the local git repository for the capstone project.
+- Do not create a GitHub remote until the user explicitly asks for the external repo/push step.

@@ -65,3 +65,12 @@ After moving the implementation to USB, these also passed:
 PYTHONPATH=/mnt/usb/projects/agentdesk/prototype python3 -m unittest discover /mnt/usb/projects/agentdesk/prototype/tests -v
 PYTHONPATH=/mnt/usb/projects/agentdesk/prototype python3 -m agentdesk run-demo --state-dir /mnt/usb/projects/agentdesk/.agentdesk-state --output-dir /mnt/usb/projects/agentdesk/.agentdesk-output
 ```
+
+After initializing the local git repository, this also passed:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentdesk/prototype python3 -m unittest discover /mnt/usb/projects/agentdesk/prototype/tests -v
+git -C /mnt/usb/projects/agentdesk status --short
+```
+
+`git status --short` was clean.

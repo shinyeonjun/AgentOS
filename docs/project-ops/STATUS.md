@@ -13,6 +13,7 @@ v0 prototype started.
 - Related research pack scaffold: `research/agentdesk-related-research/research-pack.md`
 - Related PaperQA evidence scaffold: `research/agentdesk-related-research/paperqa-evidence.md`
 - Canonical implementation root: `/mnt/usb/projects/agentdesk/`
+- Canonical local git repository: `/mnt/usb/projects/agentdesk/.git`
 - Executable v0 prototype: `/mnt/usb/projects/agentdesk/prototype/`
 - Latest local control-plane run state: `/mnt/usb/projects/agentdesk/.agentdesk-state/`
 - Latest approved demo output: `/mnt/usb/projects/agentdesk/.agentdesk-output/`
@@ -40,3 +41,11 @@ The first demo loop is now demoable without a live LLM. The implementation now
 lives on the USB drive to reduce SD-card write pressure. The current sandbox is
 filesystem-disposable only because Docker is not installed on the host yet, so
 the security claim must stay demo-grade until container isolation is added.
+
+Initial local git commit exists:
+
+```text
+d9fceac Initial AgentDesk prototype
+```
+
+No GitHub remote has been created yet.
