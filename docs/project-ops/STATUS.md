@@ -58,3 +58,10 @@ No GitHub remote has been created yet.
 The tools are considered part of the AI OS image, not the main pluginization
 target. The pluginized product is AgentDesk itself: a sandbox lifecycle runtime
 that any AI agent can call to work safely away from the user's real computer.
+
+## Current Integration Stance
+
+- First target: Codex CLI.
+- Agent brain: external agent, not AgentOS itself.
+- AgentOS role: safe task environment plus review/sync lifecycle.
+- Priority: safety first, token efficiency second.

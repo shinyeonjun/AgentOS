@@ -23,3 +23,12 @@
 - Do not create a GitHub remote until the user explicitly asks for the external repo/push step.
 - Corrected the plugin concept: AgentDesk is not mainly a manager for external tool plugins. The AI OS image contains the tools. AgentDesk itself is the plugin-style sandbox runtime that can attach to any AI agent or host system.
 - Core purpose: prevent AI agents from directly touching the user's real computer while still allowing them to complete broad tasks inside an independent environment.
+
+## 2026-06-16 Scope Clarification
+
+- First integration target: Codex CLI.
+- Expansion targets later: Claude Code, Antigravity, Jarvis/OpenClaw, and other agent systems.
+- AgentOS should not be the primary thinking brain in v0/v1. The external AI agent thinks/plans; AgentOS provides the independent task environment, context packaging, execution boundary, review package, approval gate, sync, and cleanup.
+- Primary goal: safety. AI agents should not directly mutate the real host environment.
+- Secondary goal: reduce wasted tokens where practical, especially by avoiding unnecessary full-file/context dumps.
+- Do not let token-optimization research make the project too deep for the capstone timeline. Start with simple, explainable techniques.
