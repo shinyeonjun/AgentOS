@@ -417,3 +417,28 @@ Observed result:
 - Docker sandbox policy session `948371c1752c` wrote `image-capabilities.json`.
 - Image and artifact capability metadata both describe the `base` runtime capability.
 - Task and review packages now include capability details for `base`, `code`, and `document` workflows.
+
+## 2026-06-16 CLI JSON Polish Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests
+/home/ubuntu/.openclaw/workspace/scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos doctor --workspace /mnt/usb/projects/agentos
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos doctor --workspace /mnt/usb/projects/agentos --json
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos rehearse --state-dir /mnt/usb/projects/agentos/.agentos-state --output-dir /mnt/usb/projects/agentos/.agentos-output --docker-sudo --json
+```
+
+Observed result:
+
+- 31 unit tests passed, including CLI JSON output tests.
+- Ruff passed.
+- Compileall passed.
+- `agentos doctor` human and JSON output passed.
+- JSON rehearsal `f80b0056861e` passed.
+- Code lifecycle session `8c1250b1efc2` passed.
+- Markdown document lifecycle session `19f86c293317` passed.
+- Docker sandbox policy session `99a87e6350b0` passed.
+- `docker-run` JSON mode now returns the sandbox command exit code.

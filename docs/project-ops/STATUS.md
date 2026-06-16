@@ -4,7 +4,7 @@ Last updated: 2026-06-16
 
 ## Phase
 
-v0.2 contract and approval-gated patch sync slice implemented.
+v0.2 contract, sandbox, and CLI JSON polish slice implemented.
 
 ## Current Assets
 
@@ -72,6 +72,8 @@ core loop:
 - task and review package capability details
 - Docker image `/agentos/capabilities.json`
 - Docker run `image-capabilities.json` artifact
+- JSON output for `run-demo`, `run-doc-demo`, `rehearse`, `codex`, and `docker-run`
+- `docker-run` returns the sandbox command exit code
 - common worker runtime used by the Codex adapter
 - Codex `--docker` records target AgentOS image metadata without running Codex inside the image
 - session destruction
@@ -146,12 +148,12 @@ baselines, not final specs.
 
 Contract layer, safe patch apply, selected-file sync, Codex execute result
 collection, Docker command execution, host-side worker runtime extraction,
-Docker sandbox policy validation, selected-file approval scopes, and Markdown
-document workflow, end-to-end rehearsal, and first runtime hardening pass now
-exist. Environment preflight is now available through `agentos doctor`, and
-capability metadata now describes base/code/document workflows. Next build:
+Docker sandbox policy validation, selected-file approval scopes, Markdown
+document workflow, end-to-end rehearsal, first runtime hardening pass, doctor
+preflight, capability metadata, and major-command JSON output now exist. Next
+build:
 
-1. CLI UX and JSON output polish for marketplace-grade use
+1. CLI failure UX polish for marketplace-grade use
 2. replace or isolate host `patch` dependency for cross-platform support
 3. packaging/install flow
 

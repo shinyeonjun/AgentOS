@@ -50,6 +50,7 @@ The current executable prototype is intentionally small and deterministic:
 - applies approved patch to a safe target after approval
 - syncs selected approved files to a safe target after approval
 - destroys the disposable workspace
+- supports JSON output for major automation-facing commands
 
 It proves the control-plane lifecycle without requiring a live LLM.
 
@@ -71,6 +72,9 @@ python3 -m agentos run-demo \
   --state-dir /mnt/usb/projects/agentos/.agentos-state \
   --output-dir /mnt/usb/projects/agentos/.agentos-output
 ```
+
+Add `--json` to `run-demo`, `run-doc-demo`, `rehearse`, `codex`, or
+`docker-run` when another tool should consume the result.
 
 ## Test
 
@@ -102,7 +106,8 @@ python3 -m agentos codex \
   --state-dir /mnt/usb/projects/agentos/.agentos-state \
   --output-dir /mnt/usb/projects/agentos/.agentos-output \
   --input /path/to/project \
-  --task "Fix failing tests"
+  --task "Fix failing tests" \
+  --json
 ```
 
 ## Docker Sandbox
@@ -122,6 +127,7 @@ python3 -m agentos docker-run \
   --output-dir /mnt/usb/projects/agentos/.agentos-output \
   --input /path/to/project \
   --docker-sudo \
+  --json \
   -- sh -c 'cat README.md'
 ```
 

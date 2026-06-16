@@ -2,7 +2,7 @@
 
 ## Immediate Next Move
 
-Prepare for the marketplace-grade CLI JSON/polish slice.
+Prepare for the CLI failure UX and packaging slice.
 
 The first contract slice now exists:
 
@@ -20,15 +20,17 @@ The first contract slice now exists:
 - SQLite close, command timeout, patch dependency check, and Docker hardening flags
 - `agentos doctor` Linux/WSL environment preflight
 - base/code/document capability metadata
+- JSON output for `run-demo`, `run-doc-demo`, `rehearse`, `codex`, and `docker-run`
+- `docker-run` exits with the sandbox command exit code
 
-Next, polish CLI output and add JSON mode for marketplace-grade use.
+Next, tighten failure messages, isolate host dependencies, and add an install path.
 
 ## Next 7 Actions
 
-1. Add `--json` output mode to rehearsal and major CLI commands.
-2. Polish CLI failure messages and exit codes.
-3. Replace or isolate host `patch` dependency for cross-platform support.
-4. Add packaging/install flow.
+1. Polish CLI failure messages and exit codes across all commands.
+2. Replace or isolate host `patch` dependency for cross-platform support.
+3. Add packaging/install flow.
+4. Add a real Codex execution smoke path that can be run on demand.
 5. Split persistence out of `runtime.py` when DB logic starts growing.
 6. Add a minimal review dashboard only after the CLI demo is solid.
 7. Add real-worker execution rehearsals after the deterministic demo story is stable.

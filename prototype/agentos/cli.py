@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import argparse
+import json
+from dataclasses import asdict, is_dataclass
 from pathlib import Path
+from typing import Any
 
 from .codex_adapter import run_codex_task
 from .demo import run_code_fix_demo
@@ -34,6 +37,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Keep the disposable workspace for inspection instead of destroying it",
     )
+    demo.add_argument(
+        "--json",
+        action="store_true",
+        help="Render result output as JSON",
+    )
     doc_demo = subparsers.add_parser("run-doc-demo", help="Run the deterministic Markdown document demo loop")
     doc_demo.add_argument(
         "--state-dir",
@@ -51,6 +59,11 @@ def main(argv: list[str] | None = None) -> int:
         "--keep-session",
         action="store_true",
         help="Keep the disposable workspace for inspection instead of destroying it",
+    )
+    doc_demo.add_argument(
+        "--json",
+        action="store_true",
+        help="Render result output as JSON",
     )
     rehearse = subparsers.add_parser("rehearse", help="Run the AgentOS end-to-end rehearsal suite")
     rehearse.add_argument(
@@ -84,6 +97,11 @@ def main(argv: list[str] | None = None) -> int:
         "--skip-docker",
         action="store_true",
         help="Skip the Docker policy step when Docker is unavailable",
+    )
+    rehearse.add_argument(
+        "--json",
+        action="store_true",
+        help="Render rehearsal output as JSON",
     )
     doctor = subparsers.add_parser("doctor", help="Check whether the local runtime environment can run AgentOS")
     doctor.add_argument(
@@ -177,6 +195,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Destroy the copied workspace after preparing/executing the task",
     )
+    codex.add_argument(
+        "--json",
+        action="store_true",
+        help="Render Codex task output as JSON",
+    )
     docker_run = subparsers.add_parser("docker-run", help="Run a command inside an AgentOS Docker sandbox")
     docker_run.add_argument(
         "--state-dir",
@@ -216,6 +239,11 @@ def main(argv: list[str] | None = None) -> int:
         nargs=argparse.REMAINDER,
         help="Command to run after --, for example: -- sh -c 'cat README.md'",
     )
+    docker_run.add_argument(
+        "--json",
+        action="store_true",
+        help="Render Docker run output as JSON",
+    )
 
     args = parser.parse_args(argv)
 
@@ -225,6 +253,9 @@ def main(argv: list[str] | None = None) -> int:
             output_dir=args.output_dir,
             destroy_session=not args.keep_session,
         )
+        if args.json:
+            _print_json(_result_to_dict(result))
+            return 0
         print(f"session: {result.session_id}")
         print(f"first_test_status: {result.first_test_status}")
         print(f"second_test_status: {result.second_test_status}")
@@ -247,6 +278,9 @@ def main(argv: list[str] | None = None) -> int:
             output_dir=args.output_dir,
             destroy_session=not args.keep_session,
         )
+        if args.json:
+            _print_json(_result_to_dict(result))
+            return 0
         print(f"session: {result.session_id}")
         print(f"first_validation_status: {result.first_validation_status}")
         print(f"second_validation_status: {result.second_validation_status}")
@@ -270,6 +304,9 @@ def main(argv: list[str] | None = None) -> int:
             docker_image=args.docker_image,
             skip_docker=args.skip_docker,
         )
+        if args.json:
+            _print_json(_result_to_dict(result))
+            return 0 if result.passed else 1
         print(f"rehearsal: {result.rehearsal_id}")
         print(f"status: {'passed' if result.passed else 'failed'}")
         for step in result.steps:
@@ -302,6 +339,9 @@ def main(argv: list[str] | None = None) -> int:
             docker_network=args.docker_network,
             destroy_session=args.destroy_session,
         )
+        if args.json:
+            _print_json(_result_to_dict(result))
+            return 0
         print(f"session: {result.session_id}")
         print(f"workspace_path: {result.workspace_path}")
         print(f"executed: {result.executed}")
@@ -330,6 +370,9 @@ def main(argv: list[str] | None = None) -> int:
             docker_bin=args.docker_bin,
             use_sudo=args.docker_sudo,
         )
+        if args.json:
+            _print_json(_result_to_dict(result))
+            return result.exit_code
         print(f"session: {result.session_id}")
         print(f"workspace_path: {result.workspace_path}")
         print(f"artifact_dir: {result.artifact_dir}")
@@ -339,7 +382,33 @@ def main(argv: list[str] | None = None) -> int:
         print(f"policy_artifact: {result.policy_artifact}")
         print(f"report_artifact: {result.report_artifact}")
         print(f"review_package_artifact: {result.review_package_artifact}")
-        return 0
+        return result.exit_code
 
     parser.error(f"unknown command: {args.command}")
     return 2
+
+
+def _print_json(data: dict[str, Any]) -> None:
+    print(json.dumps(data, ensure_ascii=False, indent=2) + "\n", end="")
+
+
+def _result_to_dict(value: Any) -> dict[str, Any]:
+    if hasattr(value, "to_dict"):
+        return _json_ready(value.to_dict())
+    if is_dataclass(value):
+        return _json_ready(asdict(value))
+    if isinstance(value, dict):
+        return _json_ready(value)
+    raise TypeError(f"Cannot render {type(value).__name__} as JSON")
+
+
+def _json_ready(value: Any) -> Any:
+    if isinstance(value, Path):
+        return str(value)
+    if is_dataclass(value):
+        return _json_ready(asdict(value))
+    if isinstance(value, dict):
+        return {str(key): _json_ready(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_ready(item) for item in value]
+    return value

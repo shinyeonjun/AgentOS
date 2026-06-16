@@ -1,0 +1,146 @@
+from __future__ import annotations
+
+import io
+import json
+import unittest
+from contextlib import redirect_stdout
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+from agentos.cli import main
+
+
+class AgentOSCliTests(unittest.TestCase):
+    def test_run_demo_json_outputs_machine_readable_result(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            exit_code, output = _run_cli(
+                [
+                    "run-demo",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--json",
+                ]
+            )
+
+            self.assertEqual(exit_code, 0)
+            data = json.loads(output)
+            self.assertEqual(data["first_test_status"], 1)
+            self.assertEqual(data["second_test_status"], 0)
+            self.assertTrue(data["sync_before_approval_blocked"])
+            self.assertTrue(data["destroyed"])
+
+    def test_rehearse_json_outputs_steps(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            exit_code, output = _run_cli(
+                [
+                    "rehearse",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--skip-docker",
+                    "--json",
+                ]
+            )
+
+            self.assertEqual(exit_code, 0)
+            data = json.loads(output)
+            self.assertTrue(data["passed"])
+            self.assertEqual(data["steps"][-1]["name"], "docker_sandbox_policy")
+            self.assertEqual(data["steps"][-1]["status"], "skipped")
+
+    def test_docker_run_json_returns_sandbox_exit_code(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            input_project = root / "input-project"
+            input_project.mkdir()
+            (input_project / "README.md").write_text("hello\n", encoding="utf-8")
+            fake_docker = _write_fake_docker(root / "fake-docker", exit_code=7)
+
+            exit_code, output = _run_cli(
+                [
+                    "docker-run",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--input",
+                    str(input_project),
+                    "--docker-bin",
+                    str(fake_docker),
+                    "--json",
+                    "--",
+                    "sh",
+                    "-c",
+                    "exit 7",
+                ]
+            )
+
+            self.assertEqual(exit_code, 7)
+            data = json.loads(output)
+            self.assertEqual(data["exit_code"], 7)
+            self.assertEqual(data["policy_status"], "passed")
+
+    def test_codex_prepare_json_outputs_session_metadata(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            input_project = root / "input-project"
+            input_project.mkdir()
+            (input_project / "README.md").write_text("# Demo\n", encoding="utf-8")
+
+            exit_code, output = _run_cli(
+                [
+                    "codex",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--input",
+                    str(input_project),
+                    "--task",
+                    "Summarize the project.",
+                    "--json",
+                ]
+            )
+
+            self.assertEqual(exit_code, 0)
+            data = json.loads(output)
+            self.assertFalse(data["executed"])
+            self.assertIsNone(data["codex_result"])
+            self.assertEqual(data["changed_files"], [])
+
+
+def _run_cli(argv: list[str]) -> tuple[int, str]:
+    stdout = io.StringIO()
+    with redirect_stdout(stdout):
+        exit_code = main(argv)
+    return exit_code, stdout.getvalue()
+
+
+def _write_fake_docker(path: Path, *, exit_code: int) -> Path:
+    path.write_text(
+        "#!/bin/sh\n"
+        "artifacts=''\n"
+        "while [ \"$#\" -gt 0 ]; do\n"
+        "  if [ \"$1\" = '-v' ]; then\n"
+        "    shift\n"
+        "    case \"$1\" in\n"
+        "      *:/agentos/artifacts) artifacts=${1%:/agentos/artifacts} ;;\n"
+        "    esac\n"
+        "  fi\n"
+        "  shift\n"
+        "done\n"
+        "printf 'fake docker\\n' > \"$artifacts/result.txt\"\n"
+        f"exit {exit_code}\n",
+        encoding="utf-8",
+    )
+    path.chmod(0o755)
+    return path
+
+
+if __name__ == "__main__":
+    unittest.main()

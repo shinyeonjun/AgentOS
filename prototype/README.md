@@ -26,6 +26,13 @@ Run from the workspace root:
 PYTHONPATH=projects/agentos/prototype python3 -m agentos run-demo
 ```
 
+Most automation-facing commands can emit machine-readable output:
+
+```bash
+PYTHONPATH=projects/agentos/prototype python3 -m agentos run-demo --json
+PYTHONPATH=projects/agentos/prototype python3 -m agentos rehearse --skip-docker --json
+```
+
 Run the Markdown document workflow demo:
 
 ```bash
@@ -70,8 +77,11 @@ Run a Docker sandbox command:
 
 ```bash
 PYTHONPATH=projects/agentos/prototype \
-python3 -m agentos docker-run --input /path/to/project --docker-sudo -- sh -c 'cat README.md'
+python3 -m agentos docker-run --input /path/to/project --docker-sudo --json -- sh -c 'cat README.md'
 ```
+
+`docker-run` returns the sandbox command exit code, so failed sandbox work also
+fails the CLI invocation.
 
 Docker runs now write `sandbox-policy.json` and include the policy result in
 `review_package.json`. The default policy requires `--network none`,
