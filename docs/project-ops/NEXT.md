@@ -35,13 +35,14 @@ The first contract slice now exists:
 - `agentos verify-review` for manifest and artifact integrity checks
 - Docker `image-provenance.json` and pinned runtime image references
 - worker `worker-env-policy.json` and allowlisted host-side worker environment
+- `approval-record.json` with chosen scope, review digest, and optional HMAC signature
 
-Next, continue real-worker rehearsal coverage and add approval record integrity.
+Next, continue real-worker rehearsal coverage and enforce approval scopes.
 
 ## Next 7 Actions
 
 1. Add real-worker execution rehearsals after the deterministic demo story is stable.
-2. Add signed approval records with chosen scope.
+2. Enforce approval scopes during sync, patch, and selected-file operations.
 3. Continue polishing CLI failure messages as new commands appear.
 4. Document supported install/runtime paths for Linux and WSL2.
 5. Consider a minimal review dashboard only after the CLI demo is solid.

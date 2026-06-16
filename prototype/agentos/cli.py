@@ -335,6 +335,7 @@ def _main_impl(argv: list[str]) -> int:
         print(f"report_artifact: {result.report_artifact}")
         print(f"task_manifest_artifact: {result.task_manifest_artifact}")
         print(f"review_package_artifact: {result.review_package_artifact}")
+        print(f"approval_record_artifact: {result.approval_record_artifact}")
         return 0
 
     if args.command == "run-doc-demo":
@@ -358,6 +359,7 @@ def _main_impl(argv: list[str]) -> int:
         print(f"report_artifact: {result.report_artifact}")
         print(f"task_manifest_artifact: {result.task_manifest_artifact}")
         print(f"review_package_artifact: {result.review_package_artifact}")
+        print(f"approval_record_artifact: {result.approval_record_artifact}")
         return 0
 
     if args.command == "rehearse":

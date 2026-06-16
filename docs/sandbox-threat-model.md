@@ -85,12 +85,14 @@ Current mitigation:
 
 - review packages list changed files
 - approval scopes include whole-change and selected-file paths
+- approval records include approver, chosen scope, review package digest, and
+  optional HMAC-SHA256 signature
 - selected sync rejects absolute paths and `..`
 
 Remaining gaps:
 
 - there is no interactive approval UI yet
-- sync policy is not yet backed by a signed approval record or user identity
+- sync policy is still session-level, not fully per-scope enforced
 
 ### Unsafe Docker Execution
 
@@ -168,6 +170,7 @@ Implemented:
 
 - copied workspace
 - approval-gated sync
+- signed approval record support
 - selected-file sync path checks
 - Python-native patch apply with context checks
 - command timeout
@@ -193,7 +196,7 @@ Not implemented yet:
 - rootless Docker requirement
 - custom seccomp profile
 - AppArmor/SELinux profile
-- signed approval records
+- approval scope enforcement
 - public-key artifact signing
 - SBOM/image attestation records
 - interactive review dashboard
@@ -203,7 +206,7 @@ Not implemented yet:
 
 Next practical steps:
 
-1. Add signed approval records with approver identity and chosen scope.
+1. Enforce approval scopes during sync operations.
 2. Add stronger SBOM/image provenance records.
 3. Add rootless Docker setup path.
 4. Add a stricter seccomp/AppArmor profile.

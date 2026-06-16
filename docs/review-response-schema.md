@@ -216,6 +216,8 @@ Options available to the human.
 `approval.scopes` lists concrete sync scopes derived from the changed files.
 External apps can render these as "sync all" and "sync selected files" choices
 without re-parsing diffs.
+After approval, AgentOS writes `approval-record.json` with the approver, chosen
+scope, review package digest, and optional HMAC-SHA256 signature.
 
 ## 6. Risk Notes
 

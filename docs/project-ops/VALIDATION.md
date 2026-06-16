@@ -733,3 +733,28 @@ Observed result:
 - Compileall passed.
 - Docker rehearsal `75dc9c5169ea` passed.
 - Host-side worker review packages now include `worker-env-policy.json` and a `worker environment` validation check.
+
+## 2026-06-16 Approval Record Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest prototype.tests.test_approvals prototype.tests.test_demo prototype.tests.test_document_demo prototype.tests.test_cli -v
+/home/ubuntu/.openclaw/workspace/scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+AGENTOS_APPROVAL_KEY=approval-secret AGENTOS_APPROVAL_KEY_ID=approval-dev PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos run-demo --state-dir "$tmp/state" --output-dir "$tmp/output" --json
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos rehearse --state-dir /mnt/usb/projects/agentos/.agentos-state --output-dir /mnt/usb/projects/agentos/.agentos-output --docker-sudo --json
+```
+
+Observed result:
+
+- Focused approval/demo/CLI tests passed: 16 tests.
+- Ruff passed.
+- Signed run-demo session `871f13bfb455` produced `approval-record.json`.
+- Approval record signature was `signed`, `hmac-sha256`, key id `approval-dev`, 64 characters.
+- Approval record captured chosen scope `sync_all_changed_files`.
+- Approval record captured the SHA-256 digest of `review_package.json`.
+- Full unit suite passed: 49 tests.
+- Compileall passed.
+- Docker rehearsal `735d02d9f3b2` passed.

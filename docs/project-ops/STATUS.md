@@ -53,6 +53,7 @@ core loop:
 - `review_package.json` artifact
 - `agentos inspect`
 - human approval
+- `approval-record.json` with approver, chosen scope, review digest, and optional HMAC signature
 - approved host sync
 - approved patch apply to safe target
 - approved selected-file sync to safe target
@@ -175,13 +176,13 @@ preflight, capability metadata, major-command JSON output, structured CLI
 errors, Python-native approved patch apply, editable package install, a real
 Codex smoke path, worker evidence artifacts, artifact integrity metadata,
 artifact manifests, optional HMAC manifest signatures, review verification,
-Docker image provenance/pinning, worker environment allowlisting, a Linux/WSL2
-setup guide, sandbox threat model, and a separated SQLite storage boundary now
-exist.
+Docker image provenance/pinning, worker environment allowlisting, signed
+approval record support, a Linux/WSL2 setup guide, sandbox threat model, and a
+separated SQLite storage boundary now exist.
 Next build:
 
 1. continuing real-worker rehearsal coverage
-2. signed approval records
+2. approval scope enforcement
 3. continuing CLI UX polish as new commands appear
 
 ## Docker Image State

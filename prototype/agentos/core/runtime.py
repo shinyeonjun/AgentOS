@@ -9,7 +9,9 @@ import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
+from .approvals import build_approval_record, default_approval_scope
 from .storage import StateStore
 from .sync import PatchApplyResult, apply_patch_to_target
 
@@ -182,8 +184,23 @@ class AgentOSRuntime:
     def mark_review_ready(self, session: Session) -> None:
         self.store.mark_review_ready(session_id=session.session_id)
 
-    def approve_session(self, session: Session, approver: str = "human") -> None:
-        self.store.approve_session(session_id=session.session_id, approved_at=utc_now(), approver=approver)
+    def approve_session(
+        self,
+        session: Session,
+        approver: str = "human",
+        scope: dict[str, Any] | None = None,
+        review_package_artifact: Path | None = None,
+    ) -> Path:
+        approved_at = utc_now()
+        self.store.approve_session(session_id=session.session_id, approved_at=approved_at, approver=approver)
+        approval_record = build_approval_record(
+            session_id=session.session_id,
+            approver=approver,
+            approved_at=approved_at,
+            scope=scope or default_approval_scope(),
+            review_package_artifact=review_package_artifact,
+        )
+        return self.write_json_artifact(session, "approval-record.json", approval_record)
 
     def sync_approved(self, session: Session, workspace_path: Path) -> Path:
         if not self._is_approved(session.session_id):

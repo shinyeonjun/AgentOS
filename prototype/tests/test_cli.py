@@ -32,6 +32,7 @@ class AgentOSCliTests(unittest.TestCase):
             self.assertEqual(data["second_test_status"], 0)
             self.assertTrue(data["sync_before_approval_blocked"])
             self.assertTrue(data["destroyed"])
+            self.assertTrue(data["approval_record_artifact"].endswith("approval-record.json"))
 
     def test_rehearse_json_outputs_steps(self) -> None:
         with TemporaryDirectory() as tmp:

@@ -49,6 +49,7 @@ The current executable prototype is intentionally small and deterministic:
 - syncs only after approval
 - applies approved unified diffs to a safe target after approval
 - syncs selected approved files to a safe target after approval
+- writes `approval-record.json` with approver, chosen scope, review digest, and optional HMAC signature
 - destroys the disposable workspace
 - supports JSON output for major automation-facing commands
 - verifies review package artifact integrity with `agentos verify-review`
@@ -162,6 +163,9 @@ checks that the expected line appears while recording the normal AgentOS task,
 command, worker environment policy, diff, report, and review package artifacts.
 Host-side workers run with an allowlisted environment instead of inheriting the
 full host environment.
+
+Approval records can be HMAC-signed by setting `AGENTOS_APPROVAL_KEY`; without a
+key, the record is explicitly marked `not_signed`.
 
 ## Docker Sandbox
 

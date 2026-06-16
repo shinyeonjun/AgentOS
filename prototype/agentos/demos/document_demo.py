@@ -33,6 +33,7 @@ class DocumentDemoResult:
     report_artifact: Path
     task_manifest_artifact: Path
     review_package_artifact: Path
+    approval_record_artifact: Path
 
 
 def run_markdown_document_demo(
@@ -132,7 +133,12 @@ def run_markdown_document_demo(
     except SyncNotApprovedError:
         selected_sync_blocked = True
 
-    runtime.approve_session(session, approver="demo-human")
+    approval_record_artifact = runtime.approve_session(
+        session,
+        approver="demo-human",
+        scope=review_package["approval"]["scopes"][0],
+        review_package_artifact=review_package_artifact,
+    )
     approved_sync_dir = runtime.sync_approved(session, workspace_project)
     selected_result = runtime.sync_approved_selected(
         session=session,
@@ -157,6 +163,7 @@ def run_markdown_document_demo(
         report_artifact=report_artifact,
         task_manifest_artifact=task_manifest_artifact,
         review_package_artifact=review_package_artifact,
+        approval_record_artifact=approval_record_artifact,
     )
 
 

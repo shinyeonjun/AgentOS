@@ -72,6 +72,11 @@ class AgentOSDemoTests(unittest.TestCase):
             manifest = json.loads(manifest_path.read_text())
             self.assertEqual(manifest["artifact_count"], 3)
             self.assertEqual(manifest["signature"]["status"], "not_signed")
+            approval_record = json.loads(result.approval_record_artifact.read_text())
+            self.assertEqual(approval_record["approver"], "demo-human")
+            self.assertEqual(approval_record["scope"]["id"], "sync_all_changed_files")
+            self.assertEqual(approval_record["review_package"]["name"], "review_package.json")
+            self.assertEqual(approval_record["signature"]["status"], "not_signed")
             self.assertFalse(review_package["safety"]["original_mutated"])
             self.assertEqual(review_package["validation"]["status"], "passed")
             self.assertEqual(review_package["approval"]["recommended"], "sync_all")
@@ -104,6 +109,7 @@ class AgentOSDemoTests(unittest.TestCase):
             artifact_names = {artifact["name"] for artifact in session["artifacts"]}
             self.assertIn("task.json", artifact_names)
             self.assertIn("artifact-manifest.json", artifact_names)
+            self.assertIn("approval-record.json", artifact_names)
             self.assertIn("review_package.json", artifact_names)
             selected_sync = session["syncs"][-1]
             self.assertIn("selected_files", selected_sync["source_path"])

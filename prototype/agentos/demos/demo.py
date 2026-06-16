@@ -32,6 +32,7 @@ class DemoResult:
     report_artifact: Path
     task_manifest_artifact: Path
     review_package_artifact: Path
+    approval_record_artifact: Path
 
 
 def run_code_fix_demo(state_dir: Path, output_dir: Path, destroy_session: bool = True) -> DemoResult:
@@ -142,7 +143,12 @@ def run_code_fix_demo(state_dir: Path, output_dir: Path, destroy_session: bool =
     except SyncNotApprovedError:
         selected_sync_blocked = True
 
-    runtime.approve_session(session, approver="demo-human")
+    approval_record_artifact = runtime.approve_session(
+        session,
+        approver="demo-human",
+        scope=review_package["approval"]["scopes"][0],
+        review_package_artifact=review_package_artifact,
+    )
     approved_sync_dir = runtime.sync_approved(session, workspace_project)
     patch_target = _prepare_patch_target(
         input_dir=input_dir,
@@ -174,6 +180,7 @@ def run_code_fix_demo(state_dir: Path, output_dir: Path, destroy_session: bool =
         report_artifact=report_artifact,
         task_manifest_artifact=task_manifest_artifact,
         review_package_artifact=review_package_artifact,
+        approval_record_artifact=approval_record_artifact,
     )
 
 
