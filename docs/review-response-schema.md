@@ -79,8 +79,25 @@ human whether to sync approved results.
         "algorithm": "sha256",
         "value": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
       }
+    },
+    {
+      "name": "artifact-manifest.json",
+      "type": "application/json",
+      "ref": "artifact://report/artifact-manifest.json",
+      "size_bytes": 768,
+      "digest": {
+        "algorithm": "sha256",
+        "value": "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
+      }
     }
   ],
+  "integrity": {
+    "manifest_ref": "artifact://report/artifact-manifest.json",
+    "manifest_digest": {
+      "algorithm": "sha256",
+      "value": "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
+    }
+  },
   "risk_notes": [],
   "approval": {
     "required": true,
@@ -106,6 +123,12 @@ human whether to sync approved results.
   }
 }
 ```
+
+`artifact-manifest.json` records the artifact entries covered by the integrity
+manifest. If `AGENTOS_MANIFEST_KEY` is set, AgentOS adds an HMAC-SHA256
+signature with the configured key id. If no key is configured, the manifest is
+explicitly marked `not_signed`; this is still useful for local hashing, but it
+is not a public cryptographic signature.
 
 ## 4. Conversational Rendering
 

@@ -5,7 +5,15 @@ from pathlib import Path
 from typing import Any
 
 from ..core.changes import FileChange, detect_file_changes
-from ..core.contracts import TaskInput, TaskManifest, artifact_entry, artifact_ref, build_review_package
+from ..core.contracts import (
+    TaskInput,
+    TaskManifest,
+    artifact_entry,
+    artifact_ref,
+    build_artifact_manifest,
+    build_manifest_integrity,
+    build_review_package,
+)
 from ..core.runtime import AgentOSRuntime, Session, ToolResult
 
 
@@ -86,6 +94,8 @@ def run_worker_task(
     )
     report_artifact = _write_worker_report(runtime, session, worker, execute, worker_result, changes, worker_result_artifact)
     review_package = _build_worker_review_package(
+        runtime=runtime,
+        session=session,
         session_id=session.session_id,
         worker=worker,
         executed=execute,
@@ -119,6 +129,8 @@ def run_worker_task(
 
 def _build_worker_review_package(
     *,
+    runtime: AgentOSRuntime,
+    session: Session,
     session_id: str,
     worker: WorkerSpec,
     executed: bool,
@@ -178,6 +190,9 @@ def _build_worker_review_package(
         artifact_entry(session_id, artifact, "text/x-diff")
         for artifact in diff_artifacts.values()
     )
+    manifest = build_artifact_manifest(session_id=session_id, artifacts=artifacts)
+    manifest_artifact = runtime.write_json_artifact(session, "artifact-manifest.json", manifest)
+    artifacts.append(artifact_entry(session_id, manifest_artifact, "application/json"))
 
     risk_notes = [
         {
@@ -204,6 +219,7 @@ def _build_worker_review_package(
         capabilities=task_manifest_capabilities(worker),
         artifacts=artifacts,
         risk_notes=risk_notes,
+        integrity=build_manifest_integrity(session_id, manifest_artifact),
     )
 
 

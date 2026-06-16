@@ -6,7 +6,15 @@ from pathlib import Path
 
 from .sandbox_policy import PolicyValidation, assert_policy_passes, build_default_policy, validate_sandbox_policy
 from ..core.capabilities import image_capability_manifest
-from ..core.contracts import TaskInput, TaskManifest, artifact_entry, artifact_ref, build_review_package
+from ..core.contracts import (
+    TaskInput,
+    TaskManifest,
+    artifact_entry,
+    artifact_ref,
+    build_artifact_manifest,
+    build_manifest_integrity,
+    build_review_package,
+)
 from ..core.runtime import AgentOSRuntime, Session
 
 
@@ -268,6 +276,16 @@ def _write_docker_review_package(
             "role": "sandbox_run",
         },
     ]
+    artifacts = [
+        artifact_entry(session.session_id, command_artifact, "application/json"),
+        artifact_entry(session.session_id, policy_artifact, "application/json"),
+        artifact_entry(session.session_id, capability_artifact, "application/json"),
+        artifact_entry(session.session_id, report_artifact, "text/markdown"),
+    ]
+    manifest = build_artifact_manifest(session_id=session.session_id, artifacts=artifacts)
+    manifest_artifact = runtime.write_json_artifact(session, "artifact-manifest.json", manifest)
+    artifacts.append(artifact_entry(session.session_id, manifest_artifact, "application/json"))
+
     review_package = build_review_package(
         session_id=session.session_id,
         title="Docker sandbox task",
@@ -277,12 +295,8 @@ def _write_docker_review_package(
         validation_checks=validation_checks,
         validation_status=validation_status,
         capabilities=["base"],
-        artifacts=[
-            artifact_entry(session.session_id, command_artifact, "application/json"),
-            artifact_entry(session.session_id, policy_artifact, "application/json"),
-            artifact_entry(session.session_id, capability_artifact, "application/json"),
-            artifact_entry(session.session_id, report_artifact, "text/markdown"),
-        ],
+        artifacts=artifacts,
+        integrity=build_manifest_integrity(session.session_id, manifest_artifact),
         risk_notes=[
             {
                 "severity": "low",

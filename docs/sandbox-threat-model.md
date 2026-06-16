@@ -149,11 +149,14 @@ Current mitigation:
 - worker runs write `worker-result.json`
 - review validation checks link to worker result artifacts
 - review package artifact entries record size and SHA-256 digest metadata
+- `artifact-manifest.json` records the artifact set covered by review integrity
+- optional HMAC-SHA256 manifest signatures are available through
+  `AGENTOS_MANIFEST_KEY`
 
 Remaining gaps:
 
 - no human review UI yet
-- no signed artifact manifest yet
+- no public-key artifact signature yet
 - stdout/stderr tails can truncate long output
 
 ## Current Hardening Checklist
@@ -175,6 +178,7 @@ Implemented:
 - sandbox policy artifact
 - worker result artifact
 - artifact size and SHA-256 digest metadata in review packages
+- artifact manifest with optional HMAC-SHA256 signature metadata
 
 Not implemented yet:
 
@@ -183,7 +187,8 @@ Not implemented yet:
 - AppArmor/SELinux profile
 - environment variable filtering
 - signed approval records
-- signed artifact manifest
+- public-key artifact signing
+- manifest verification command
 - image digest pinning
 - SBOM/image provenance
 - interactive review dashboard
@@ -194,7 +199,7 @@ Not implemented yet:
 Next practical steps:
 
 1. Add environment allowlist for worker execution.
-2. Record artifact hashes in review packages.
+2. Add a manifest verification command for review packages.
 3. Pin Docker image by digest in policy artifacts.
 4. Add a rootless Docker setup path.
 5. Add a stricter seccomp/AppArmor profile.

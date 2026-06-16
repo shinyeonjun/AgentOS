@@ -4,6 +4,7 @@ import json
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 from agentos.core.inspector import inspect_state
 from agentos.demos.demo import run_code_fix_demo
@@ -13,11 +14,12 @@ class AgentOSDemoTests(unittest.TestCase):
     def test_code_fix_demo_runs_full_lifecycle(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
-            result = run_code_fix_demo(
-                state_dir=root / "state",
-                output_dir=root / "output",
-                destroy_session=True,
-            )
+            with patch.dict("os.environ", {"AGENTOS_MANIFEST_KEY": ""}):
+                result = run_code_fix_demo(
+                    state_dir=root / "state",
+                    output_dir=root / "output",
+                    destroy_session=True,
+                )
 
             self.assertNotEqual(result.first_test_status, 0)
             self.assertEqual(result.second_test_status, 0)
@@ -40,11 +42,12 @@ class AgentOSDemoTests(unittest.TestCase):
     def test_code_fix_demo_writes_contract_artifacts(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
-            result = run_code_fix_demo(
-                state_dir=root / "state",
-                output_dir=root / "output",
-                destroy_session=True,
-            )
+            with patch.dict("os.environ", {"AGENTOS_MANIFEST_KEY": ""}):
+                result = run_code_fix_demo(
+                    state_dir=root / "state",
+                    output_dir=root / "output",
+                    destroy_session=True,
+                )
 
             task_manifest = json.loads(result.task_manifest_artifact.read_text())
             review_package = json.loads(result.review_package_artifact.read_text())
@@ -60,6 +63,15 @@ class AgentOSDemoTests(unittest.TestCase):
             self.assertIn("size_bytes", review_package["artifacts"][0])
             self.assertEqual(review_package["artifacts"][0]["digest"]["algorithm"], "sha256")
             self.assertEqual(len(review_package["artifacts"][0]["digest"]["value"]), 64)
+            self.assertEqual(review_package["integrity"]["manifest_ref"], f"artifact://{result.session_id}/artifact-manifest.json")
+            self.assertEqual(review_package["integrity"]["manifest_digest"]["algorithm"], "sha256")
+            self.assertEqual(len(review_package["integrity"]["manifest_digest"]["value"]), 64)
+            manifest_artifact = next(item for item in review_package["artifacts"] if item["name"] == "artifact-manifest.json")
+            self.assertEqual(manifest_artifact["digest"]["algorithm"], "sha256")
+            manifest_path = result.review_package_artifact.parent / "artifact-manifest.json"
+            manifest = json.loads(manifest_path.read_text())
+            self.assertEqual(manifest["artifact_count"], 3)
+            self.assertEqual(manifest["signature"]["status"], "not_signed")
             self.assertFalse(review_package["safety"]["original_mutated"])
             self.assertEqual(review_package["validation"]["status"], "passed")
             self.assertEqual(review_package["approval"]["recommended"], "sync_all")
@@ -91,6 +103,7 @@ class AgentOSDemoTests(unittest.TestCase):
             self.assertEqual(len(session["syncs"]), 3)
             artifact_names = {artifact["name"] for artifact in session["artifacts"]}
             self.assertIn("task.json", artifact_names)
+            self.assertIn("artifact-manifest.json", artifact_names)
             self.assertIn("review_package.json", artifact_names)
             selected_sync = session["syncs"][-1]
             self.assertIn("selected_files", selected_sync["source_path"])
