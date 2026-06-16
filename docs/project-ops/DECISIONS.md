@@ -32,3 +32,12 @@
 - Primary goal: safety. AI agents should not directly mutate the real host environment.
 - Secondary goal: reduce wasted tokens where practical, especially by avoiding unnecessary full-file/context dumps.
 - Do not let token-optimization research make the project too deep for the capstone timeline. Start with simple, explainable techniques.
+
+## 2026-06-16 Direction Decisions
+
+- Project name should move to `AgentOS`.
+- Rewrite or supersede the old `technical-plan.md` with the latest AgentOS direction.
+- Demo path: start with code modification because AI agents will commonly be used for code work, then expand toward document tasks.
+- Sync should eventually support approved patch apply, not only safe output export.
+- Docker should be installed only after deciding storage layout.
+- Current USB is `vfat`; do not use it directly as Docker data-root.

@@ -55,6 +55,7 @@ python3 -m unittest discover /mnt/usb/projects/agentdesk/prototype/tests -v
 - Review response schema: `docs/review-response-schema.md`
 - Context efficiency: `docs/context-efficiency.md`
 - Algorithms and data structures: `docs/algorithms-data-structures.md`
+- Docker storage plan: `docs/docker-storage-plan.md`
 - Technical plan: `docs/technical-plan.md`
 - Operating notes: `docs/project-ops/`
 - Prototype code: `prototype/`
