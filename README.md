@@ -56,22 +56,31 @@ It proves the control-plane lifecycle without requiring a live LLM.
 
 ## Run
 
+Install the prototype in editable mode when developing locally:
+
+```bash
+cd /mnt/usb/projects/agentos
+python3 -m venv .venv
+. .venv/bin/activate
+python3 -m pip install -e .
+```
+
 Check local runtime readiness first:
 
 ```bash
-PYTHONPATH=/mnt/usb/projects/agentos/prototype \
-python3 -m agentos doctor \
-  --workspace /mnt/usb/projects/agentos
+agentos doctor --workspace /mnt/usb/projects/agentos
 ```
 
-From any directory:
+From any directory after install:
 
 ```bash
-PYTHONPATH=/mnt/usb/projects/agentos/prototype \
-python3 -m agentos run-demo \
+agentos run-demo \
   --state-dir /mnt/usb/projects/agentos/.agentos-state \
   --output-dir /mnt/usb/projects/agentos/.agentos-output
 ```
+
+Without installation, the prototype still works with
+`PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos ...`.
 
 Add `--json` to `run-demo`, `run-doc-demo`, `rehearse`, `codex`, or
 `docker-run` when another tool should consume the result.
@@ -86,8 +95,7 @@ python3 -m unittest discover /mnt/usb/projects/agentos/prototype/tests -v
 ## Inspect
 
 ```bash
-PYTHONPATH=/mnt/usb/projects/agentos/prototype \
-python3 -m agentos inspect \
+agentos inspect \
   --state-dir /mnt/usb/projects/agentos/.agentos-state \
   --json
 ```
@@ -101,8 +109,7 @@ Add `--docker` to record the target AgentOS image metadata for the host-side
 Codex worker session. Codex CLI is not bundled into the image.
 
 ```bash
-PYTHONPATH=/mnt/usb/projects/agentos/prototype \
-python3 -m agentos codex \
+agentos codex \
   --state-dir /mnt/usb/projects/agentos/.agentos-state \
   --output-dir /mnt/usb/projects/agentos/.agentos-output \
   --input /path/to/project \
@@ -121,8 +128,7 @@ sudo docker build -t agentos-base:0.1 /mnt/usb/projects/agentos/docker/agentos-b
 Run a command in the Docker-backed AgentOS workspace:
 
 ```bash
-PYTHONPATH=/mnt/usb/projects/agentos/prototype \
-python3 -m agentos docker-run \
+agentos docker-run \
   --state-dir /mnt/usb/projects/agentos/.agentos-state \
   --output-dir /mnt/usb/projects/agentos/.agentos-output \
   --input /path/to/project \

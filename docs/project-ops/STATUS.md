@@ -75,6 +75,8 @@ core loop:
 - JSON output for `run-demo`, `run-doc-demo`, `rehearse`, `codex`, and `docker-run`
 - `docker-run` returns the sandbox command exit code
 - structured CLI errors for common environment/input failures
+- editable Python packaging through `pyproject.toml`
+- `agentos` console script entry point
 - common worker runtime used by the Codex adapter
 - Codex `--docker` records target AgentOS image metadata without running Codex inside the image
 - session destruction
@@ -152,10 +154,11 @@ collection, Docker command execution, host-side worker runtime extraction,
 Docker sandbox policy validation, selected-file approval scopes, Markdown
 document workflow, end-to-end rehearsal, first runtime hardening pass, doctor
 preflight, capability metadata, major-command JSON output, structured CLI
-errors, and Python-native approved patch apply now exist. Next build:
+errors, Python-native approved patch apply, and editable package install now
+exist. Next build:
 
-1. packaging/install flow
-2. real Codex execution smoke path
+1. real Codex execution smoke path
+2. clean Linux/WSL2 setup guide from clone to rehearsal
 3. continuing CLI UX polish as new commands appear
 
 ## Docker Image State

@@ -26,6 +26,15 @@ Run from the workspace root:
 PYTHONPATH=projects/agentos/prototype python3 -m agentos run-demo
 ```
 
+Install as a local editable CLI from the repository root:
+
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+python3 -m pip install -e .
+agentos doctor
+```
+
 Most automation-facing commands can emit machine-readable output:
 
 ```bash

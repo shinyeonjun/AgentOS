@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentos"
+version = "0.2.0"
+description = "Approval-gated sandbox lifecycle runtime for external AI agents"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+  { name = "Shin Yeonjun" }
+]
+keywords = ["ai", "sandbox", "approval", "agent-runtime"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+]
+dependencies = []
+
+[project.scripts]
+agentos = "agentos.cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "prototype" }
+
+[tool.setuptools.packages.find]
+where = ["prototype"]
+include = ["agentos*"]

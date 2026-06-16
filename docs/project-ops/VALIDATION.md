@@ -469,3 +469,29 @@ Observed result:
 - Code lifecycle session `0e31b1a625d6` passed.
 - Markdown document lifecycle session `ea6b2d29e91a` passed.
 - Docker sandbox policy session `f9596efb1214` passed.
+
+## 2026-06-16 Editable Install Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests
+/home/ubuntu/.openclaw/workspace/scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+tmp=$(mktemp -d)
+python3 -m venv "$tmp/venv"
+"$tmp/venv/bin/python" -m pip install -e /mnt/usb/projects/agentos
+"$tmp/venv/bin/agentos" doctor --workspace /mnt/usb/projects/agentos --json
+"$tmp/venv/bin/agentos" rehearse --state-dir "$tmp/state" --output-dir "$tmp/output" --skip-docker --json
+"$tmp/venv/bin/python" -m pip show agentos
+```
+
+Observed result:
+
+- 35 unit tests passed.
+- Ruff passed.
+- Compileall passed.
+- Editable install produced package `agentos` version `0.2.0`.
+- Console script `agentos` ran `doctor --json` successfully from a fresh venv.
+- Console script `agentos` ran rehearsal `cc7d6d019ec5` successfully with Docker skipped.
+- Generated `prototype/agentos.egg-info/` was removed and `*.egg-info/` is ignored.
