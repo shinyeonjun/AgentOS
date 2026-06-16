@@ -13,23 +13,17 @@ The first contract slice now exists:
 - selected-file sync to a safe target
 - Codex prepare wrapper with optional execution
 
-Next, move execution into Docker so the Codex wrapper runs in a stronger
-sandbox boundary.
+Next, run Codex execute mode inside the Docker-backed AgentOS workspace.
 
 ## Next 7 Actions
 
-1. Add Docker sandbox proof-of-concept:
-   - create session
-   - copy input into workspace
-   - run one safe command
-   - collect artifact
-   - destroy session
-2. Run Codex execute mode inside Docker-backed workspace.
-3. Add Markdown document modification demo.
-4. Add first end-to-end demo script for exhibition rehearsal.
-5. Add minimal policy checks for network and writable mounts.
-6. Split persistence out of `runtime.py` when DB logic starts growing.
-7. Add selected-file approval scopes to `review_package.json`.
+1. Run Codex execute mode inside Docker-backed workspace.
+2. Add Markdown document modification demo.
+3. Add first end-to-end demo script for exhibition rehearsal.
+4. Add minimal policy checks for network and writable mounts.
+5. Split persistence out of `runtime.py` when DB logic starts growing.
+6. Add selected-file approval scopes to `review_package.json`.
+7. Add image capability metadata for base/code/document layers.
 
 ## Do Not Do Yet
 

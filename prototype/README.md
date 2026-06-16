@@ -43,6 +43,13 @@ Use `--execute` only when the copied workspace should actually run Codex.
 Execute mode records the Codex tool call, detects changed files, writes text
 diff artifacts, and updates `review_package.json`.
 
+Run a Docker sandbox command:
+
+```bash
+PYTHONPATH=projects/agentos/prototype \
+python3 -m agentos docker-run --input /path/to/project --docker-sudo -- sh -c 'cat README.md'
+```
+
 Run tests:
 
 ```bash

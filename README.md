@@ -95,6 +95,26 @@ python3 -m agentos codex \
   --task "Fix failing tests"
 ```
 
+## Docker Sandbox
+
+Build the first AI OS base image:
+
+```bash
+sudo docker build -t agentos-base:0.1 /mnt/usb/projects/agentos/docker/agentos-base
+```
+
+Run a command in the Docker-backed AgentOS workspace:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype \
+python3 -m agentos docker-run \
+  --state-dir /mnt/usb/projects/agentos/.agentos-state \
+  --output-dir /mnt/usb/projects/agentos/.agentos-output \
+  --input /path/to/project \
+  --docker-sudo \
+  -- sh -c 'cat README.md'
+```
+
 ## Project Notes
 
 - Requirements: `docs/requirements.md`
@@ -115,6 +135,6 @@ python3 -m agentos codex \
 ## Current Limitation
 
 Docker is installed on the host and its data-root is on the ext4 USB project
-partition at `/mnt/usb/docker-data`. The current Python prototype still uses a
-disposable filesystem workspace, so the current isolation claim remains
-demo-grade until the Docker sandbox slice is implemented.
+partition at `/mnt/usb/docker-data`. The first Docker-backed sandbox command
+runner exists, but the security claim remains demo-grade until policy hardening
+and Codex-in-Docker execution are completed.

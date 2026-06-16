@@ -221,3 +221,28 @@ Observed result:
 - Review package reported 1 changed file: `README.md`.
 - Diff artifact was written: `diff-README.md.diff`.
 - No real Codex tokens were spent during this validation.
+
+## 2026-06-16 Docker Sandbox Validation
+
+Commands run:
+
+```bash
+sudo docker build -t agentos-base:0.1 /mnt/usb/projects/agentos/docker/agentos-base
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover /mnt/usb/projects/agentos/prototype/tests -v
+scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos docker-run --state-dir /mnt/usb/projects/agentos/.agentos-state --output-dir /mnt/usb/projects/agentos/.agentos-output --input /tmp/agentos-docker-input --docker-sudo -- sh -c 'cat README.md > /agentos/artifacts/readme.txt && cat README.md'
+```
+
+Observed result:
+
+- `agentos-base:0.1` built successfully from `busybox:1.36`.
+- Observed image size: about 4.11 MB.
+- 7 unit tests passed.
+- Ruff passed.
+- Compileall passed.
+- Docker sandbox session `ea78e8317617` exited with code 0.
+- Docker command used `--network none`.
+- Workspace was mounted at `/agentos/work`.
+- Artifact directory was mounted at `/agentos/artifacts`.
+- Container wrote `/agentos/artifacts/readme.txt`, and the host artifact contained `hello docker sandbox`.

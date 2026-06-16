@@ -5,6 +5,7 @@ from pathlib import Path
 
 from .codex_adapter import run_codex_task
 from .demo import run_code_fix_demo
+from .docker_sandbox import DEFAULT_IMAGE, run_docker_task
 from .inspector import inspect_state, render_inspection
 
 
@@ -85,6 +86,45 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Destroy the copied workspace after preparing/executing the task",
     )
+    docker_run = subparsers.add_parser("docker-run", help="Run a command inside an AgentOS Docker sandbox")
+    docker_run.add_argument(
+        "--state-dir",
+        type=Path,
+        default=Path("projects/agentos/.agentos-state"),
+        help="Persistent control-plane state directory",
+    )
+    docker_run.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("projects/agentos/.agentos-output"),
+        help="Safe approved-sync output directory",
+    )
+    docker_run.add_argument(
+        "--input",
+        required=True,
+        type=Path,
+        help="Host file or directory to copy into the AgentOS workspace",
+    )
+    docker_run.add_argument(
+        "--image",
+        default=DEFAULT_IMAGE,
+        help="Docker image to run",
+    )
+    docker_run.add_argument(
+        "--docker-bin",
+        default="docker",
+        help="Docker executable name or path",
+    )
+    docker_run.add_argument(
+        "--docker-sudo",
+        action="store_true",
+        help="Run Docker through sudo for shells that do not have docker-group access yet",
+    )
+    docker_run.add_argument(
+        "sandbox_command",
+        nargs=argparse.REMAINDER,
+        help="Command to run after --, for example: -- sh -c 'cat README.md'",
+    )
 
     args = parser.parse_args(argv)
 
@@ -135,6 +175,30 @@ def main(argv: list[str] | None = None) -> int:
         print(f"command_artifact: {result.command_artifact}")
         print(f"review_package_artifact: {result.review_package_artifact}")
         print(f"destroyed: {result.destroyed}")
+        return 0
+
+    if args.command == "docker-run":
+        sandbox_command = args.sandbox_command
+        if sandbox_command and sandbox_command[0] == "--":
+            sandbox_command = sandbox_command[1:]
+        if not sandbox_command:
+            parser.error("docker-run requires a sandbox command after --")
+        result = run_docker_task(
+            state_dir=args.state_dir,
+            output_dir=args.output_dir,
+            input_path=args.input,
+            command=sandbox_command,
+            image=args.image,
+            docker_bin=args.docker_bin,
+            use_sudo=args.docker_sudo,
+        )
+        print(f"session: {result.session_id}")
+        print(f"workspace_path: {result.workspace_path}")
+        print(f"artifact_dir: {result.artifact_dir}")
+        print(f"exit_code: {result.exit_code}")
+        print(f"command_artifact: {result.command_artifact}")
+        print(f"report_artifact: {result.report_artifact}")
+        print(f"review_package_artifact: {result.review_package_artifact}")
         return 0
 
     parser.error(f"unknown command: {args.command}")

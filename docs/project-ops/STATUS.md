@@ -12,6 +12,7 @@ v0.2 contract and approval-gated patch sync slice implemented.
 - Canonical local git repository: `/mnt/usb/projects/agentos/.git`
 - GitHub remote: `https://github.com/shinyeonjun/AgentOS.git`
 - Executable v0 prototype: `/mnt/usb/projects/agentos/prototype/`
+- Docker image definition: `/mnt/usb/projects/agentos/docker/agentos-base/Dockerfile`
 - Contract modules:
   - `/mnt/usb/projects/agentos/prototype/agentos/changes.py`
   - `/mnt/usb/projects/agentos/prototype/agentos/contracts.py`
@@ -55,6 +56,7 @@ core loop:
 - approved selected-file sync to safe target
 - Codex prepare wrapper with optional `--execute`
 - Codex execute result collection with changed-file detection and diff artifacts
+- Docker-backed sandbox command runner using `agentos-base:0.1`
 - session destruction
 
 ## Current Verdict
@@ -125,9 +127,27 @@ baselines, not final specs.
 
 ## Next Build Slice
 
-Contract layer, safe patch apply, selected-file sync, and Codex execute result
-collection now exist. Next build:
+Contract layer, safe patch apply, selected-file sync, Codex execute result
+collection, and Docker command execution now exist. Next build:
 
-1. Docker execution
+1. Codex execute inside Docker
 2. Markdown document workflow
 3. policy checks for network and writable mounts
+
+## Docker Image State
+
+- Image: `agentos-base:0.1`
+- Base: `busybox:1.36`
+- Size observed: about 4.11 MB
+- Standard directories created:
+  - `/agentos/input`
+  - `/agentos/work`
+  - `/agentos/artifacts`
+  - `/agentos/logs`
+  - `/agentos/report`
+- Runtime command uses:
+  - `--network none`
+  - `--rm`
+  - host UID/GID
+  - workspace mounted to `/agentos/work`
+  - artifacts mounted to `/agentos/artifacts`
