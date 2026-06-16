@@ -29,13 +29,14 @@ The first contract slice now exists:
 - SQLite persistence split into `agentos.core.storage.StateStore`
 - `worker-result.json` evidence artifact for host-side worker runs
 - review package validation checks link to worker result artifacts
+- sandbox threat model documenting current claims, gaps, and roadmap
 
-Next, write the sandbox threat model and continue real-worker rehearsal coverage.
+Next, continue real-worker rehearsal coverage and add artifact integrity metadata.
 
 ## Next 7 Actions
 
-1. Add an explicit threat model for sandbox claims.
-2. Add real-worker execution rehearsals after the deterministic demo story is stable.
+1. Add real-worker execution rehearsals after the deterministic demo story is stable.
+2. Add artifact hashing / integrity metadata to review packages.
 3. Continue polishing CLI failure messages as new commands appear.
 4. Document supported install/runtime paths for Linux and WSL2.
 5. Consider a minimal review dashboard only after the CLI demo is solid.

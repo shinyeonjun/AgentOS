@@ -600,3 +600,20 @@ Observed result:
 - Ruff passed.
 - Compileall passed.
 - Docker rehearsal `dde17076bfc4` passed.
+
+## 2026-06-16 Sandbox Threat Model Validation
+
+Files updated:
+
+```text
+docs/sandbox-threat-model.md
+README.md
+docs/project-ops/STATUS.md
+docs/project-ops/NEXT.md
+```
+
+Observed result:
+
+- Threat model defines current security claim as demo-grade sandbox lifecycle, not production isolation.
+- Documented protected assets, trust boundaries, considered threats, current mitigations, remaining gaps, and security roadmap.
+- Recommended wording now avoids overclaiming "secure", "production sandbox", or "complete AI OS".

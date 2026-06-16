@@ -195,6 +195,7 @@ filesystem rather than under `/mnt/c`.
 - Algorithms and data structures: `docs/algorithms-data-structures.md`
 - Docker storage plan: `docs/docker-storage-plan.md`
 - Linux/WSL2 setup: `docs/setup-linux-wsl.md`
+- Sandbox threat model: `docs/sandbox-threat-model.md`
 - Technical plan: `docs/technical-plan.md`
 - Operating notes: `docs/project-ops/`
 - Prototype code: `prototype/`
