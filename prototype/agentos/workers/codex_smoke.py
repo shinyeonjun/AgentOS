@@ -22,6 +22,7 @@ class CodexSmokeResult:
     changed_files: tuple[str, ...]
     task_manifest_artifact: Path
     command_artifact: Path
+    worker_result_artifact: Path
     review_package_artifact: Path
 
 
@@ -90,6 +91,7 @@ def _to_smoke_result(result: CodexRunResult, *, execute: bool) -> CodexSmokeResu
         changed_files=result.changed_files,
         task_manifest_artifact=result.task_manifest_artifact,
         command_artifact=result.command_artifact,
+        worker_result_artifact=result.worker_result_artifact,
         review_package_artifact=result.review_package_artifact,
     )
 

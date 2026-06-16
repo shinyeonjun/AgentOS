@@ -15,6 +15,7 @@ class CodexRunResult:
     workspace_path: Path
     task_manifest_artifact: Path
     command_artifact: Path
+    worker_result_artifact: Path
     review_package_artifact: Path
     executed: bool
     sandbox_image: str | None
@@ -87,6 +88,7 @@ def _to_codex_result(result: WorkerRunResult, *, sandbox_image: str | None) -> C
         workspace_path=result.workspace_path,
         task_manifest_artifact=result.task_manifest_artifact,
         command_artifact=result.command_artifact,
+        worker_result_artifact=result.worker_result_artifact,
         review_package_artifact=result.review_package_artifact,
         executed=result.executed,
         sandbox_image=sandbox_image,

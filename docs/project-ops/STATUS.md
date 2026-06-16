@@ -80,6 +80,8 @@ core loop:
 - `agentos` console script entry point
 - on-demand `agentos codex-smoke` command
 - real Codex smoke execution passed with changed-file detection
+- worker execution evidence artifact: `worker-result.json`
+- review package validation checks reference worker result artifacts
 - package folders split into `core`, `sandbox`, `workers`, and `demos`
 - Linux/WSL2 setup guide from clone to rehearsal
 - SQLite persistence isolated in `agentos.core.storage.StateStore`
@@ -161,11 +163,11 @@ Docker sandbox policy validation, selected-file approval scopes, Markdown
 document workflow, end-to-end rehearsal, first runtime hardening pass, doctor
 preflight, capability metadata, major-command JSON output, structured CLI
 errors, Python-native approved patch apply, editable package install, a real
-Codex smoke path, a Linux/WSL2 setup guide, and a separated SQLite storage
-boundary now exist. Next build:
+Codex smoke path, worker evidence artifacts, a Linux/WSL2 setup guide, and a
+separated SQLite storage boundary now exist. Next build:
 
-1. richer real-worker evidence in reports/review packages
-2. explicit sandbox threat model
+1. explicit sandbox threat model
+2. continuing real-worker rehearsal coverage
 3. continuing CLI UX polish as new commands appear
 
 ## Docker Image State

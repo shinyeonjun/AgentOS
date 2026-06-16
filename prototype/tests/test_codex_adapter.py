@@ -48,7 +48,12 @@ class CodexAdapterTests(unittest.TestCase):
             artifact_names = {artifact["name"] for artifact in session["artifacts"]}
             self.assertIn("task.json", artifact_names)
             self.assertIn("worker-command.json", artifact_names)
+            self.assertIn("worker-result.json", artifact_names)
             self.assertIn("review_package.json", artifact_names)
+
+            worker_result = json.loads(result.worker_result_artifact.read_text())
+            self.assertFalse(worker_result["executed"])
+            self.assertEqual(worker_result["changed_files"], [])
 
     def test_codex_execute_collects_changed_files(self) -> None:
         with TemporaryDirectory() as tmp:
@@ -80,9 +85,14 @@ class CodexAdapterTests(unittest.TestCase):
             self.assertEqual(result.changed_files, ("README.md",))
 
             review_package = json.loads(result.review_package_artifact.read_text())
+            worker_result = json.loads(result.worker_result_artifact.read_text())
             self.assertEqual(review_package["validation"]["status"], "passed")
+            self.assertEqual(review_package["validation"]["checks"][0]["result_ref"], f"artifact://{result.session_id}/worker-result.json")
             self.assertEqual(review_package["changes"]["changed_files"][0]["path"], "README.md")
             self.assertIn("diff-README.md.diff", review_package["changes"]["changed_files"][0]["diff_ref"])
+            self.assertTrue(worker_result["executed"])
+            self.assertEqual(worker_result["exit_code"], 0)
+            self.assertEqual(worker_result["changed_files"], ["README.md"])
             approval_scopes = review_package["approval"]["scopes"]
             self.assertEqual(approval_scopes[0]["id"], "sync_all_changed_files")
             self.assertEqual(approval_scopes[0]["paths"], ["README.md"])

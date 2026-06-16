@@ -26,6 +26,7 @@ class WorkerRunResult:
     workspace_path: Path
     task_manifest_artifact: Path
     command_artifact: Path
+    worker_result_artifact: Path
     review_package_artifact: Path
     executed: bool
     worker_result: ToolResult | None
@@ -75,7 +76,15 @@ def run_worker_task(
     worker_result = runtime.run_command(session, worker.command, workspace_path, env=worker.env) if execute else None
     changes = detect_file_changes(original_path, workspace_path) if execute else []
     diff_artifacts = _write_diff_artifacts(runtime, session, changes)
-    report_artifact = _write_worker_report(runtime, session, worker, execute, worker_result, changes)
+    worker_result_artifact = _write_worker_result_artifact(
+        runtime=runtime,
+        session=session,
+        worker=worker,
+        executed=execute,
+        worker_result=worker_result,
+        changes=changes,
+    )
+    report_artifact = _write_worker_report(runtime, session, worker, execute, worker_result, changes, worker_result_artifact)
     review_package = _build_worker_review_package(
         session_id=session.session_id,
         worker=worker,
@@ -84,6 +93,7 @@ def run_worker_task(
         changes=changes,
         task_manifest_artifact=task_manifest_artifact,
         command_artifact=command_artifact,
+        worker_result_artifact=worker_result_artifact,
         diff_artifacts=diff_artifacts,
         report_artifact=report_artifact,
     )
@@ -98,6 +108,7 @@ def run_worker_task(
         workspace_path=workspace_path,
         task_manifest_artifact=task_manifest_artifact,
         command_artifact=command_artifact,
+        worker_result_artifact=worker_result_artifact,
         review_package_artifact=review_package_artifact,
         executed=execute,
         worker_result=worker_result,
@@ -115,9 +126,11 @@ def _build_worker_review_package(
     changes: list[FileChange],
     task_manifest_artifact: Path,
     command_artifact: Path,
+    worker_result_artifact: Path,
     diff_artifacts: dict[str, Path],
     report_artifact: Path,
 ) -> dict:
+    worker_result_ref = artifact_ref(session_id, worker_result_artifact)
     if not executed:
         summary = f"Prepared a {worker.name} task session without executing the worker."
         validation_status = "not_run"
@@ -127,6 +140,7 @@ def _build_worker_review_package(
                 "status": "not_run",
                 "exit_code": None,
                 "role": "prepared",
+                "result_ref": worker_result_ref,
             }
         ]
     else:
@@ -140,6 +154,7 @@ def _build_worker_review_package(
                 "status": validation_status,
                 "exit_code": exit_code,
                 "role": "worker_run",
+                "result_ref": worker_result_ref,
             }
         ]
 
@@ -168,6 +183,11 @@ def _build_worker_review_package(
             "name": report_artifact.name,
             "type": "text/markdown",
             "ref": artifact_ref(session_id, report_artifact),
+        },
+        {
+            "name": worker_result_artifact.name,
+            "type": "application/json",
+            "ref": worker_result_ref,
         },
     ]
     artifacts.extend(
@@ -227,7 +247,8 @@ def _write_diff_artifacts(
     return artifacts
 
 
-def _write_worker_report(
+def _write_worker_result_artifact(
+    *,
     runtime: AgentOSRuntime,
     session: Session,
     worker: WorkerSpec,
@@ -235,12 +256,34 @@ def _write_worker_report(
     worker_result: ToolResult | None,
     changes: list[FileChange],
 ) -> Path:
+    content = {
+        "worker": worker.name,
+        "executed": executed,
+        "exit_code": worker_result.exit_code if worker_result else None,
+        "timed_out": worker_result.timed_out if worker_result else False,
+        "stdout_tail": worker_result.stdout_tail if worker_result else "",
+        "stderr_tail": worker_result.stderr_tail if worker_result else "",
+        "changed_files": [change.path for change in changes],
+    }
+    return runtime.write_json_artifact(session, "worker-result.json", content)
+
+
+def _write_worker_report(
+    runtime: AgentOSRuntime,
+    session: Session,
+    worker: WorkerSpec,
+    executed: bool,
+    worker_result: ToolResult | None,
+    changes: list[FileChange],
+    worker_result_artifact: Path,
+) -> Path:
     if not executed:
         body = (
             f"# {worker.title} Report\n\n"
             "The worker was not executed. AgentOS prepared the copied workspace and command artifact only.\n\n"
             f"Worker: `{worker.name}`\n\n"
             f"Task: {worker.task}\n"
+            f"\nWorker result artifact: `{worker_result_artifact}`\n"
         )
     else:
         exit_code = worker_result.exit_code if worker_result else 1
@@ -249,7 +292,8 @@ def _write_worker_report(
             f"Worker: `{worker.name}`\n\n"
             f"Task: {worker.task}\n\n"
             f"Exit code: `{exit_code}`\n\n"
-            f"Changed files: `{len(changes)}`\n"
+            f"Changed files: `{len(changes)}`\n\n"
+            f"Worker result artifact: `{worker_result_artifact}`\n"
         )
     return runtime.write_artifact(session, "final-report.md", body, "text/markdown")
 

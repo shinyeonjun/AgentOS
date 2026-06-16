@@ -27,18 +27,20 @@ The first contract slice now exists:
 - on-demand `agentos codex-smoke` path for real Codex adapter execution
 - Linux/WSL2 setup guide from clone to rehearsal
 - SQLite persistence split into `agentos.core.storage.StateStore`
+- `worker-result.json` evidence artifact for host-side worker runs
+- review package validation checks link to worker result artifacts
 
-Next, continue polishing real-worker evidence and write the sandbox threat model.
+Next, write the sandbox threat model and continue real-worker rehearsal coverage.
 
 ## Next 7 Actions
 
-1. Improve real Codex smoke evidence in reports/review packages if needed.
-2. Add an explicit threat model for sandbox claims.
+1. Add an explicit threat model for sandbox claims.
+2. Add real-worker execution rehearsals after the deterministic demo story is stable.
 3. Continue polishing CLI failure messages as new commands appear.
 4. Document supported install/runtime paths for Linux and WSL2.
 5. Consider a minimal review dashboard only after the CLI demo is solid.
-6. Add real-worker execution rehearsals after the deterministic demo story is stable.
-7. Add release packaging only after the local install path is stable.
+6. Add release packaging only after the local install path is stable.
+7. Keep UI/dashboard work behind the CLI and review contract.
 
 ## Do Not Do Yet
 

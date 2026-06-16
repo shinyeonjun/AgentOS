@@ -404,6 +404,7 @@ def _main_impl(argv: list[str]) -> int:
         print(f"changed_files: {len(result.changed_files)}")
         print(f"task_manifest_artifact: {result.task_manifest_artifact}")
         print(f"command_artifact: {result.command_artifact}")
+        print(f"worker_result_artifact: {result.worker_result_artifact}")
         print(f"review_package_artifact: {result.review_package_artifact}")
         print(f"destroyed: {result.destroyed}")
         return 0
@@ -430,6 +431,7 @@ def _main_impl(argv: list[str]) -> int:
         print(f"changed_files: {len(result.changed_files)}")
         print(f"task_manifest_artifact: {result.task_manifest_artifact}")
         print(f"command_artifact: {result.command_artifact}")
+        print(f"worker_result_artifact: {result.worker_result_artifact}")
         print(f"review_package_artifact: {result.review_package_artifact}")
         return 0 if result.validation_status in {"passed", "not_run"} else 1
 

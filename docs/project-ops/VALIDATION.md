@@ -576,3 +576,27 @@ Observed result:
 - Ruff passed.
 - Compileall passed.
 - Docker rehearsal `a3f72c501409` passed.
+
+## 2026-06-16 Worker Evidence Artifact Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest prototype.tests.test_codex_adapter prototype.tests.test_codex_smoke prototype.tests.test_cli -v
+/home/ubuntu/.openclaw/workspace/scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos codex-smoke --state-dir /tmp/agentos-evidence-codex-state --output-dir /tmp/agentos-evidence-codex-output --execute --json
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos rehearse --state-dir /mnt/usb/projects/agentos/.agentos-state --output-dir /mnt/usb/projects/agentos/.agentos-output --docker-sudo --json
+```
+
+Observed result:
+
+- Codex/CLI focused tests passed.
+- Real Codex smoke `888888af9777` passed.
+- `worker-result.json` recorded worker name, execution status, exit code, timeout flag, stdout/stderr tails, and changed files.
+- `review_package.json` validation check now links to `artifact://888888af9777/worker-result.json`.
+- Full unit suite passed: 40 tests.
+- Ruff passed.
+- Compileall passed.
+- Docker rehearsal `dde17076bfc4` passed.
