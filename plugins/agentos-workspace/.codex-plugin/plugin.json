@@ -1,7 +1,7 @@
 {
   "name": "agentos-workspace",
-  "version": "0.3.6",
-  "description": "Route AI coding tasks through AgentOS copied sessions, review packages, and approval-gated sync.",
+  "version": "0.3.7",
+  "description": "Force selected coding tasks through AgentOS MCP sessions before any file edits.",
   "author": {
     "name": "AgentOS"
   },
@@ -13,14 +13,14 @@
   "interface": {
     "displayName": "AgentOS Workspace",
     "shortDescription": "Route coding work through AgentOS sessions.",
-    "longDescription": "AgentOS Workspace routes Codex coding work through copied AgentOS session workspaces, review packages, approval gates, and approved sync instead of editing host projects directly. When selected, Codex must use the bundled AgentOS skill and MCP server to run doctor, prepare Docker dependencies when needed, and create or reuse an AgentOS session before changing files.",
+    "longDescription": "AgentOS Workspace routes Codex coding work through copied AgentOS session workspaces, review packages, approval gates, and approved sync instead of editing host projects directly. When selected, Codex must call the bundled AgentOS MCP server before any file edit: run doctor, prepare Docker dependencies when needed, create or reuse an AgentOS session, work only inside the returned workspace_path, and stop if AgentOS tools are unavailable.",
     "developerName": "AgentOS",
     "category": "Productivity",
     "capabilities": ["Write", "Code"],
     "defaultPrompt": [
-      "Use AgentOS for this task. Create or reuse an AgentOS session before editing files, work only inside the session workspace, produce a review package, and do not sync until I approve.",
-      "Route this coding task through AgentOS instead of editing the current workspace directly.",
-      "Start with AgentOS doctor. If Docker or the AgentOS image is not ready, run AgentOS environment prepare before Docker sandbox work. Then make the requested changes inside the AgentOS workspace and show the review package."
+      "Use AgentOS MCP for this task. Before any file edit, call agentos doctor. If AgentOS MCP tools are not visible, stop and say the tools are unavailable.",
+      "Do not edit the current/original workspace directly. Create or reuse an AgentOS session, then work only inside the returned workspace_path.",
+      "If Docker or the AgentOS image is not ready, call prepare_environment before Docker sandbox work. Produce and verify a review package, then wait for approval before sync."
     ],
     "brandColor": "#2563EB"
   }

@@ -15,15 +15,21 @@ class McpServerTests(unittest.TestCase):
         initialize = _handle_rpc({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}})
         self.assertIsNotNone(initialize)
         self.assertEqual(initialize["result"]["serverInfo"]["name"], "agentos")
+        instructions = initialize["result"]["instructions"]
+        self.assertIn("call doctor before any file edit", instructions)
+        self.assertIn("If AgentOS tools are unavailable, stop", instructions)
 
         tools = _handle_rpc({"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}})
         self.assertIsNotNone(tools)
-        names = {tool["name"] for tool in tools["result"]["tools"]}
+        tools_by_name = {tool["name"]: tool for tool in tools["result"]["tools"]}
+        names = set(tools_by_name)
         self.assertIn("doctor", names)
         self.assertIn("prepare_environment", names)
         self.assertIn("create_session", names)
         self.assertIn("run_command", names)
         self.assertIn("sync_approved", names)
+        self.assertIn("MUST CALL FIRST", tools_by_name["doctor"]["description"])
+        self.assertIn("before editing", tools_by_name["create_session"]["description"])
 
     def test_tool_call_creates_session_and_runs_command(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -18,6 +18,8 @@ def build_plugin_spec() -> dict[str, Any]:
         "runtime_contract": {
             "agent_role": "Plan, edit, test, and explain changes.",
             "agentos_role": "Create safe workspaces, record evidence, build reviews, gate sync.",
+            "first_action": "doctor_before_file_edits",
+            "missing_agentos_tools": "stop_without_direct_edits",
             "original_mutation": "forbidden_before_approved_sync",
             "sync_requires_human_approval": True,
         },
@@ -124,6 +126,8 @@ def build_plugin_spec() -> dict[str, Any]:
             ),
         ],
         "agent_rules": [
+            "Call doctor before any file edit when AgentOS is selected.",
+            "If AgentOS MCP tools are unavailable, stop instead of editing with normal file tools.",
             "Never edit the original host project while operating through AgentOS.",
             "Start with doctor and run prepare_environment before Docker sandbox work if Docker or the image is not ready.",
             "Use workspace_path as the active project root.",

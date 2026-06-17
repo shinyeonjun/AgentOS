@@ -1,6 +1,6 @@
 ---
 name: agentos-workspace
-description: Use when AgentOS Workspace is selected, mentioned, or requested. Route coding tasks through AgentOS copied sessions, review packages, and approval-gated sync instead of editing the current workspace directly.
+description: Use when AgentOS Workspace is selected, mentioned, or requested. Call AgentOS MCP before edits; route work through copied sessions and approval-gated sync.
 ---
 
 # AgentOS Workspace
@@ -8,6 +8,11 @@ description: Use when AgentOS Workspace is selected, mentioned, or requested. Ro
 Use this skill when the user selects or mentions AgentOS Workspace, asks to use
 AgentOS, or wants Codex to edit, test, or inspect a project through AgentOS
 instead of directly mutating the host project.
+
+If this skill is active, the first action for any coding task is an AgentOS MCP
+call to `doctor`. If AgentOS MCP tools are not visible in this conversation,
+stop before editing files and tell the user that the AgentOS tools are
+unavailable in the current Codex conversation.
 
 If this skill is active, do not satisfy the coding task with normal Codex file
 edits in the current workspace. Start by checking AgentOS availability and
@@ -26,16 +31,17 @@ through AgentOS before Docker sandbox work.
 
 ## Standard Flow
 
-1. Prefer AgentOS MCP tools when they are available. Start with `doctor`. If
+1. Use AgentOS MCP tools before any file edit. Start with `doctor`. If
    Docker checks warn or fail and the task needs Docker sandbox work, call
    `prepare_environment`. Then use `create_session`, `run_command`,
    `review_session`, `verify_review`, `approve_scope`, and `sync_approved`.
 
 2. If MCP tools are unavailable immediately after installing or updating this
    plugin, first assume the current Codex conversation started before the MCP
-   server was registered. Ask the user to start a new Codex conversation with
-   the updated plugin enabled. Existing conversations may see updated skill
-   files through shell reads but still keep their old MCP tool registry.
+   server was registered. Do not edit files through normal Codex tools. Ask the
+   user to start a new Codex conversation with the updated plugin enabled.
+   Existing conversations may see updated skill files through shell reads but
+   still keep their old MCP tool registry.
 
 3. If a new Codex conversation still lacks MCP tools, check whether the bundled
    MCP server failed to start because Node or Python 3 is missing or blocked.
@@ -108,7 +114,8 @@ agentos sync --latest --target <project-dir> --require-clean-git --json
 
 ## Safety Rules
 
-- Never claim the original project changed until `agentos sync` succeeds.
+- Never edit or claim the original project changed until `agentos sync`
+  succeeds.
 - Never call `agentos sync` before user approval.
 - Prefer dry-run sync before actual sync.
 - Stop if `agentos verify-review` fails.

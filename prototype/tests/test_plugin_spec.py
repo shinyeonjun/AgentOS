@@ -14,6 +14,9 @@ class PluginSpecTests(unittest.TestCase):
 
         self.assertEqual(spec["schema_version"], "0.4")
         self.assertEqual(spec["interfaces"]["mcp_stdio"], "agentos mcp serve")
+        self.assertEqual(spec["runtime_contract"]["first_action"], "doctor_before_file_edits")
+        self.assertEqual(spec["runtime_contract"]["missing_agentos_tools"], "stop_without_direct_edits")
+        self.assertIn("Call doctor before any file edit", spec["agent_rules"][0])
         self.assertIn("create_session", tools)
         self.assertIn("run_command", tools)
         self.assertIn("run_docker_command", tools)
@@ -31,8 +34,11 @@ class PluginSpecTests(unittest.TestCase):
         mcp_config = json.loads((plugin_root / ".mcp.json").read_text(encoding="utf-8"))
         marketplace = json.loads((repo_root / ".agents" / "plugins" / "marketplace.json").read_text(encoding="utf-8"))
 
+        self.assertEqual(manifest["version"], "0.3.7")
         self.assertEqual(manifest["mcpServers"], "./.mcp.json")
         self.assertEqual(manifest["skills"], "./skills/")
+        self.assertIn("Before any file edit", manifest["interface"]["defaultPrompt"][0])
+        self.assertIn("stop", manifest["interface"]["defaultPrompt"][0])
         self.assertEqual(marketplace["plugins"][0]["source"]["path"], "./plugins/agentos-workspace")
         self.assertIn("mcpServers", mcp_config)
         self.assertNotIn("mcp_servers", mcp_config)

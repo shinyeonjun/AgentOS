@@ -1,8 +1,8 @@
 interface:
   display_name: "AgentOS Workspace"
-  short_description: "Use copied AgentOS sessions for coding tasks"
+  short_description: "Call AgentOS MCP before coding edits"
   brand_color: "#2563EB"
-  default_prompt: "Use $agentos-workspace for this task. Run AgentOS doctor first, prepare Docker/image dependencies if needed, create or reuse an AgentOS session before editing files, work only inside the session workspace, produce a review package, and do not sync until I approve."
+  default_prompt: "Use $agentos-workspace for this task. Before any file edit, call AgentOS MCP doctor. If AgentOS MCP tools are not visible, stop and say the tools are unavailable. Do not edit the original workspace directly. Create or reuse an AgentOS session, work only inside workspace_path, produce and verify a review package, and do not sync until I approve."
 
 policy:
   allow_implicit_invocation: true
@@ -11,5 +11,5 @@ dependencies:
   tools:
     - type: "mcp"
       value: "agentos"
-      description: "AgentOS MCP server for doctor/prepare checks, copied workspace sessions, command execution, review packages, and approval-gated sync."
+      description: "AgentOS MCP server. Must be called before coding edits: doctor, optional prepare, copied session workspace, command execution, review package, and approval-gated sync."
       transport: "stdio"

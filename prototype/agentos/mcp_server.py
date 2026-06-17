@@ -23,6 +23,11 @@ SERVER_NAME = "agentos"
 SERVER_VERSION = "0.2.0"
 DEFAULT_STATE_DIR = Path(".agentos-state")
 DEFAULT_OUTPUT_DIR = Path(".agentos-output")
+AGENTOS_WORKFLOW_RULE = (
+    "AgentOS selected: call doctor before any file edit. Do not edit the original workspace directly. "
+    "If AgentOS tools are unavailable, stop instead of using normal file-edit tools. Create or reuse a "
+    "session and work only inside workspace_path; produce and verify a review before approved sync."
+)
 
 
 def run_stdio() -> int:
@@ -92,13 +97,12 @@ def _initialize_result(params: dict[str, Any]) -> dict[str, Any]:
             "version": SERVER_VERSION,
             "description": "Safe workspace runtime for approval-gated AI coding sessions.",
         },
-        "instructions": (
-            "When AgentOS is selected or requested, do not edit the original project directly. "
-            "First call doctor. If Docker is unavailable or the AgentOS image is missing, call "
-            "prepare_environment before Docker sandbox work. Then create or reuse a copied "
-            "session. Work only inside the returned workspace_path, build and verify a review "
-            "package, and wait for explicit human approval before syncing approved changes back "
-            "to the original project."
+        "instructions": " ".join(
+            [
+                AGENTOS_WORKFLOW_RULE,
+                "If Docker is unavailable or the AgentOS image is missing, call prepare_environment before Docker sandbox work.",
+                "Wait for explicit human approval before syncing approved changes back to the original project.",
+            ]
         ),
     }
 
@@ -338,7 +342,7 @@ def _tool_definitions() -> list[dict[str, Any]]:
     return [
         _tool_definition(
             "doctor",
-            "Check whether the local AgentOS runtime environment is usable without failing MCP startup.",
+            "MUST CALL FIRST when AgentOS is selected. Check runtime readiness before any file edit.",
             {
                 "workspace": _string_schema("Workspace path to inspect."),
                 "image": {"type": "string", "default": "agentos-base:0.1"},
@@ -348,7 +352,7 @@ def _tool_definitions() -> list[dict[str, Any]]:
         ),
         _tool_definition(
             "prepare_environment",
-            "Prepare Docker dependencies for AgentOS, including building the bundled default image when missing.",
+            "Call after doctor when Docker or the AgentOS image is not ready; do not fall back to direct edits.",
             {
                 "image": {"type": "string", "default": "agentos-base:0.1"},
                 "docker_bin": {"type": "string", "default": "docker"},
@@ -359,7 +363,7 @@ def _tool_definitions() -> list[dict[str, Any]]:
         ),
         _tool_definition(
             "create_session",
-            "Create a copied AgentOS workspace session. Work only inside returned workspace_path.",
+            "Create the copied AgentOS workspace before editing. Work only inside returned workspace_path.",
             {
                 **common_paths,
                 "project_dir": _string_schema("Original project directory to copy into the session."),
@@ -367,7 +371,7 @@ def _tool_definitions() -> list[dict[str, Any]]:
             },
             required=["project_dir"],
         ),
-        _tool_definition("list_sessions", "List known AgentOS sessions.", common_paths),
+        _tool_definition("list_sessions", "List known AgentOS sessions before choosing reuse or create_session.", common_paths),
         _tool_definition(
             "session_status",
             "Inspect one AgentOS session by id, id prefix, or name.",
@@ -376,7 +380,7 @@ def _tool_definitions() -> list[dict[str, Any]]:
         ),
         _tool_definition(
             "run_command",
-            "Run a host command inside an AgentOS session workspace.",
+            "Run a host command inside an AgentOS session workspace, never in the original project.",
             {
                 **common_paths,
                 "work_name": _string_schema("Session id, id prefix, or name."),
@@ -387,7 +391,7 @@ def _tool_definitions() -> list[dict[str, Any]]:
         ),
         _tool_definition(
             "run_docker_command",
-            "Run a Docker sandbox command mounted against an AgentOS session workspace.",
+            "Run Docker sandbox work mounted against an AgentOS session workspace after doctor/prepare.",
             {
                 **common_paths,
                 "work_name": _string_schema("Session id, id prefix, or name."),
@@ -400,13 +404,13 @@ def _tool_definitions() -> list[dict[str, Any]]:
         ),
         _tool_definition(
             "review_session",
-            "Build a review package by comparing the session workspace to its original snapshot.",
+            "Build the required review package before reporting completion or asking for sync approval.",
             {**common_paths, "work_name": _string_schema("Session id, id prefix, or name.")},
             required=["work_name"],
         ),
-        _tool_definition("render_review", "Return a structured review package summary.", review_selector),
-        _tool_definition("render_diff", "Render review diff text.", review_selector),
-        _tool_definition("verify_review", "Verify review package artifact integrity.", review_selector),
+        _tool_definition("render_review", "Return the structured review package summary for the human.", review_selector),
+        _tool_definition("render_diff", "Render review diff text for human inspection before approval.", review_selector),
+        _tool_definition("verify_review", "Verify review package integrity before approval or sync.", review_selector),
         _tool_definition(
             "approve_scope",
             "Record explicit human approval for one review scope. Do not call without user approval.",

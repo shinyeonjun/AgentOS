@@ -7,6 +7,10 @@ The plugin rule is simple: Codex should work inside an AgentOS session
 workspace, produce a review package, and wait for explicit approval before any
 sync back to the host project.
 
+When testing the plugin, the first visible AgentOS action should be a call to
+`doctor`. If a Codex conversation cannot see AgentOS MCP tools, it should stop
+instead of editing files through normal Codex file tools.
+
 AgentOS MCP startup does not require Docker to already be running. Docker is
 checked by `doctor` and prepared only before Docker sandbox work. If the default
 `agentos-base:0.1` image is missing, AgentOS can build the bundled minimal image
@@ -81,6 +85,15 @@ After installing or updating the plugin, start a new Codex conversation before
 testing AgentOS. Codex conversations may keep the MCP tool registry they had at
 startup, so an old conversation can read the updated plugin files while still
 missing `mcp__agentos.*` tools.
+
+Suggested smoke prompt:
+
+```text
+Use AgentOS Workspace for this task. First call AgentOS doctor. If AgentOS MCP
+tools are not visible, stop without editing files. If tools are visible, create
+or reuse a session and make a tiny README change only inside workspace_path,
+then produce a review package.
+```
 
 ## Main Skill
 
