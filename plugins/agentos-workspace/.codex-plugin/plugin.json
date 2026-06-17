@@ -1,6 +1,6 @@
 {
   "name": "agentos-workspace",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Use AgentOS as a safe workspace runtime for AI coding tasks.",
   "author": {
     "name": "AgentOS"
@@ -9,6 +9,7 @@
   "license": "MIT",
   "keywords": ["agentos", "codex", "sandbox", "workspace", "approval"],
   "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "AgentOS Workspace",
     "shortDescription": "Work through safe AgentOS sessions.",

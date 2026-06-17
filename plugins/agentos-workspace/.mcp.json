@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "agentos": {
+      "title": "AgentOS",
+      "description": "Create safe copied workspaces, run checks, build review packages, and sync only approved changes.",
+      "command": "agentos",
+      "args": ["mcp", "serve"]
+    }
+  }
+}

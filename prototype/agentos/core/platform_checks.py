@@ -48,6 +48,7 @@ def run_doctor(workspace_path: Path | None = None) -> DoctorResult:
     checks = (
         _check_platform(),
         _check_python(),
+        _check_agentos_cli(),
         _check_docker_binary(),
         _check_workspace_path(workspace_path),
     )
@@ -93,6 +94,17 @@ def _check_python() -> DoctorCheck:
     if sys.version_info >= (3, 11):
         return DoctorCheck("python", "passed", f"Python {version} at {sys.executable}.")
     return DoctorCheck("python", "failed", f"Python {version} is too old; use Python 3.11+.")
+
+
+def _check_agentos_cli() -> DoctorCheck:
+    executable = shutil.which("agentos")
+    if executable is None:
+        return DoctorCheck(
+            "agentos_cli",
+            "warning",
+            "agentos executable is not on PATH. Codex plugin MCP tools need the installed CLI.",
+        )
+    return DoctorCheck("agentos_cli", "passed", f"agentos executable found at {executable}.")
 
 
 def _check_docker_binary() -> DoctorCheck:

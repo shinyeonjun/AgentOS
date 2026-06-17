@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import unittest
+from pathlib import Path
 
 from agentos.core.plugin_spec import build_plugin_spec
 
@@ -10,7 +12,8 @@ class PluginSpecTests(unittest.TestCase):
         spec = build_plugin_spec()
         tools = {tool["name"]: tool for tool in spec["tools"]}
 
-        self.assertEqual(spec["schema_version"], "0.3")
+        self.assertEqual(spec["schema_version"], "0.4")
+        self.assertEqual(spec["interfaces"]["mcp_stdio"], "agentos mcp serve")
         self.assertIn("create_session", tools)
         self.assertIn("run_command", tools)
         self.assertIn("run_docker_command", tools)
@@ -20,6 +23,17 @@ class PluginSpecTests(unittest.TestCase):
         self.assertTrue(tools["approve_scope"]["human_approval_required"])
         self.assertTrue(tools["sync_approved"]["human_approval_required"])
         self.assertIn("workspace_path", tools["create_session"]["outputs"])
+
+    def test_codex_plugin_declares_agentos_mcp_server(self) -> None:
+        repo_root = Path(__file__).resolve().parents[2]
+        plugin_root = repo_root / "plugins" / "agentos-workspace"
+        manifest = json.loads((plugin_root / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
+        mcp_config = json.loads((plugin_root / ".mcp.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(manifest["mcpServers"], "./.mcp.json")
+        server = mcp_config["mcpServers"]["agentos"]
+        self.assertEqual(server["command"], "agentos")
+        self.assertEqual(server["args"], ["mcp", "serve"])
 
 
 if __name__ == "__main__":

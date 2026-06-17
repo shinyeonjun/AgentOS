@@ -39,6 +39,7 @@ from .core.work_sessions import (
 from .demos.demo import run_code_fix_demo
 from .demos.document_demo import run_markdown_document_demo
 from .demos.rehearsal import run_rehearsal
+from .mcp_server import run_stdio as run_mcp_stdio
 from .sandbox.docker_sandbox import DEFAULT_IMAGE, run_docker_task
 from .workers.codex_adapter import run_codex_session_task, run_codex_task
 from .workers.codex_smoke import run_codex_smoke
@@ -123,6 +124,9 @@ def _main_impl(argv: list[str]) -> int:
     add_json_arg(sessions, noun="sessions")
     plugin_spec = subparsers.add_parser("plugin-spec", help="Render the AgentOS external-agent tool contract")
     add_json_arg(plugin_spec, noun="plugin tool spec")
+    mcp = subparsers.add_parser("mcp", help="Run AgentOS MCP adapters")
+    mcp_subparsers = mcp.add_subparsers(dest="mcp_command", required=True)
+    mcp_subparsers.add_parser("serve", help="Run the AgentOS MCP stdio server")
     session = subparsers.add_parser("session", help="Create and operate persistent AgentOS workspace sessions")
     session_subparsers = session.add_subparsers(dest="session_command", required=True)
     session_list = session_subparsers.add_parser("list", help="List persistent AgentOS workspace sessions")
@@ -447,6 +451,10 @@ def _main_impl(argv: list[str]) -> int:
                 approval = " approval=required" if tool["human_approval_required"] else ""
                 print(f"- {tool['name']}: {tool['command']}{approval}")
         return 0
+
+    if args.command == "mcp":
+        if args.mcp_command == "serve":
+            return run_mcp_stdio()
 
     if args.command == "session":
         if args.session_command == "list":

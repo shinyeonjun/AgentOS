@@ -197,6 +197,10 @@ Then open the `AgentOS` marketplace and install `agentos-workspace`. Leave the
 sparse path empty when adding this repository; the marketplace file and plugin
 package live in different top-level directories.
 
+The plugin expects the `agentos` CLI to be installed on `PATH`. It also bundles
+an MCP server declaration for `agentos mcp serve`, so Codex can call AgentOS
+tools directly instead of inferring shell commands from instructions alone.
+
 ## Verify Review Package
 
 Review packages include an `artifact-manifest.json` reference. Verify that the

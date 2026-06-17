@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-PLUGIN_SPEC_VERSION = "0.3"
+PLUGIN_SPEC_VERSION = "0.4"
 
 
 def build_plugin_spec() -> dict[str, Any]:
@@ -10,6 +10,11 @@ def build_plugin_spec() -> dict[str, Any]:
         "schema_version": PLUGIN_SPEC_VERSION,
         "name": "agentos",
         "description": "Safe workspace runtime for external AI coding agents.",
+        "interfaces": {
+            "cli": "agentos",
+            "mcp_stdio": "agentos mcp serve",
+            "codex_plugin": "plugins/agentos-workspace",
+        },
         "runtime_contract": {
             "agent_role": "Plan, edit, test, and explain changes.",
             "agentos_role": "Create safe workspaces, record evidence, build reviews, gate sync.",

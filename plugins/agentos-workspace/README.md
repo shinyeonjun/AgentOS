@@ -18,6 +18,21 @@ This repository includes a marketplace file at:
 Add the AgentOS repository as a Codex plugin marketplace, then install
 `agentos-workspace`.
 
+Install the AgentOS CLI before using the plugin:
+
+```bash
+agentos doctor --json
+```
+
+The plugin bundles an MCP server declaration that starts:
+
+```bash
+agentos mcp serve
+```
+
+If `agentos` is not on `PATH`, Codex can still read the skill instructions but
+the MCP tools cannot start.
+
 When adding this repository as a Git marketplace, leave the sparse path empty.
 The marketplace file lives under `.agents/plugins/`, but the plugin package
 lives under `plugins/agentos-workspace/`; checking out only `.agents/plugins`

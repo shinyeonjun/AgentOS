@@ -16,34 +16,47 @@ requested. Create or reuse an AgentOS session and treat the returned
 
 ## Standard Flow
 
-1. Inspect the AgentOS tool contract:
+1. Prefer AgentOS MCP tools when they are available. Start with `doctor`, then
+   `create_session`, `run_command`, `review_session`, `verify_review`,
+   `approve_scope`, and `sync_approved`.
+
+2. If MCP tools are unavailable, verify that the AgentOS CLI is installed:
+
+```bash
+agentos doctor --json
+```
+
+If `agentos` is not found, stop and tell the user to install AgentOS CLI. Do
+not clone the AgentOS source repo into a temp directory as an implicit runtime.
+
+3. Inspect the AgentOS tool contract:
 
 ```bash
 agentos plugin-spec --json
 ```
 
-2. Create a persistent session:
+4. Create a persistent session:
 
 ```bash
 agentos session create --input <project-dir> --name <work-name> --json
 ```
 
-3. Work only inside the session workspace. Use `cd <workspace_path>` before
+5. Work only inside the session workspace. Use `cd <workspace_path>` before
    reading or editing project files.
 
-4. Run checks inside the session:
+6. Run checks inside the session:
 
 ```bash
 agentos session exec <work-name> --json -- <test-command>
 ```
 
-5. Use Docker only through the session when needed:
+7. Use Docker only through the session when needed:
 
 ```bash
 agentos session docker-exec <work-name> --image agentos-base:0.1 --json -- <command>
 ```
 
-6. Build and inspect a review package:
+8. Build and inspect a review package:
 
 ```bash
 agentos session review <work-name> --json
@@ -52,9 +65,9 @@ agentos diff --latest
 agentos verify-review --latest --json
 ```
 
-7. Report changed files, validation status, and approval scopes to the user.
+9. Report changed files, validation status, and approval scopes to the user.
 
-8. Do not sync until the user explicitly approves a scope. After approval:
+10. Do not sync until the user explicitly approves a scope. After approval:
 
 ```bash
 agentos approve --latest --scope <scope-id> --json
