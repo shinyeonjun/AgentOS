@@ -82,6 +82,18 @@ From the repo root after install:
 agentos run-demo
 ```
 
+For a quick Linux/WSL2 sanity check from the repo root:
+
+```bash
+scripts/wsl-smoke.sh
+```
+
+Add `--docker --docker-sudo` when Docker Desktop or Docker Engine is ready:
+
+```bash
+scripts/wsl-smoke.sh --docker --docker-sudo
+```
+
 Without installation, the prototype still works with
 `PYTHONPATH=prototype python3 -m agentos ...` from the repo root.
 

@@ -863,3 +863,25 @@ Observed result:
 - Latest Docker review session `bcdf70689568` rendered through `agentos review --latest`.
 - `agentos verify-review --latest --json` passed integrity checks with only the expected unsigned-manifest warning.
 - Docker sandbox policy now resolves relative state/output paths before host mount validation, so relative CLI defaults still satisfy absolute Docker mount requirements.
+
+## 2026-06-17 WSL Smoke Script Validation
+
+Commands run:
+
+```bash
+shellcheck /mnt/usb/projects/agentos/scripts/wsl-smoke.sh
+cd /mnt/usb/projects/agentos
+scripts/wsl-smoke.sh --help
+scripts/wsl-smoke.sh
+```
+
+Observed result:
+
+- `scripts/wsl-smoke.sh` passed ShellCheck.
+- `scripts/wsl-smoke.sh --help` rendered usage text.
+- Default smoke path passed from repo root:
+  - `agentos doctor --workspace "$PWD"`
+  - skip-Docker rehearsal `0467f36d2f2e`
+  - `agentos review --latest`
+  - `agentos verify-review --latest --json`
+- Latest smoke review session `8ff5b9a5cd4b` rendered and verified with only the expected unsigned-manifest warning.

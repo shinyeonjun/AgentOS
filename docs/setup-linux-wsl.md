@@ -61,6 +61,20 @@ agentos doctor --workspace "$PWD"
 Expected status should be `passed` or `warning`. A warning for Docker means the
 non-Docker demos can still run, but Docker rehearsal needs Docker access.
 
+For the fastest sanity check, run:
+
+```bash
+scripts/wsl-smoke.sh
+```
+
+When Docker is ready:
+
+```bash
+scripts/wsl-smoke.sh --docker --docker-sudo
+```
+
+Drop `--docker-sudo` if Docker works without sudo.
+
 ## 3. Build the Base Image
 
 ```bash

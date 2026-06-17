@@ -85,6 +85,7 @@ core loop:
 - JSON output for `run-demo`, `run-doc-demo`, `rehearse`, `codex`, and `docker-run`
 - human-friendly and JSON output for `agentos review`
 - repo-relative default state/output paths: `.agentos-state` and `.agentos-output`
+- Linux/WSL2 smoke helper: `scripts/wsl-smoke.sh`
 - `docker-run` returns the sandbox command exit code
 - structured CLI errors for common environment/input failures
 - editable Python packaging through `pyproject.toml`
