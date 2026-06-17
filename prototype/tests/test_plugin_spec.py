@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import unittest
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from agentos.core.plugin_spec import build_plugin_spec
 
@@ -34,11 +36,11 @@ class PluginSpecTests(unittest.TestCase):
         mcp_config = json.loads((plugin_root / ".mcp.json").read_text(encoding="utf-8"))
         marketplace = json.loads((repo_root / ".agents" / "plugins" / "marketplace.json").read_text(encoding="utf-8"))
 
-        self.assertEqual(manifest["version"], "0.3.9")
+        self.assertEqual(manifest["version"], "0.4.0")
         self.assertEqual(manifest["mcpServers"], "./.mcp.json")
         self.assertEqual(manifest["skills"], "./skills/")
         self.assertIn("Before any file edit", manifest["interface"]["defaultPrompt"][0])
-        self.assertIn("stop", manifest["interface"]["defaultPrompt"][0])
+        self.assertIn("setup", manifest["interface"]["defaultPrompt"][0])
         self.assertEqual(marketplace["plugins"][0]["source"]["path"], "./plugins/agentos-workspace")
         self.assertIn("mcpServers", mcp_config)
         self.assertNotIn("mcp_servers", mcp_config)
@@ -48,7 +50,57 @@ class PluginSpecTests(unittest.TestCase):
         self.assertEqual(server["args"], ["./agentos_mcp_launcher.cjs"])
         self.assertTrue((plugin_root / "runtime" / "agentos" / "mcp_server.py").exists())
         self.assertTrue((plugin_root / "agents" / "openai.yaml").exists())
+        self.assertTrue((plugin_root / "skills" / "agentos-setup" / "SKILL.md").exists())
+        self.assertTrue((plugin_root / "scripts" / "setup-codex-mcp.cjs").exists())
+        self.assertTrue((plugin_root / "scripts" / "setup-codex-mcp.ps1").exists())
+        self.assertTrue((plugin_root / "scripts" / "setup-codex-mcp.sh").exists())
+        self.assertTrue((plugin_root / "scripts" / "smoke-mcp.cjs").exists())
         self.assertFalse((plugin_root / "skills" / "agentos-workspace" / "agents" / "openai.yaml").exists())
+
+    def test_setup_script_writes_absolute_mcp_config(self) -> None:
+        repo_root = Path(__file__).resolve().parents[2]
+        plugin_root = repo_root / "plugins" / "agentos-workspace"
+        setup_script = plugin_root / "scripts" / "setup-codex-mcp.cjs"
+
+        with TemporaryDirectory() as tmp:
+            codex_home = Path(tmp) / "codex-home"
+            result = subprocess.run(
+                ["node", str(setup_script), "--codex-home", str(codex_home)],
+                text=True,
+                capture_output=True,
+                check=True,
+            )
+            config = (codex_home / "config.toml").read_text(encoding="utf-8")
+
+        self.assertIn("Updated", result.stdout)
+        self.assertIn("# BEGIN AgentOS Workspace MCP", config)
+        self.assertIn("[mcp_servers.agentos]", config)
+        self.assertIn('command = "node"', config)
+        self.assertIn(str(plugin_root / "agentos_mcp_launcher.cjs").replace("\\", "\\\\"), config)
+        self.assertIn(str(plugin_root).replace("\\", "\\\\"), config)
+        self.assertIn("startup_timeout_sec = 20", config)
+        self.assertIn("tool_timeout_sec = 60", config)
+
+    def test_setup_script_refuses_unmanaged_existing_server_without_force(self) -> None:
+        repo_root = Path(__file__).resolve().parents[2]
+        setup_script = repo_root / "plugins" / "agentos-workspace" / "scripts" / "setup-codex-mcp.cjs"
+
+        with TemporaryDirectory() as tmp:
+            codex_home = Path(tmp) / "codex-home"
+            codex_home.mkdir()
+            (codex_home / "config.toml").write_text(
+                '[mcp_servers.agentos]\ncommand = "old"\n',
+                encoding="utf-8",
+            )
+            result = subprocess.run(
+                ["node", str(setup_script), "--codex-home", str(codex_home)],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("already has [mcp_servers.agentos]", result.stderr)
 
     def test_codex_plugin_launcher_handles_windows_python_aliases(self) -> None:
         repo_root = Path(__file__).resolve().parents[2]

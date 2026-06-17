@@ -2,7 +2,7 @@ interface:
   display_name: "AgentOS Workspace"
   short_description: "Call AgentOS MCP before coding edits"
   brand_color: "#2563EB"
-  default_prompt: "Use $agentos-workspace for this task. Before any file edit, call AgentOS MCP doctor. If AgentOS MCP tools are not visible, stop and say the tools are unavailable. Do not edit the original workspace directly. Create or reuse an AgentOS session, work only inside workspace_path, produce and verify a review package, and do not sync until I approve."
+  default_prompt: "Use $agentos-workspace for this task. Before any file edit, call AgentOS MCP doctor. If AgentOS MCP tools are not visible, use $agentos-setup to register the local MCP server first. Do not edit the original workspace directly. Create or reuse an AgentOS session, work only inside workspace_path, produce and verify a review package, and do not sync until I approve."
 
 policy:
   allow_implicit_invocation: true

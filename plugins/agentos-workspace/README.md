@@ -45,7 +45,10 @@ this plugin, the skill defines the workflow and the root-level
 `agents/openai.yaml` declares that the plugin depends on the bundled `agentos`
 MCP server. Keep this file at the plugin root, not inside the skill directory.
 You do not need to register a separate MCP server in Codex for normal plugin
-use.
+use when Codex attaches bundled plugin MCP servers correctly. Some Codex
+Desktop/App builds may install the plugin but fail to expose the local stdio MCP
+tools in a thread. In that case, use the setup script below to register the same
+bundled server directly in Codex config.
 
 So a separate `agentos` CLI install is optional for normal Codex plugin use. If
 you want to debug from a terminal, install the CLI and check it with:
@@ -88,6 +91,49 @@ After installing or updating the plugin, start a new Codex conversation before
 testing AgentOS. Codex conversations may keep the MCP tool registry they had at
 startup, so an old conversation can read the updated plugin files while still
 missing `mcp__agentos.*` tools.
+
+## Manual MCP Setup
+
+If the plugin is installed but a new conversation still cannot see
+`mcp__agentos__doctor`, run the setup helper from the plugin root. It writes a
+marked `[mcp_servers.agentos]` block to Codex `config.toml` using absolute paths
+for this installed plugin copy.
+
+Windows PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\setup-codex-mcp.ps1
+```
+
+macOS/Linux:
+
+```bash
+./scripts/setup-codex-mcp.sh
+```
+
+The cross-platform implementation is:
+
+```bash
+node scripts/setup-codex-mcp.cjs
+```
+
+Useful options:
+
+```bash
+node scripts/setup-codex-mcp.cjs --dry-run
+node scripts/setup-codex-mcp.cjs --server-name agentos-local
+node scripts/setup-codex-mcp.cjs --launcher /absolute/path/to/agentos_mcp_launcher.cjs
+node scripts/setup-codex-mcp.cjs --force
+```
+
+The script preserves existing config and refuses to replace an unmanaged
+`[mcp_servers.agentos]` section unless `--force` is passed. After setup, restart
+Codex and open a new conversation. To check that the bundled runtime can list
+tools from a terminal, run:
+
+```bash
+node scripts/smoke-mcp.cjs
+```
 
 Suggested smoke prompt:
 

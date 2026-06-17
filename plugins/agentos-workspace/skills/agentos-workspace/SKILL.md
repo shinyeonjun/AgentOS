@@ -16,7 +16,9 @@ unavailable in the current Codex conversation.
 
 If this skill is active, do not satisfy the coding task with normal Codex file
 edits in the current workspace. Start by checking AgentOS availability and
-creating or reusing an AgentOS session.
+creating or reusing an AgentOS session. If AgentOS MCP tools are missing in a
+new Codex conversation, use the `agentos-setup` skill and bundled setup scripts
+to register the local MCP server before attempting coding work.
 
 ## Core Rule
 
