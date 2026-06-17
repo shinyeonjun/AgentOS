@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import subprocess
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
@@ -231,6 +232,33 @@ class AgentOSCliTests(unittest.TestCase):
             self.assertEqual(data["state"], "REVIEW_READY")
             self.assertEqual(data["validation_status"], "passed")
 
+    def test_sessions_and_reviews_json_list_state(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            run_exit_code, _run_output = _run_cli(
+                [
+                    "run-demo",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--json",
+                ]
+            )
+            self.assertEqual(run_exit_code, 0)
+
+            sessions_exit_code, sessions_output = _run_cli(
+                ["sessions", "--state-dir", str(root / "state"), "--json"]
+            )
+            reviews_exit_code, reviews_output = _run_cli(
+                ["reviews", "--state-dir", str(root / "state"), "--json"]
+            )
+
+            self.assertEqual(sessions_exit_code, 0)
+            self.assertTrue(json.loads(sessions_output)["sessions"])
+            self.assertEqual(reviews_exit_code, 0)
+            self.assertTrue(json.loads(reviews_output)["reviews"])
+
     def test_verify_review_latest_json_uses_state_dir(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -307,6 +335,26 @@ class AgentOSCliTests(unittest.TestCase):
             self.assertEqual(approve_exit_code, 0)
             self.assertEqual(json.loads(approve_output)["scope"]["id"], "sync_selected:README.md")
 
+            dry_run_exit_code, dry_run_output = _run_cli(
+                [
+                    "sync",
+                    "--latest",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--target",
+                    str(target_project),
+                    "--dry-run",
+                    "--json",
+                ]
+            )
+            self.assertEqual(dry_run_exit_code, 0)
+            dry_run_data = json.loads(dry_run_output)
+            self.assertTrue(dry_run_data["dry_run"])
+            self.assertEqual(dry_run_data["copied_paths"], ["README.md"])
+            self.assertNotIn(SMOKE_LINE, (target_project / "README.md").read_text(encoding="utf-8"))
+
             sync_exit_code, sync_output = _run_cli(
                 [
                     "sync",
@@ -326,6 +374,70 @@ class AgentOSCliTests(unittest.TestCase):
             self.assertEqual(data["copied_paths"], ["README.md"])
             self.assertIn(SMOKE_LINE, (target_project / "README.md").read_text(encoding="utf-8"))
             self.assertTrue((target_project / "KEEP.md").exists())
+
+    def test_sync_require_clean_git_rejects_dirty_target(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            input_project = root / "input-project"
+            input_project.mkdir()
+            (input_project / "README.md").write_text("# Demo\n\n", encoding="utf-8")
+            target_project = root / "target-project"
+            target_project.mkdir()
+            (target_project / "README.md").write_text("# Demo\n\n", encoding="utf-8")
+            subprocess.run(["git", "init"], cwd=target_project, check=True, capture_output=True)
+            (target_project / "DIRTY.md").write_text("dirty\n", encoding="utf-8")
+            fake_codex = _write_fake_codex(root / "fake-codex", edit_readme=True)
+
+            run_exit_code, _run_output = _run_cli(
+                [
+                    "codex",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--input",
+                    str(input_project),
+                    "--task",
+                    "Update README.",
+                    "--codex-bin",
+                    str(fake_codex),
+                    "--execute",
+                    "--json",
+                ]
+            )
+            self.assertEqual(run_exit_code, 0)
+            approve_exit_code, _approve_output = _run_cli(
+                [
+                    "approve",
+                    "--latest",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--scope",
+                    "sync_selected:README.md",
+                    "--json",
+                ]
+            )
+            self.assertEqual(approve_exit_code, 0)
+
+            sync_exit_code, sync_output = _run_cli(
+                [
+                    "sync",
+                    "--latest",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--target",
+                    str(target_project),
+                    "--require-clean-git",
+                    "--json",
+                ]
+            )
+
+            self.assertEqual(sync_exit_code, 1)
+            self.assertEqual(json.loads(sync_output)["error"]["type"], "RuntimeError")
 
     def test_codex_smoke_prepare_json_outputs_validation_status(self) -> None:
         with TemporaryDirectory() as tmp:

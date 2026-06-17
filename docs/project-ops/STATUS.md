@@ -67,6 +67,9 @@ core loop:
 - `agentos review --latest` and `agentos verify-review --latest` for path-free demo flow
 - `agentos approve` records an approval scope for a review package
 - `agentos sync` copies only approved paths into a target directory
+- `agentos sessions` and `agentos reviews` list recent state
+- `agentos sync --dry-run` previews approved paths without copying
+- `agentos sync --require-clean-git` blocks dirty git targets
 - Codex prepare wrapper with optional `--execute`
 - Codex execute result collection with changed-file detection and diff artifacts
 - Docker-backed sandbox command runner using `agentos-base:0.1`

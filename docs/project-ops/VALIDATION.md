@@ -910,3 +910,27 @@ Observed result:
 - Regression test confirmed selected sync updates `README.md` and preserves unrelated `KEEP.md`.
 - Runtime selected-file sync no longer removes the whole target directory.
 - Default WSL smoke path passed with rehearsal `75a79fa965c4`.
+
+## 2026-06-17 Safer Sync UX Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests -p 'test_cli.py' -v
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests
+/home/ubuntu/.openclaw/workspace/scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+cd /mnt/usb/projects/agentos
+scripts/wsl-smoke.sh
+```
+
+Observed result:
+
+- CLI focused tests passed: 16 tests.
+- Full unit suite passed: 60 tests.
+- Ruff passed.
+- Compileall passed.
+- `agentos sessions --json` and `agentos reviews --json` list persisted state.
+- `agentos sync --dry-run` returns approved paths without changing the target.
+- `agentos sync --require-clean-git` rejects a dirty git target.
+- Default WSL smoke path passed with rehearsal `c5feaef2eda9`.

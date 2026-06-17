@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -29,12 +30,16 @@ class SyncCliResult:
     session_id: str
     target_dir: Path
     copied_paths: tuple[str, ...]
+    dry_run: bool = False
+    git_status: str = "not_checked"
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "session_id": self.session_id,
             "target_dir": str(self.target_dir),
             "copied_paths": list(self.copied_paths),
+            "dry_run": self.dry_run,
+            "git_status": self.git_status,
         }
 
 
@@ -72,12 +77,23 @@ def sync_approved_review(
     target_dir: Path,
     review_package_path: Path | None = None,
     latest: bool = False,
+    dry_run: bool = False,
+    require_clean_git: bool = False,
 ) -> SyncCliResult:
     review_path = _review_path(state_dir=state_dir, review_package_path=review_package_path, latest=latest)
     summary = summarize_review_package(review_path)
     session = load_session(state_dir=state_dir, session_id=summary.session_id)
     scope = latest_approval_scope(state_dir=state_dir, session_id=summary.session_id)
     paths = _sync_paths(scope=scope, review_package=summary.package)
+    git_status = check_clean_git(target_dir) if require_clean_git else "not_checked"
+    if dry_run:
+        return SyncCliResult(
+            session_id=summary.session_id,
+            target_dir=target_dir,
+            copied_paths=tuple(paths),
+            dry_run=True,
+            git_status=git_status,
+        )
     runtime = AgentOSRuntime(state_dir=state_dir, output_dir=output_dir)
     result = runtime.sync_approved_selected(
         session,
@@ -89,6 +105,8 @@ def sync_approved_review(
         session_id=summary.session_id,
         target_dir=result.target_dir,
         copied_paths=result.copied_paths,
+        dry_run=False,
+        git_status=git_status,
     )
 
 
@@ -117,6 +135,22 @@ def latest_approval_scope(*, state_dir: Path, session_id: str) -> dict[str, Any]
     approval_path = _latest_artifact_path(state_dir=state_dir, session_id=session_id, artifact_name="approval-record.json")
     approval = json.loads(approval_path.read_text(encoding="utf-8"))
     return dict(approval["scope"])
+
+
+def check_clean_git(target_dir: Path) -> str:
+    if not target_dir.exists():
+        raise FileNotFoundError(f"Sync target does not exist: {target_dir}")
+    result = subprocess.run(
+        ["git", "-C", str(target_dir), "status", "--porcelain"],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"Sync target is not a readable git repository: {target_dir}")
+    if result.stdout.strip():
+        raise RuntimeError(f"Sync target git worktree is dirty: {target_dir}")
+    return "clean"
 
 
 def _review_path(*, state_dir: Path, review_package_path: Path | None, latest: bool) -> Path:

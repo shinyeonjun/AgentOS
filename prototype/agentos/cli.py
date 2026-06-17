@@ -10,7 +10,13 @@ from typing import Any
 from .core.inspector import inspect_state, render_inspection
 from .core.integrity import render_verification, verify_review_package
 from .core.platform_checks import render_doctor, run_doctor
-from .core.review import latest_review_package_path, render_review_summary, summarize_review_package
+from .core.review import (
+    latest_review_package_path,
+    list_review_packages,
+    render_review_list,
+    render_review_summary,
+    summarize_review_package,
+)
 from .core.session_ops import approve_review_package, sync_approved_review
 from .demos.demo import run_code_fix_demo
 from .demos.document_demo import run_markdown_document_demo
@@ -157,6 +163,36 @@ def _main_impl(argv: list[str]) -> int:
         action="store_true",
         help="Render inspection output as JSON",
     )
+    sessions = subparsers.add_parser("sessions", help="List AgentOS sessions")
+    sessions.add_argument(
+        "--state-dir",
+        type=Path,
+        default=DEFAULT_STATE_DIR,
+        help="Persistent control-plane state directory",
+    )
+    sessions.add_argument(
+        "--json",
+        action="store_true",
+        help="Render sessions as JSON",
+    )
+    reviews = subparsers.add_parser("reviews", help="List review packages")
+    reviews.add_argument(
+        "--state-dir",
+        type=Path,
+        default=DEFAULT_STATE_DIR,
+        help="Persistent control-plane state directory",
+    )
+    reviews.add_argument(
+        "--limit",
+        type=int,
+        default=10,
+        help="Maximum number of review packages to list",
+    )
+    reviews.add_argument(
+        "--json",
+        action="store_true",
+        help="Render review packages as JSON",
+    )
     verify_review = subparsers.add_parser("verify-review", help="Verify review package artifact integrity")
     verify_review.add_argument(
         "review_package",
@@ -270,6 +306,16 @@ def _main_impl(argv: list[str]) -> int:
         required=True,
         type=Path,
         help="Target project directory to receive approved files",
+    )
+    sync.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show approved paths without copying files",
+    )
+    sync.add_argument(
+        "--require-clean-git",
+        action="store_true",
+        help="Fail unless --target is a clean git worktree",
     )
     sync.add_argument(
         "--json",
@@ -516,6 +562,19 @@ def _main_impl(argv: list[str]) -> int:
         print(render_inspection(data, as_json=args.json))
         return 0
 
+    if args.command == "sessions":
+        data = inspect_state(args.state_dir)
+        print(render_inspection(data, as_json=args.json))
+        return 0
+
+    if args.command == "reviews":
+        items = list_review_packages(args.state_dir, limit=args.limit)
+        if args.json:
+            _print_json({"reviews": [item.to_dict() for item in items]})
+        else:
+            print(render_review_list(items))
+        return 0
+
     if args.command == "verify-review":
         result = verify_review_package(_review_package_arg(args, parser))
         if args.json:
@@ -556,12 +615,16 @@ def _main_impl(argv: list[str]) -> int:
             review_package_path=args.review_package,
             latest=args.latest,
             target_dir=args.target,
+            dry_run=args.dry_run,
+            require_clean_git=args.require_clean_git,
         )
         if args.json:
             _print_json(result.to_dict())
         else:
             print(f"session: {result.session_id}")
             print(f"target_dir: {result.target_dir}")
+            print(f"dry_run: {result.dry_run}")
+            print(f"git_status: {result.git_status}")
             print(f"copied_paths: {len(result.copied_paths)}")
             for path in result.copied_paths:
                 print(f"- {path}")

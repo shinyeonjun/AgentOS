@@ -120,6 +120,8 @@ The rehearsal should pass these steps:
 Show the latest review package without copying artifact paths:
 
 ```bash
+agentos sessions
+agentos reviews
 agentos review --latest
 agentos verify-review --latest --json
 ```
@@ -128,7 +130,8 @@ For a real worker session with changed files, approve and sync selected files:
 
 ```bash
 agentos approve --latest --scope sync_selected:README.md
-agentos sync --latest --target ../some-project
+agentos sync --latest --target ../some-project --dry-run
+agentos sync --latest --target ../some-project --require-clean-git
 ```
 
 ## 5. Run a Codex Smoke Test

@@ -83,10 +83,53 @@ class ReviewSummary:
         return dict(self.package.get("integrity") or {})
 
 
+@dataclass(frozen=True)
+class ReviewListItem:
+    session_id: str
+    created_at: str
+    state: str
+    path: Path
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "session_id": self.session_id,
+            "created_at": self.created_at,
+            "state": self.state,
+            "path": str(self.path),
+        }
+
+
 def summarize_review_package(review_package_path: Path) -> ReviewSummary:
     path = review_package_path.resolve()
     package = json.loads(path.read_text(encoding="utf-8"))
     return ReviewSummary(review_package_path=path, package=package)
+
+
+def list_review_packages(state_dir: Path, limit: int = 10) -> list[ReviewListItem]:
+    db_path = state_dir / "agentos.sqlite3"
+    if not db_path.exists():
+        return []
+    with sqlite3.connect(db_path) as conn:
+        rows = conn.execute(
+            """
+            select s.session_id, a.created_at, s.state, a.path
+            from artifacts a
+            join sessions s on s.session_id = a.session_id
+            where a.name = 'review_package.json'
+            order by a.created_at desc, s.created_at desc
+            limit ?
+            """,
+            (limit,),
+        ).fetchall()
+    return [
+        ReviewListItem(
+            session_id=row[0],
+            created_at=row[1],
+            state=row[2],
+            path=Path(row[3]),
+        )
+        for row in rows
+    ]
 
 
 def latest_review_package_path(state_dir: Path) -> Path:
@@ -108,6 +151,15 @@ def latest_review_package_path(state_dir: Path) -> Path:
     if row is None:
         raise FileNotFoundError(f"No review_package.json artifacts found in {state_dir}")
     return Path(row[0])
+
+
+def render_review_list(items: list[ReviewListItem]) -> str:
+    if not items:
+        return "No review packages recorded."
+    lines = ["AgentOS review packages:"]
+    for item in items:
+        lines.append(f"- {item.session_id} [{item.state}] {item.created_at} {item.path}")
+    return "\n".join(lines)
 
 
 def render_review_summary(summary: ReviewSummary) -> str:

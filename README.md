@@ -122,6 +122,8 @@ PYTHONPATH=prototype python3 -m unittest discover -s prototype/tests -v
 ## Inspect
 
 ```bash
+agentos sessions
+agentos reviews
 agentos inspect --json
 ```
 
@@ -157,11 +159,13 @@ scope and sync only approved files to a target project:
 
 ```bash
 agentos approve --latest --scope sync_selected:README.md
-agentos sync --latest --target ../some-project
+agentos sync --latest --target ../some-project --dry-run
+agentos sync --latest --target ../some-project --require-clean-git
 ```
 
 `sync` copies only the paths allowed by the approval scope. It does not remove
-unrelated files from the target directory.
+unrelated files from the target directory. Use `--dry-run` before copying, and
+use `--require-clean-git` when syncing into a git repository.
 
 ## Codex Prepare
 
