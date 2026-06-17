@@ -18,6 +18,27 @@ This repository includes a local marketplace file at:
 From a Codex app or CLI environment that supports local marketplaces, add or
 open this marketplace, then install `agentos-workspace`.
 
+When adding this repository as a Git marketplace, leave the sparse path empty.
+The marketplace file lives under `.agents/plugins/`, but the plugin package
+lives under `plugins/agentos-workspace/`; checking out only `.agents/plugins`
+will list the plugin but fail during install because `plugin.json` is not in the
+snapshot.
+
+Working Git marketplace values:
+
+```text
+Source: https://github.com/shinyeonjun/AgentOS
+Git ref: main
+Sparse path: <empty>
+```
+
+CLI equivalent:
+
+```bash
+codex plugin marketplace add https://github.com/shinyeonjun/AgentOS --ref main
+codex plugin add agentos-workspace@personal
+```
+
 ## Main Skill
 
 The skill lives at:
