@@ -65,6 +65,7 @@ core loop:
 - optional `agentos rehearse --include-real-worker` Codex smoke step with worker evidence artifacts
 - `agentos review` terminal summary for review packages
 - `agentos review --latest` and `agentos verify-review --latest` for path-free demo flow
+- `agentos run` creates review-ready Codex task sessions and prints next review commands
 - `agentos approve` records an approval scope for a review package
 - `agentos sync` copies only approved paths into a target directory
 - `agentos sessions` and `agentos reviews` list recent state

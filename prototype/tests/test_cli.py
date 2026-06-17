@@ -147,6 +147,39 @@ class AgentOSCliTests(unittest.TestCase):
             self.assertIsNone(data["codex_result"])
             self.assertEqual(data["changed_files"], [])
 
+    def test_run_json_outputs_review_ready_next_commands(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            input_project = root / "input-project"
+            input_project.mkdir()
+            (input_project / "README.md").write_text("# Demo\n\n", encoding="utf-8")
+            fake_codex = _write_fake_codex(root / "fake-codex", edit_readme=True)
+
+            exit_code, output = _run_cli(
+                [
+                    "run",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--input",
+                    str(input_project),
+                    "--task",
+                    "Update README.",
+                    "--codex-bin",
+                    str(fake_codex),
+                    "--execute",
+                    "--json",
+                ]
+            )
+
+            self.assertEqual(exit_code, 0)
+            data = json.loads(output)
+            self.assertTrue(data["executed"])
+            self.assertEqual(data["changed_files"], ["README.md"])
+            self.assertTrue(data["review_package_artifact"].endswith("review_package.json"))
+            self.assertIn("agentos review --latest", data["next_commands"])
+
     def test_verify_review_json_outputs_integrity_status(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)

@@ -1006,3 +1006,26 @@ Observed result:
 - Repeated CLI argument registration was moved from `cli.py` to `cli_args.py`.
 - `cli.py` was reduced from 832 lines to 630 lines without changing command behavior.
 - Generated `__pycache__` folders were removed from the working tree after validation.
+
+## 2026-06-17 Integrated Run Command Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest prototype.tests.test_cli -v
+/home/ubuntu/.openclaw/workspace/scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+cd /mnt/usb/projects/agentos
+scripts/wsl-smoke.sh
+```
+
+Observed result:
+
+- CLI focused tests passed: 18 tests.
+- Full unit suite passed: 64 tests.
+- Ruff passed.
+- Compileall passed.
+- `agentos run` creates a review-ready Codex task session using the same worker contract as `agentos codex`.
+- `agentos run --json` includes next review commands for `review`, `diff`, `verify-review`, `approve`, and dry-run `sync`.
+- Default WSL smoke path passed with rehearsal `bc92e405eadf`.

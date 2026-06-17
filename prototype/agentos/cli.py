@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .cli_args import (
+    add_codex_task_args,
     add_json_arg,
     add_keep_session_arg,
     add_output_dir_arg,
@@ -186,60 +187,15 @@ def _main_impl(argv: list[str]) -> int:
         help="Fail unless approval-record.json has a valid HMAC signature",
     )
     add_json_arg(sync, noun="sync output")
+    run = subparsers.add_parser("run", help="Create a review-ready Codex task session")
+    add_state_dir_arg(run, default=DEFAULT_STATE_DIR)
+    add_output_dir_arg(run, default=DEFAULT_OUTPUT_DIR)
+    add_codex_task_args(run, docker_image_default=DEFAULT_IMAGE)
+    add_json_arg(run, noun="run output")
     codex = subparsers.add_parser("codex", help="Prepare or execute a Codex task inside AgentOS")
     add_state_dir_arg(codex, default=DEFAULT_STATE_DIR)
     add_output_dir_arg(codex, default=DEFAULT_OUTPUT_DIR)
-    codex.add_argument(
-        "--input",
-        required=True,
-        type=Path,
-        help="Host file or directory to copy into the AgentOS workspace",
-    )
-    codex.add_argument(
-        "--task",
-        required=True,
-        help="Task prompt to pass to Codex",
-    )
-    codex.add_argument(
-        "--codex-bin",
-        default="codex",
-        help="Codex executable name or path",
-    )
-    codex.add_argument(
-        "--execute",
-        action="store_true",
-        help="Actually run Codex. Without this flag, only prepare the session and command artifact.",
-    )
-    codex.add_argument(
-        "--docker",
-        action="store_true",
-        help="Record the target AgentOS Docker runtime image for this host-side Codex worker session",
-    )
-    codex.add_argument(
-        "--docker-image",
-        default=DEFAULT_IMAGE,
-        help="Docker image to use with --docker",
-    )
-    codex.add_argument(
-        "--docker-bin",
-        default="docker",
-        help="Deprecated for codex sessions; kept for CLI compatibility",
-    )
-    codex.add_argument(
-        "--docker-sudo",
-        action="store_true",
-        help="Deprecated for codex sessions; kept for CLI compatibility",
-    )
-    codex.add_argument(
-        "--docker-network",
-        default="none",
-        help="Target AgentOS runtime network policy metadata for --docker. Default is none.",
-    )
-    codex.add_argument(
-        "--destroy-session",
-        action="store_true",
-        help="Destroy the copied workspace after preparing/executing the task",
-    )
+    add_codex_task_args(codex, docker_image_default=DEFAULT_IMAGE)
     add_json_arg(codex, noun="Codex task output")
     codex_smoke = subparsers.add_parser("codex-smoke", help="Run an on-demand Codex adapter smoke test")
     add_state_dir_arg(codex_smoke, default=DEFAULT_STATE_DIR)
@@ -460,37 +416,25 @@ def _main_impl(argv: list[str]) -> int:
                 print(f"- {path}")
         return 0
 
+    if args.command == "run":
+        result = _run_codex_from_args(args)
+        if args.json:
+            payload = _result_to_dict(result)
+            payload["next_commands"] = _next_review_commands()
+            _print_json(payload)
+            return 0
+        _print_codex_task_result(result)
+        print("next:")
+        for command in _next_review_commands():
+            print(f"- {command}")
+        return 0
+
     if args.command == "codex":
-        result = run_codex_task(
-            state_dir=args.state_dir,
-            output_dir=args.output_dir,
-            input_path=args.input,
-            task=args.task,
-            execute=args.execute,
-            codex_bin=args.codex_bin,
-            use_docker=args.docker,
-            docker_image=args.docker_image,
-            docker_bin=args.docker_bin,
-            docker_sudo=args.docker_sudo,
-            docker_network=args.docker_network,
-            destroy_session=args.destroy_session,
-        )
+        result = _run_codex_from_args(args)
         if args.json:
             _print_json(_result_to_dict(result))
             return 0
-        print(f"session: {result.session_id}")
-        print(f"workspace_path: {result.workspace_path}")
-        print(f"executed: {result.executed}")
-        print(f"sandbox_image: {result.sandbox_image}")
-        if result.codex_result is not None:
-            print(f"codex_exit_code: {result.codex_result.exit_code}")
-        print(f"changed_files: {len(result.changed_files)}")
-        print(f"task_manifest_artifact: {result.task_manifest_artifact}")
-        print(f"command_artifact: {result.command_artifact}")
-        print(f"env_policy_artifact: {result.env_policy_artifact}")
-        print(f"worker_result_artifact: {result.worker_result_artifact}")
-        print(f"review_package_artifact: {result.review_package_artifact}")
-        print(f"destroyed: {result.destroyed}")
+        _print_codex_task_result(result)
         return 0
 
     if args.command == "codex-smoke":
@@ -558,6 +502,49 @@ def _main_impl(argv: list[str]) -> int:
 
 def _print_json(data: dict[str, Any]) -> None:
     print(json.dumps(data, ensure_ascii=False, indent=2) + "\n", end="")
+
+
+def _run_codex_from_args(args: argparse.Namespace) -> Any:
+    return run_codex_task(
+        state_dir=args.state_dir,
+        output_dir=args.output_dir,
+        input_path=args.input,
+        task=args.task,
+        execute=args.execute,
+        codex_bin=args.codex_bin,
+        use_docker=args.docker,
+        docker_image=args.docker_image,
+        docker_bin=args.docker_bin,
+        docker_sudo=args.docker_sudo,
+        docker_network=args.docker_network,
+        destroy_session=args.destroy_session,
+    )
+
+
+def _print_codex_task_result(result: Any) -> None:
+    print(f"session: {result.session_id}")
+    print(f"workspace_path: {result.workspace_path}")
+    print(f"executed: {result.executed}")
+    print(f"sandbox_image: {result.sandbox_image}")
+    if result.codex_result is not None:
+        print(f"codex_exit_code: {result.codex_result.exit_code}")
+    print(f"changed_files: {len(result.changed_files)}")
+    print(f"task_manifest_artifact: {result.task_manifest_artifact}")
+    print(f"command_artifact: {result.command_artifact}")
+    print(f"env_policy_artifact: {result.env_policy_artifact}")
+    print(f"worker_result_artifact: {result.worker_result_artifact}")
+    print(f"review_package_artifact: {result.review_package_artifact}")
+    print(f"destroyed: {result.destroyed}")
+
+
+def _next_review_commands() -> list[str]:
+    return [
+        "agentos review --latest",
+        "agentos diff --latest",
+        "agentos verify-review --latest --json",
+        "agentos approve --latest --scope <scope-id>",
+        "agentos sync --latest --target <target-project> --dry-run",
+    ]
 
 
 def _review_package_arg(args: argparse.Namespace, parser: argparse.ArgumentParser) -> Path:

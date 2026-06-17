@@ -130,6 +130,7 @@ agentos verify-review --latest --json
 For a real worker session with changed files, approve and sync selected files:
 
 ```bash
+agentos run --input ../some-project --task "Update the README with setup notes." --execute
 agentos approve --latest --scope sync_selected:README.md
 agentos sync --latest --target ../some-project --dry-run
 agentos sync --latest --target ../some-project --require-clean-git

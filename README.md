@@ -98,7 +98,7 @@ Without installation, the prototype still works with
 `PYTHONPATH=prototype python3 -m agentos ...` from the repo root.
 
 Add `--json` to `run-demo`, `run-doc-demo`, `rehearse`, `inspect`,
-`review`, `verify-review`, `codex`, `codex-smoke`, or `docker-run` when another tool
+`review`, `verify-review`, `run`, `codex`, `codex-smoke`, or `docker-run` when another tool
 should consume the result.
 
 Run the exhibition rehearsal path:
@@ -141,6 +141,19 @@ HMAC-SHA256 signature. Without that key, unsigned manifests verify with a
 warning rather than a hard failure.
 
 ## Review Package Summary
+
+Run a Codex-backed task through the review-ready AgentOS lifecycle:
+
+```bash
+agentos run \
+  --input ../some-project \
+  --task "Update the README with setup notes." \
+  --execute
+```
+
+`agentos run` does not sync changes by itself. It creates the copied task
+workspace, runs or prepares the worker session, records artifacts, and prints
+the next review, diff, approval, and sync commands.
 
 Render a compact terminal review screen for demos and manual inspection:
 
