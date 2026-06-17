@@ -176,6 +176,31 @@ class AgentOSCliTests(unittest.TestCase):
             self.assertEqual(data["status"], "warning")
             self.assertTrue(any(check["name"] == "manifest digest" for check in data["checks"]))
 
+    def test_review_json_outputs_human_summary_data(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            run_exit_code, run_output = _run_cli(
+                [
+                    "run-demo",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--json",
+                ]
+            )
+            self.assertEqual(run_exit_code, 0)
+            review_package = json.loads(run_output)["review_package_artifact"]
+
+            exit_code, output = _run_cli(["review", review_package, "--json"])
+
+            self.assertEqual(exit_code, 0)
+            data = json.loads(output)
+            self.assertEqual(data["state"], "REVIEW_READY")
+            self.assertEqual(data["validation_status"], "passed")
+            self.assertTrue(data["changed_files"])
+            self.assertTrue(data["approval_scopes"])
+
     def test_codex_smoke_prepare_json_outputs_validation_status(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)

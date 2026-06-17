@@ -2,7 +2,7 @@
 
 ## Immediate Next Move
 
-Prepare for exhibition rehearsal polish and review-package presentation.
+Prepare for exhibition rehearsal polish and interactive review flow.
 
 The first contract slice now exists:
 
@@ -40,13 +40,14 @@ The first contract slice now exists:
 - real-worker Codex smoke represented in the main rehearsal suite
 - optional `agentos rehearse --include-real-worker` execution path
 - exhibition demo script at `docs/exhibition-demo-script.md`
+- `agentos review` terminal summary for review packages
 
-Next, make the review package easy to explain and inspect during a live demo.
+Next, make review selection/navigation easier without jumping straight to a web dashboard.
 
 ## Next 7 Actions
 
 1. Polish the exhibition demo path and presenter script with one clean command sequence.
-2. Add a compact review-package summary command if live inspection feels too verbose.
+2. Consider an interactive review selector for recent sessions.
 3. Keep signed approval and scope enforcement covered by regression tests.
 4. Continue polishing CLI failure messages as new commands appear.
 5. Consider a minimal review dashboard only after the CLI demo is solid.

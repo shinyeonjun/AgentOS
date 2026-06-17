@@ -4,7 +4,7 @@ Last updated: 2026-06-17
 
 ## Phase
 
-v0.2 contract, sandbox, CLI JSON polish, and real-worker rehearsal option implemented.
+v0.2 contract, sandbox, CLI review polish, and real-worker rehearsal option implemented.
 
 ## Current Assets
 
@@ -63,6 +63,7 @@ core loop:
 - Markdown document workflow demo with document diff, validation, review, approval, and selected sync
 - end-to-end `agentos rehearse` command with code, document, and Docker policy steps
 - optional `agentos rehearse --include-real-worker` Codex smoke step with worker evidence artifacts
+- `agentos review` terminal summary for review packages
 - Codex prepare wrapper with optional `--execute`
 - Codex execute result collection with changed-file detection and diff artifacts
 - Docker-backed sandbox command runner using `agentos-base:0.1`
@@ -81,6 +82,7 @@ core loop:
 - Docker run `image-provenance.json` artifact
 - Docker runner pins execution to a repo digest or local image id when available
 - JSON output for `run-demo`, `run-doc-demo`, `rehearse`, `codex`, and `docker-run`
+- human-friendly and JSON output for `agentos review`
 - `docker-run` returns the sandbox command exit code
 - structured CLI errors for common environment/input failures
 - editable Python packaging through `pyproject.toml`
@@ -188,7 +190,7 @@ as skipped, and can execute it with `--include-real-worker`.
 Next build:
 
 1. polish the exhibition demo path and presenter script
-2. continue CLI UX polish as new commands appear
+2. consider an interactive review selector after the summary command is stable
 3. consider a minimal review dashboard only after the CLI demo story is stable
 
 ## Docker Image State

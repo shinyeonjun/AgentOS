@@ -88,7 +88,7 @@ Without installation, the prototype still works with
 `PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos ...`.
 
 Add `--json` to `run-demo`, `run-doc-demo`, `rehearse`, `inspect`,
-`verify-review`, `codex`, `codex-smoke`, or `docker-run` when another tool
+`review`, `verify-review`, `codex`, `codex-smoke`, or `docker-run` when another tool
 should consume the result.
 
 Run the exhibition rehearsal path:
@@ -134,6 +134,19 @@ agentos verify-review \
 If `AGENTOS_MANIFEST_KEY` is set, `verify-review` also verifies the manifest
 HMAC-SHA256 signature. Without that key, unsigned manifests verify with a
 warning rather than a hard failure.
+
+## Review Package Summary
+
+Render a compact terminal review screen for demos and manual inspection:
+
+```bash
+agentos review \
+  /mnt/usb/projects/agentos/.agentos-state/artifacts/<session>/review_package.json
+```
+
+The summary shows session metadata, changed files, validation checks, approval
+scopes, risk notes, artifacts, and integrity references without dumping the full
+JSON contract.
 
 ## Codex Prepare
 

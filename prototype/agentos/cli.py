@@ -10,6 +10,7 @@ from typing import Any
 from .core.inspector import inspect_state, render_inspection
 from .core.integrity import render_verification, verify_review_package
 from .core.platform_checks import render_doctor, run_doctor
+from .core.review import render_review_summary, summarize_review_package
 from .demos.demo import run_code_fix_demo
 from .demos.document_demo import run_markdown_document_demo
 from .demos.rehearsal import run_rehearsal
@@ -162,6 +163,17 @@ def _main_impl(argv: list[str]) -> int:
         "--json",
         action="store_true",
         help="Render verification output as JSON",
+    )
+    review = subparsers.add_parser("review", help="Render a human-friendly review package summary")
+    review.add_argument(
+        "review_package",
+        type=Path,
+        help="Path to a review_package.json artifact",
+    )
+    review.add_argument(
+        "--json",
+        action="store_true",
+        help="Render review summary as JSON",
     )
     codex = subparsers.add_parser("codex", help="Prepare or execute a Codex task inside AgentOS")
     codex.add_argument(
@@ -410,6 +422,14 @@ def _main_impl(argv: list[str]) -> int:
         else:
             print(render_verification(result))
         return 0 if result.passed else 1
+
+    if args.command == "review":
+        result = summarize_review_package(args.review_package)
+        if args.json:
+            _print_json(result.to_dict())
+        else:
+            print(render_review_summary(result))
+        return 0
 
     if args.command == "codex":
         result = run_codex_task(

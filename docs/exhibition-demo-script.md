@@ -42,7 +42,15 @@ python3 -m agentos rehearse \
    - code fix lifecycle
    - Markdown document lifecycle
    - Docker sandbox policy
-5. Show the review package:
+5. Show the review package summary:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype \
+python3 -m agentos review \
+  /mnt/usb/projects/agentos/.agentos-state/artifacts/<session>/review_package.json
+```
+
+6. If deeper session history is needed, inspect the state:
 
 ```bash
 PYTHONPATH=/mnt/usb/projects/agentos/prototype \
@@ -51,7 +59,7 @@ python3 -m agentos inspect \
   --json
 ```
 
-6. Verify one review package:
+7. Verify one review package:
 
 ```bash
 PYTHONPATH=/mnt/usb/projects/agentos/prototype \
@@ -60,7 +68,7 @@ python3 -m agentos verify-review \
   --json
 ```
 
-7. If Codex auth is available and token spend is acceptable, run the real worker
+8. If Codex auth is available and token spend is acceptable, run the real worker
    rehearsal:
 
 ```bash

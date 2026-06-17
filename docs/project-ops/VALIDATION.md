@@ -811,3 +811,27 @@ Observed result:
 - Docker policy session `0d97419c1e0c` passed in the real-worker rehearsal.
 - `agentos verify-review` on the real-worker review package returned `warning` only because the manifest was intentionally unsigned.
 - Manifest digest, artifact sizes, and artifact SHA-256 digests passed for the real-worker review package.
+
+## 2026-06-17 Review Summary CLI Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests -p 'test_review.py' -v
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests -p 'test_cli.py' -v
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests
+/home/ubuntu/.openclaw/workspace/scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos rehearse --state-dir /mnt/usb/projects/agentos/.agentos-state --output-dir /mnt/usb/projects/agentos/.agentos-output --docker-sudo --json
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos review /mnt/usb/projects/agentos/.agentos-state/artifacts/3ee6f95913eb/review_package.json
+```
+
+Observed result:
+
+- Review and CLI focused tests passed: 13 tests.
+- Full unit suite passed: 55 tests.
+- Ruff passed.
+- Compileall passed.
+- Default rehearsal `d7351cd61657` passed.
+- `agentos review` rendered a compact terminal summary for real-worker review package `3ee6f95913eb`.
+- Summary output includes session metadata, changed files, validation checks, approval scopes, risk notes, artifact digests, and integrity references.
