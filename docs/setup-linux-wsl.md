@@ -67,6 +67,12 @@ For the fastest sanity check, run:
 scripts/wsl-smoke.sh
 ```
 
+For the full sample lifecycle without spending model tokens, run:
+
+```bash
+scripts/sample-e2e.sh
+```
+
 When Docker is ready:
 
 ```bash

@@ -88,6 +88,18 @@ For a quick Linux/WSL2 sanity check from the repo root:
 scripts/wsl-smoke.sh
 ```
 
+Run the reusable sample E2E lifecycle without spending model tokens:
+
+```bash
+scripts/sample-e2e.sh
+```
+
+Use real Codex for the same sample flow when auth is available:
+
+```bash
+scripts/sample-e2e.sh --real-codex
+```
+
 Add `--docker --docker-sudo` when Docker Desktop or Docker Engine is ready:
 
 ```bash

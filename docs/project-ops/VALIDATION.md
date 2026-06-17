@@ -1081,3 +1081,23 @@ Observed result:
 - Signed approval for `sync_selected:README.md` produced `approval-record.json`.
 - Dry-run sync reported `copied_paths: ["README.md"]`, `git_status: clean`, and `approval_verification_status: passed` without changing the target.
 - Actual sync copied only `README.md`; `app.py` stayed unchanged and target git status became `M README.md`.
+
+## 2026-06-17 Reusable Sample E2E Script Validation
+
+Commands run:
+
+```bash
+shellcheck scripts/sample-e2e.sh
+scripts/sample-e2e.sh
+```
+
+Observed result:
+
+- ShellCheck passed.
+- Default fake-Codex sample E2E passed without spending model tokens.
+- The script created a disposable sample source/target project.
+- The script ran `agentos run -> review -> diff -> verify -> signed approve -> dry-run sync -> sync`.
+- Dry-run sync did not change the target README.
+- Actual sync copied only `README.md`; target git status became `M README.md`.
+- The target `app.py` remained unchanged.
+- Latest default sample E2E session: `2be4fa8288b5`.
