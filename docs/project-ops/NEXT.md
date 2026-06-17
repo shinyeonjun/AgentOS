@@ -44,6 +44,7 @@ The first contract slice now exists:
 - repo-relative defaults for `.agentos-state` and `.agentos-output`
 - `agentos review --latest` and `agentos verify-review --latest`
 - Linux/WSL2 smoke helper: `scripts/wsl-smoke.sh`
+- minimal approval and sync CLI: `agentos approve`, `agentos sync`
 
 Next, test the setup on an actual Windows laptop through WSL2 and only then
 decide whether a fuller TUI is worth it.
@@ -52,9 +53,9 @@ decide whether a fuller TUI is worth it.
 
 1. Polish the exhibition demo path and presenter script with one clean command sequence.
 2. Test `scripts/wsl-smoke.sh` on the Windows laptop through WSL2 and Docker Desktop.
-3. Keep signed approval and scope enforcement covered by regression tests.
-4. Continue polishing CLI failure messages as new commands appear.
-5. Consider a minimal review dashboard only after the CLI demo is solid.
+3. Run a real sample repo task through `codex -> review -> approve -> sync`.
+4. Keep signed approval and scope enforcement covered by regression tests.
+5. Continue polishing CLI failure messages as new commands appear.
 6. Add release packaging only after the local install path is stable.
 7. Keep UI/dashboard work behind the CLI and review contract.
 

@@ -240,9 +240,7 @@ class AgentOSRuntime:
         target_dir: Path,
     ) -> SelectedSyncResult:
         self._require_approval_scope(session, action="sync_selected", paths=relative_paths)
-        if target_dir.exists():
-            shutil.rmtree(target_dir)
-        target_dir.mkdir(parents=True)
+        target_dir.mkdir(parents=True, exist_ok=True)
 
         copied_paths: list[str] = []
         for relative_path in relative_paths:
@@ -250,6 +248,8 @@ class AgentOSRuntime:
             target = target_dir / relative_path
             target.parent.mkdir(parents=True, exist_ok=True)
             if source.is_dir():
+                if target.exists():
+                    shutil.rmtree(target)
                 shutil.copytree(source, target)
             else:
                 shutil.copy2(source, target)

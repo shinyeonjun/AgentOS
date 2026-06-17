@@ -260,6 +260,73 @@ class AgentOSCliTests(unittest.TestCase):
             data = json.loads(output)
             self.assertEqual(data["status"], "warning")
 
+    def test_approve_and_sync_latest_copies_only_approved_files(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            input_project = root / "input-project"
+            input_project.mkdir()
+            (input_project / "README.md").write_text("# Demo\n\n", encoding="utf-8")
+            target_project = root / "target-project"
+            target_project.mkdir()
+            (target_project / "README.md").write_text("# Demo\n\n", encoding="utf-8")
+            (target_project / "KEEP.md").write_text("do not remove\n", encoding="utf-8")
+            fake_codex = _write_fake_codex(root / "fake-codex", edit_readme=True)
+
+            run_exit_code, _run_output = _run_cli(
+                [
+                    "codex",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--input",
+                    str(input_project),
+                    "--task",
+                    "Update README.",
+                    "--codex-bin",
+                    str(fake_codex),
+                    "--execute",
+                    "--json",
+                ]
+            )
+            self.assertEqual(run_exit_code, 0)
+
+            approve_exit_code, approve_output = _run_cli(
+                [
+                    "approve",
+                    "--latest",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--scope",
+                    "sync_selected:README.md",
+                    "--json",
+                ]
+            )
+            self.assertEqual(approve_exit_code, 0)
+            self.assertEqual(json.loads(approve_output)["scope"]["id"], "sync_selected:README.md")
+
+            sync_exit_code, sync_output = _run_cli(
+                [
+                    "sync",
+                    "--latest",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--target",
+                    str(target_project),
+                    "--json",
+                ]
+            )
+
+            self.assertEqual(sync_exit_code, 0)
+            data = json.loads(sync_output)
+            self.assertEqual(data["copied_paths"], ["README.md"])
+            self.assertIn(SMOKE_LINE, (target_project / "README.md").read_text(encoding="utf-8"))
+            self.assertTrue((target_project / "KEEP.md").exists())
+
     def test_codex_smoke_prepare_json_outputs_validation_status(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)

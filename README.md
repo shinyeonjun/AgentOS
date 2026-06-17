@@ -150,6 +150,19 @@ The summary shows session metadata, changed files, validation checks, approval
 scopes, risk notes, artifacts, and integrity references without dumping the full
 JSON contract.
 
+## Approve and Sync
+
+For a real worker session that leaves the workspace alive, approve one review
+scope and sync only approved files to a target project:
+
+```bash
+agentos approve --latest --scope sync_selected:README.md
+agentos sync --latest --target ../some-project
+```
+
+`sync` copies only the paths allowed by the approval scope. It does not remove
+unrelated files from the target directory.
+
 ## Codex Prepare
 
 By default this prepares a copied workspace and Codex command artifact without

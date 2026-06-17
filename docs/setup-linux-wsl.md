@@ -124,6 +124,13 @@ agentos review --latest
 agentos verify-review --latest --json
 ```
 
+For a real worker session with changed files, approve and sync selected files:
+
+```bash
+agentos approve --latest --scope sync_selected:README.md
+agentos sync --latest --target ../some-project
+```
+
 ## 5. Run a Codex Smoke Test
 
 Prepare mode does not spend Codex tokens:

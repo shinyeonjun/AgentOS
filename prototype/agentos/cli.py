@@ -11,6 +11,7 @@ from .core.inspector import inspect_state, render_inspection
 from .core.integrity import render_verification, verify_review_package
 from .core.platform_checks import render_doctor, run_doctor
 from .core.review import latest_review_package_path, render_review_summary, summarize_review_package
+from .core.session_ops import approve_review_package, sync_approved_review
 from .demos.demo import run_code_fix_demo
 from .demos.document_demo import run_markdown_document_demo
 from .demos.rehearsal import run_rehearsal
@@ -201,6 +202,79 @@ def _main_impl(argv: list[str]) -> int:
         "--json",
         action="store_true",
         help="Render review summary as JSON",
+    )
+    approve = subparsers.add_parser("approve", help="Approve a review package scope for sync")
+    approve.add_argument(
+        "review_package",
+        nargs="?",
+        type=Path,
+        help="Path to a review_package.json artifact. Omit with --latest.",
+    )
+    approve.add_argument(
+        "--state-dir",
+        type=Path,
+        default=DEFAULT_STATE_DIR,
+        help="Persistent control-plane state directory for --latest",
+    )
+    approve.add_argument(
+        "--output-dir",
+        type=Path,
+        default=DEFAULT_OUTPUT_DIR,
+        help="Safe approved-sync output directory",
+    )
+    approve.add_argument(
+        "--latest",
+        action="store_true",
+        help="Approve the latest review_package.json recorded in --state-dir",
+    )
+    approve.add_argument(
+        "--scope",
+        help="Approval scope id. Defaults to the first scope in the review package.",
+    )
+    approve.add_argument(
+        "--approver",
+        default="human",
+        help="Approver name to record in approval-record.json",
+    )
+    approve.add_argument(
+        "--json",
+        action="store_true",
+        help="Render approval output as JSON",
+    )
+    sync = subparsers.add_parser("sync", help="Sync approved review package files to a target directory")
+    sync.add_argument(
+        "review_package",
+        nargs="?",
+        type=Path,
+        help="Path to a review_package.json artifact. Omit with --latest.",
+    )
+    sync.add_argument(
+        "--state-dir",
+        type=Path,
+        default=DEFAULT_STATE_DIR,
+        help="Persistent control-plane state directory for --latest",
+    )
+    sync.add_argument(
+        "--output-dir",
+        type=Path,
+        default=DEFAULT_OUTPUT_DIR,
+        help="Safe approved-sync output directory",
+    )
+    sync.add_argument(
+        "--latest",
+        action="store_true",
+        help="Sync the latest review_package.json recorded in --state-dir",
+    )
+    sync.add_argument(
+        "--target",
+        required=True,
+        type=Path,
+        help="Target project directory to receive approved files",
+    )
+    sync.add_argument(
+        "--json",
+        action="store_true",
+        help="Render sync output as JSON",
     )
     codex = subparsers.add_parser("codex", help="Prepare or execute a Codex task inside AgentOS")
     codex.add_argument(
@@ -456,6 +530,41 @@ def _main_impl(argv: list[str]) -> int:
             _print_json(result.to_dict())
         else:
             print(render_review_summary(result))
+        return 0
+
+    if args.command == "approve":
+        result = approve_review_package(
+            state_dir=args.state_dir,
+            output_dir=args.output_dir,
+            review_package_path=args.review_package,
+            latest=args.latest,
+            scope_id=args.scope,
+            approver=args.approver,
+        )
+        if args.json:
+            _print_json(result.to_dict())
+        else:
+            print(f"session: {result.session_id}")
+            print(f"approved_scope: {result.scope['id']}")
+            print(f"approval_record_artifact: {result.approval_record_artifact}")
+        return 0
+
+    if args.command == "sync":
+        result = sync_approved_review(
+            state_dir=args.state_dir,
+            output_dir=args.output_dir,
+            review_package_path=args.review_package,
+            latest=args.latest,
+            target_dir=args.target,
+        )
+        if args.json:
+            _print_json(result.to_dict())
+        else:
+            print(f"session: {result.session_id}")
+            print(f"target_dir: {result.target_dir}")
+            print(f"copied_paths: {len(result.copied_paths)}")
+            for path in result.copied_paths:
+                print(f"- {path}")
         return 0
 
     if args.command == "codex":

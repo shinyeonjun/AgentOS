@@ -65,6 +65,8 @@ core loop:
 - optional `agentos rehearse --include-real-worker` Codex smoke step with worker evidence artifacts
 - `agentos review` terminal summary for review packages
 - `agentos review --latest` and `agentos verify-review --latest` for path-free demo flow
+- `agentos approve` records an approval scope for a review package
+- `agentos sync` copies only approved paths into a target directory
 - Codex prepare wrapper with optional `--execute`
 - Codex execute result collection with changed-file detection and diff artifacts
 - Docker-backed sandbox command runner using `agentos-base:0.1`
@@ -86,6 +88,7 @@ core loop:
 - human-friendly and JSON output for `agentos review`
 - repo-relative default state/output paths: `.agentos-state` and `.agentos-output`
 - Linux/WSL2 smoke helper: `scripts/wsl-smoke.sh`
+- selected-file sync no longer deletes the whole target directory
 - `docker-run` returns the sandbox command exit code
 - structured CLI errors for common environment/input failures
 - editable Python packaging through `pyproject.toml`

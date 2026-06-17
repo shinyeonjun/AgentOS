@@ -885,3 +885,28 @@ Observed result:
   - `agentos review --latest`
   - `agentos verify-review --latest --json`
 - Latest smoke review session `8ff5b9a5cd4b` rendered and verified with only the expected unsigned-manifest warning.
+
+## 2026-06-17 Minimal Approve and Sync CLI Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests -p 'test_cli.py' -v
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests
+/home/ubuntu/.openclaw/workspace/scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+cd /mnt/usb/projects/agentos
+scripts/wsl-smoke.sh
+```
+
+Observed result:
+
+- CLI focused tests passed: 14 tests.
+- Full unit suite passed: 58 tests.
+- Ruff passed.
+- Compileall passed.
+- `agentos approve --latest --scope sync_selected:README.md` records `approval-record.json` for a worker review package.
+- `agentos sync --latest --target <dir>` copies only approved paths.
+- Regression test confirmed selected sync updates `README.md` and preserves unrelated `KEEP.md`.
+- Runtime selected-file sync no longer removes the whole target directory.
+- Default WSL smoke path passed with rehearsal `75a79fa965c4`.
