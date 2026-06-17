@@ -14,11 +14,14 @@ function parseArgs(argv) {
     toolTimeout: "60",
     dryRun: false,
     force: false,
+    check: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--dry-run") {
       options.dryRun = true;
+    } else if (arg === "--check") {
+      options.check = true;
     } else if (arg === "--force") {
       options.force = true;
     } else if (arg === "--codex-home") {
@@ -63,6 +66,7 @@ Options:
   --cwd <dir>              Working directory for the MCP server. Defaults to plugin root.
   --startup-timeout <sec>  Startup timeout. Defaults to 20.
   --tool-timeout <sec>     Tool timeout. Defaults to 60.
+  --check                  Check whether the managed config block is present.
   --dry-run                Print the config that would be written.
   --force                  Replace an existing unmanaged server section if possible.
 `);
@@ -98,6 +102,15 @@ function managedBlock(options) {
     MARKER_END,
     "",
   ].join("\n");
+}
+
+function desiredPaths(options) {
+  const pluginRoot = path.resolve(__dirname, "..");
+  return {
+    pluginRoot,
+    launcher: path.resolve(options.launcher || path.join(pluginRoot, "agentos_mcp_launcher.cjs")),
+    cwd: path.resolve(options.cwd || pluginRoot),
+  };
 }
 
 function removeManagedBlock(text) {
@@ -146,11 +159,59 @@ function updateConfig(existing, options) {
   return `${next ? `${next}\n\n` : ""}${block}`;
 }
 
+function checkConfig(existing, options, configPath) {
+  const paths = desiredPaths(options);
+  if (!fs.existsSync(paths.launcher)) {
+    return {
+      ok: false,
+      code: 1,
+      message: `AgentOS launcher is missing: ${paths.launcher}`,
+    };
+  }
+  if (!existing.trim()) {
+    return {
+      ok: false,
+      code: 1,
+      message: `No Codex config found at ${configPath}. Run setup to create it.`,
+    };
+  }
+  const hasManagedBlock = existing.includes(MARKER_BEGIN) && existing.includes(MARKER_END);
+  const hasServer = findSection(existing, options.serverName) !== null;
+  if (hasManagedBlock && hasServer && existing.includes(paths.launcher)) {
+    return {
+      ok: true,
+      code: 0,
+      message: `[mcp_servers.${options.serverName}] is managed by AgentOS Workspace.`,
+    };
+  }
+  if (hasServer) {
+    return {
+      ok: false,
+      code: 2,
+      message:
+        `[mcp_servers.${options.serverName}] exists but is not the AgentOS-managed block. ` +
+        "Review it before running setup with --force.",
+    };
+  }
+  return {
+    ok: false,
+    code: 1,
+    message: `[mcp_servers.${options.serverName}] is not configured. Run setup to register AgentOS MCP.`,
+  };
+}
+
 function main() {
   const options = parseArgs(process.argv.slice(2));
   options.codexHome = path.resolve(options.codexHome || defaultCodexHome());
   const configPath = path.join(options.codexHome, "config.toml");
   const existing = fs.existsSync(configPath) ? fs.readFileSync(configPath, "utf8") : "";
+
+  if (options.check) {
+    const status = checkConfig(existing, options, configPath);
+    console.log(status.message);
+    process.exit(status.code);
+  }
+
   const updated = updateConfig(existing, options);
 
   if (options.dryRun) {

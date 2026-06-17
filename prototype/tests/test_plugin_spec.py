@@ -36,7 +36,7 @@ class PluginSpecTests(unittest.TestCase):
         mcp_config = json.loads((plugin_root / ".mcp.json").read_text(encoding="utf-8"))
         marketplace = json.loads((repo_root / ".agents" / "plugins" / "marketplace.json").read_text(encoding="utf-8"))
 
-        self.assertEqual(manifest["version"], "0.4.0")
+        self.assertEqual(manifest["version"], "0.4.1")
         self.assertEqual(manifest["mcpServers"], "./.mcp.json")
         self.assertEqual(manifest["skills"], "./skills/")
         self.assertIn("Before any file edit", manifest["interface"]["defaultPrompt"][0])
@@ -71,6 +71,12 @@ class PluginSpecTests(unittest.TestCase):
                 check=True,
             )
             config = (codex_home / "config.toml").read_text(encoding="utf-8")
+            check = subprocess.run(
+                ["node", str(setup_script), "--codex-home", str(codex_home), "--check"],
+                text=True,
+                capture_output=True,
+                check=True,
+            )
 
         self.assertIn("Updated", result.stdout)
         self.assertIn("# BEGIN AgentOS Workspace MCP", config)
@@ -80,6 +86,8 @@ class PluginSpecTests(unittest.TestCase):
         self.assertIn(str(plugin_root).replace("\\", "\\\\"), config)
         self.assertIn("startup_timeout_sec = 20", config)
         self.assertIn("tool_timeout_sec = 60", config)
+
+        self.assertIn("is managed by AgentOS Workspace", check.stdout)
 
     def test_setup_script_refuses_unmanaged_existing_server_without_force(self) -> None:
         repo_root = Path(__file__).resolve().parents[2]
@@ -101,6 +109,21 @@ class PluginSpecTests(unittest.TestCase):
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("already has [mcp_servers.agentos]", result.stderr)
+
+    def test_setup_script_check_reports_missing_config(self) -> None:
+        repo_root = Path(__file__).resolve().parents[2]
+        setup_script = repo_root / "plugins" / "agentos-workspace" / "scripts" / "setup-codex-mcp.cjs"
+
+        with TemporaryDirectory() as tmp:
+            result = subprocess.run(
+                ["node", str(setup_script), "--codex-home", str(Path(tmp) / "missing"), "--check"],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("No Codex config found", result.stdout)
 
     def test_codex_plugin_launcher_handles_windows_python_aliases(self) -> None:
         repo_root = Path(__file__).resolve().parents[2]

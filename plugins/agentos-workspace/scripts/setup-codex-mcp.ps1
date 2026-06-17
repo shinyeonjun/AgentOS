@@ -3,6 +3,7 @@ param(
   [string]$ServerName = "agentos",
   [string]$Launcher = "",
   [string]$Cwd = "",
+  [switch]$Check,
   [switch]$DryRun,
   [switch]$Force
 )
@@ -15,6 +16,7 @@ $ArgsList = @($SetupScript, "--server-name", $ServerName)
 if ($CodexHome) { $ArgsList += @("--codex-home", $CodexHome) }
 if ($Launcher) { $ArgsList += @("--launcher", $Launcher) }
 if ($Cwd) { $ArgsList += @("--cwd", $Cwd) }
+if ($Check) { $ArgsList += "--check" }
 if ($DryRun) { $ArgsList += "--dry-run" }
 if ($Force) { $ArgsList += "--force" }
 

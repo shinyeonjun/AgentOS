@@ -95,9 +95,10 @@ missing `mcp__agentos.*` tools.
 ## Manual MCP Setup
 
 If the plugin is installed but a new conversation still cannot see
-`mcp__agentos__doctor`, run the setup helper from the plugin root. It writes a
-marked `[mcp_servers.agentos]` block to Codex `config.toml` using absolute paths
-for this installed plugin copy.
+`mcp__agentos__doctor`, run the setup helper from the plugin root. It behaves
+like a first-use setup wizard: check the config, write a marked
+`[mcp_servers.agentos]` block to Codex `config.toml` using absolute paths for
+this installed plugin copy, and let you rerun it later as a repair step.
 
 Windows PowerShell:
 
@@ -120,6 +121,7 @@ node scripts/setup-codex-mcp.cjs
 Useful options:
 
 ```bash
+node scripts/setup-codex-mcp.cjs --check
 node scripts/setup-codex-mcp.cjs --dry-run
 node scripts/setup-codex-mcp.cjs --server-name agentos-local
 node scripts/setup-codex-mcp.cjs --launcher /absolute/path/to/agentos_mcp_launcher.cjs
@@ -128,8 +130,10 @@ node scripts/setup-codex-mcp.cjs --force
 
 The script preserves existing config and refuses to replace an unmanaged
 `[mcp_servers.agentos]` section unless `--force` is passed. After setup, restart
-Codex and open a new conversation. To check that the bundled runtime can list
-tools from a terminal, run:
+Codex and open a new conversation. If Codex Desktop rewrites config or a plugin
+update changes the cache path, rerun the setup script; it refreshes the managed
+block instead of appending duplicates. To check that the bundled runtime can
+list tools from a terminal, run:
 
 ```bash
 node scripts/smoke-mcp.cjs

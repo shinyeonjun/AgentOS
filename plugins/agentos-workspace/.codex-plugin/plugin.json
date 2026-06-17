@@ -1,6 +1,6 @@
 {
   "name": "agentos-workspace",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Force selected coding tasks through AgentOS MCP sessions before any file edits.",
   "author": {
     "name": "AgentOS"
@@ -18,7 +18,7 @@
     "category": "Productivity",
     "capabilities": ["Write", "Code"],
     "defaultPrompt": [
-      "Use AgentOS MCP for this task. Before any file edit, call agentos doctor. If tools are unavailable, run AgentOS setup first.",
+      "Use AgentOS MCP for this task. Before any file edit, call agentos doctor. If tools are unavailable, offer to run AgentOS setup.",
       "Do not edit the current/original workspace directly. Create or reuse an AgentOS session, then work only inside the returned workspace_path.",
       "If Docker or the AgentOS image is not ready, call prepare_environment before Docker sandbox work. Produce and verify a review package, then wait for approval before sync."
     ],
