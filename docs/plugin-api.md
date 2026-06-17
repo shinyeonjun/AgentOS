@@ -1,326 +1,193 @@
-# AgentOS Plugin API v0.2
+# AgentOS Plugin API v0.3
 
-작성일: 2026-06-16
+Updated: 2026-06-17
 
-## 1. Purpose
+## Purpose
 
-This document defines the first AgentOS plugin interface shape.
+AgentOS is the safe workspace runtime that an external AI agent app can call
+when it needs to edit files, run checks, review changes, and sync approved
+results.
 
-The first target is Codex CLI, but the API should be generic enough to later
-support Claude Code, Antigravity, Jarvis/OpenClaw, and custom local agents.
-
-AgentOS is not the brain. The external agent plans and reasons. AgentOS provides
-the task environment, lifecycle state, review package, approval gate, sync, and
-cleanup.
-
-## 2. API Style
-
-v0 can expose a CLI-first protocol:
+The AI agent is still the brain. AgentOS is the workbench:
 
 ```text
-agentos session create --task task.json
-agentos session import --session <id> --path <input>
-agentos session run --session <id> -- <command>
-agentos session review --session <id>
-agentos session approve --session <id> --items all
-agentos session sync --session <id> --target <path>
-agentos session destroy --session <id>
+Codex / Claude Code / another agent app
+  -> calls AgentOS plugin commands
+  -> works inside an AgentOS session workspace
+  -> asks AgentOS for review/diff/approval/sync
 ```
 
-Later versions may expose:
+AgentOS must not become another coding agent. Its job is to provide the
+session, filesystem boundary, tool evidence, review package, approval gate, and
+sync boundary.
 
-- local HTTP API
-- MCP server
-- SDK
-- direct integration wrapper for agent tools
+## Implemented CLI Contract
 
-## 3. Core API Operations
+The current v0 contract is CLI-first. A plugin, MCP server, or SDK can wrap
+these commands later without changing the lifecycle.
 
-### 3.1 create_session
-
-Creates a new task session.
-
-Input:
-
-```json
-{
-  "task": {
-    "title": "Fix failing calculator test",
-    "description": "Find and fix the bug, then run tests.",
-    "host_agent": "codex-cli",
-    "requested_by": "user",
-    "constraints": {
-      "no_original_mutation": true,
-      "sync_requires_approval": true
-    }
-  }
-}
+```bash
+agentos session create --input <project-dir> --name <work-name> --json
+agentos session list --json
+agentos session status <work-name> --json
+agentos session exec <work-name> --json -- <command>
+agentos session docker-exec <work-name> --image agentos-base:0.1 --json -- <command>
+agentos session review <work-name> --json
+agentos review --latest --json
+agentos diff --latest
+agentos verify-review --latest --json
+agentos approve --latest --scope <scope-id> --json
+agentos sync --latest --target <project-dir> --dry-run --json
+agentos sync --latest --target <project-dir> --require-clean-git --json
+agentos session destroy <work-name> --json
 ```
 
-Output:
+## Harness Commands
 
-```json
-{
-  "session_id": "s_123",
-  "state": "CREATED",
-  "state_dir": "...",
-  "sandbox_dir": "..."
-}
+AgentOS also exposes host-side worker harnesses:
+
+```bash
+agentos codex --input <project-dir> --task "<task>" --execute --json
+agentos session codex <work-name> --task "<task>" --execute --json
 ```
 
-### 3.2 import_input
+These commands are useful for smoke tests, demos, and development because they
+prove that Codex can work inside an AgentOS workspace and produce review
+artifacts.
 
-Copies files/folders into the sandbox.
+They are not the final product UX. In the final plugin flow, Codex or another
+agent app should call AgentOS as a tool/runtime rather than requiring AgentOS to
+be the parent process that launches the agent.
 
-Input:
+## Recommended Agent Plugin Flow
 
-```json
-{
-  "session_id": "s_123",
-  "inputs": [
-    {
-      "source_path": "/host/project",
-      "kind": "directory",
-      "role": "primary_project"
-    }
-  ]
-}
+When an AI agent app receives a user coding request, it should follow this
+sequence:
+
+1. Create or reuse a named AgentOS session for the target project.
+2. Treat the returned `workspace_path` as the active project root.
+3. Run edits, tests, and optional Docker checks inside that workspace.
+4. Ask AgentOS to generate a review package.
+5. Show the user the changed files, diff, validation status, risk notes, and
+   approval scopes.
+6. Do not sync until the user explicitly approves a scope.
+7. Dry-run sync before actual sync.
+8. Sync only approved files to the explicit target path.
+9. Keep or destroy the session based on user intent.
+
+## Tool Descriptions for Agent Apps
+
+### create_session
+
+Creates a persistent copied workspace.
+
+CLI:
+
+```bash
+agentos session create --input <project-dir> --name <work-name> --json
 ```
 
-Output:
+Important output fields:
 
-```json
-{
-  "session_id": "s_123",
-  "state": "INPUT_IMPORTED",
-  "workspace_paths": [
-    "/agentos/work/project"
-  ]
-}
+- `session_id`
+- `name`
+- `input_path`
+- `workspace_path`
+- `original_path`
+- `task_manifest_artifact`
+
+### run_command
+
+Runs a host command inside the session workspace.
+
+CLI:
+
+```bash
+agentos session exec <work-name> --json -- <command>
 ```
 
-### 3.3 prepare_workspace
+Use this for tests, linters, formatters, local scripts, and non-Docker checks.
 
-Prepares AI OS layout and capability metadata.
+### run_docker_command
 
-Input:
+Runs a Docker sandbox command with the session workspace mounted at
+`/agentos/work`.
 
-```json
-{
-  "session_id": "s_123",
-  "capabilities": ["base", "code"],
-  "token_policy": {
-    "prefer_manifest_first": true,
-    "prefer_diff_review": true
-  }
-}
+CLI:
+
+```bash
+agentos session docker-exec <work-name> --image <image> --json -- <command>
 ```
 
-Output:
+Use this when the project needs a containerized runtime or when a demo should
+show the Docker-backed boundary.
 
-```json
-{
-  "session_id": "s_123",
-  "state": "WORKSPACE_PREPARED",
-  "workspace_manifest_ref": "artifact://manifest.json"
-}
+### review_session
+
+Builds the review package from the original snapshot and current session
+workspace.
+
+CLI:
+
+```bash
+agentos session review <work-name> --json
+agentos review --latest --json
+agentos diff --latest
+agentos verify-review --latest --json
 ```
 
-### 3.4 run
+### approve_scope
 
-Runs a command in the sandbox.
+Records human approval for a concrete review scope.
 
-Input:
+CLI:
 
-```json
-{
-  "session_id": "s_123",
-  "cwd": "/agentos/work/project",
-  "command": ["python3", "-m", "pytest"],
-  "capture": {
-    "stdout_tail_bytes": 4000,
-    "stderr_tail_bytes": 4000,
-    "store_full_log": true
-  }
-}
+```bash
+agentos approve --latest --scope <scope-id> --json
 ```
 
-Output:
+The agent app must not choose approval itself. It can recommend a scope, but the
+human must approve.
 
-```json
-{
-  "event_id": "e_456",
-  "exit_code": 0,
-  "stdout_tail": "...",
-  "stderr_tail": "",
-  "log_ref": "artifact://logs/e_456.txt"
-}
+### sync_approved
+
+Copies only approved changed files to an explicit target.
+
+CLI:
+
+```bash
+agentos sync --latest --target <project-dir> --dry-run --json
+agentos sync --latest --target <project-dir> --require-clean-git --json
 ```
 
-### 3.5 review
+### destroy_session
 
-Generates or returns the review package.
+Deletes the session workspace while keeping metadata/artifacts.
 
-Output:
+CLI:
 
-```json
-{
-  "session_id": "s_123",
-  "state": "REVIEW_READY",
-  "review_package_ref": "artifact://review/s_123.json"
-}
+```bash
+agentos session destroy <work-name> --json
 ```
 
-### 3.6 approve
+## Agent Rules
 
-Records approval.
+External agents must follow these rules:
 
-Input:
+1. Never edit the original host project while operating through AgentOS.
+2. Use `workspace_path` as the active root.
+3. Keep review artifacts as the source of truth for user approval.
+4. Never claim sync happened until `agentos sync` reports success.
+5. If review verification fails, stop.
+6. If the sync target is a dirty git worktree, stop unless the user accepts the
+   risk.
+7. If a session workspace is missing, create a new session instead of syncing
+   from stale artifacts.
 
-```json
-{
-  "session_id": "s_123",
-  "approved_items": ["all"],
-  "approved_by": "human",
-  "decision": "approve"
-}
-```
+## Legacy Notes
 
-Output:
-
-```json
-{
-  "session_id": "s_123",
-  "state": "APPROVED"
-}
-```
-
-### 3.7 sync
-
-Synchronizes approved outputs only.
-
-Input:
-
-```json
-{
-  "session_id": "s_123",
-  "target": {
-    "kind": "safe_output_directory",
-    "path": "/host/agentos-output/s_123"
-  }
-}
-```
-
-Output:
-
-```json
-{
-  "session_id": "s_123",
-  "state": "SYNCED",
-  "synced_files": [
-    "calculator.py"
-  ]
-}
-```
-
-### 3.8 destroy
-
-Deletes disposable workspace state.
-
-Input:
-
-```json
-{
-  "session_id": "s_123",
-  "keep_artifacts": true
-}
-```
-
-Output:
-
-```json
-{
-  "session_id": "s_123",
-  "state": "DESTROYED"
-}
-```
-
-## 4. Codex CLI-First Flow
-
-The first integration can be a wrapper around Codex task execution.
-
-Possible flow:
-
-```text
-agentos codex run --input /path/to/project --task "fix failing tests"
-```
-
-Internally:
-
-```text
-create session
-copy input
-prepare workspace
-invoke Codex with sandbox path and task manifest
-track outputs
-generate review package
-ask user to sync
-sync/destroy
-```
-
-The wrapper should make it difficult for Codex to accidentally work on the host
-original path.
-
-## 5. Contract With External Agents
-
-External agents should follow these rules:
-
-1. Treat AgentOS sandbox paths as the active work area.
-2. Do not edit original host paths directly.
-3. Prefer workspace manifest before reading full files.
-4. Return or request review through AgentOS.
-5. Do not claim sync occurred until AgentOS reports it.
-
-## 6. Errors
-
-Common error states:
-
-```text
-SESSION_NOT_FOUND
-INVALID_STATE_TRANSITION
-INPUT_IMPORT_FAILED
-SANDBOX_PREPARE_FAILED
-COMMAND_FAILED
-REVIEW_NOT_READY
-SYNC_REQUIRES_APPROVAL
-SYNC_TARGET_INVALID
-DESTROY_FAILED
-```
-
-Errors should be returned in structured form:
-
-```json
-{
-  "error": {
-    "code": "SYNC_REQUIRES_APPROVAL",
-    "message": "Session s_123 has not been approved.",
-    "recoverable": true
-  }
-}
-```
-
-## 7. v0 API Acceptance Criteria
-
-The v0 API is acceptable when an external caller can:
-
-1. create a session
-2. import inputs
-3. run commands in the sandbox
-4. get a review package
-5. observe pre-approval sync blocking
-6. approve
-7. sync
-8. destroy
-
-Codex CLI integration can be rough at first, but the boundary must be clear:
-Codex works in the sandbox, not in the original project.
+Older drafts described commands such as `agentos session import`,
+`agentos session run`, `agentos session approve`, and `agentos session sync`.
+Those are not the current v0 CLI. The current implementation uses
+`session create`, `session exec`, `session docker-exec`, top-level
+`approve/sync`, and `session destroy`.

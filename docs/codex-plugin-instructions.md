@@ -9,6 +9,18 @@ AgentOS is the safe work environment. Codex is the thinking and coding worker.
 Codex must not edit the user's real project directly while operating through
 AgentOS.
 
+## Integration Shape
+
+The final product shape is:
+
+```text
+Codex app -> AgentOS plugin/tool calls -> AgentOS workspace/review/sync
+```
+
+AgentOS may also launch Codex through `agentos session codex` for smoke tests
+and demos, but that is a harness path. The plugin path should treat AgentOS as a
+runtime/tool that Codex calls, not as the primary AI app.
+
 ## Operating Rules
 
 1. Create or reuse an AgentOS persistent workspace session for the target
