@@ -22,17 +22,31 @@ class PlatformChecksTests(unittest.TestCase):
         self.assertEqual(statuses["docker"], "warning")
         self.assertNotIn("patch", statuses)
 
-    def test_doctor_fails_on_native_windows(self) -> None:
+    def test_doctor_warns_on_native_windows(self) -> None:
         with (
             patch("agentos.core.platform_checks.platform.system", return_value="Windows"),
             patch("agentos.core.platform_checks.shutil.which", return_value="/usr/bin/tool"),
         ):
             result = run_doctor(workspace_path=Path("C:/project"))
 
-        self.assertEqual(result.status, "failed")
+        self.assertEqual(result.status, "warning")
         self.assertEqual(result.checks[0].name, "platform")
-        self.assertEqual(result.checks[0].status, "failed")
-        self.assertIn("WSL2", result.checks[0].message)
+        self.assertEqual(result.checks[0].status, "warning")
+        self.assertIn("experimental", result.checks[0].message)
+
+    def test_doctor_warns_when_shell_does_not_expand_pwd(self) -> None:
+        with (
+            patch("agentos.core.platform_checks.platform.system", return_value="Windows"),
+            patch("agentos.core.platform_checks.shutil.which", return_value="/usr/bin/tool"),
+            patch("pathlib.Path.resolve", return_value=Path("D:/AgentOS/$PWD")),
+        ):
+            result = run_doctor(workspace_path=Path("$PWD"))
+
+        self.assertEqual(result.status, "warning")
+        workspace_check = result.checks[-1]
+        self.assertEqual(workspace_check.name, "workspace_path")
+        self.assertEqual(workspace_check.status, "warning")
+        self.assertIn("$PWD", workspace_check.message)
 
     def test_doctor_warns_for_windows_mounted_wsl_workspace(self) -> None:
         with (

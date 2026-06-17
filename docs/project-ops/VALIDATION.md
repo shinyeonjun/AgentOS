@@ -1101,3 +1101,24 @@ Observed result:
 - Actual sync copied only `README.md`; target git status became `M README.md`.
 - The target `app.py` remained unchanged.
 - Latest default sample E2E session: `2be4fa8288b5`.
+
+## 2026-06-17 Native Windows Doctor Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest prototype.tests.test_platform_checks -v
+/home/ubuntu/.openclaw/workspace/scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+```
+
+Observed result:
+
+- Platform focused tests passed: 5 tests.
+- Full unit suite passed: 65 tests.
+- Ruff passed.
+- Compileall passed.
+- Native Windows `agentos doctor` now returns a warning instead of a hard failure.
+- Native Windows support is documented as experimental for non-Docker CLI commands.
+- `agentos doctor --workspace "$PWD"` now warns when `$PWD` is passed literally from a shell that does not expand it.

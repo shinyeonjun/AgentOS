@@ -267,11 +267,10 @@ runtime image reference when Docker exposes one.
 ## Supported Runtime
 
 The current prototype is tested on Linux and WSL-style environments. Native
-Windows support is not claimed yet because the prototype intentionally uses
-POSIX-oriented runtime paths such as `python3` and Docker.
-For Windows users, the supported path is WSL2 with Docker Desktop WSL
-integration enabled, preferably with the project stored on the WSL/Linux
-filesystem rather than under `/mnt/c`.
+Windows CLI support is experimental for non-Docker commands such as `doctor`,
+`run`, `review`, `diff`, `verify-review`, `approve`, and `sync`. Bash smoke
+scripts and Docker sandbox rehearsals are still best run from WSL2 with Docker
+Desktop WSL integration enabled.
 
 ## Project Notes
 

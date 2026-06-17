@@ -7,8 +7,11 @@ AgentOS currently supports:
 
 - Linux
 - Windows through WSL2 plus Docker Desktop WSL integration
+- experimental native Windows CLI usage for non-Docker commands
 
-AgentOS does not currently claim native Windows PowerShell or cmd support.
+Bash smoke scripts and Docker sandbox rehearsals are still best from WSL2. If
+you run `agentos doctor` in native Windows CMD or PowerShell, pass `.` instead
+of `"$PWD"` because CMD does not expand `$PWD`.
 
 ## 1. Prepare the Runtime
 

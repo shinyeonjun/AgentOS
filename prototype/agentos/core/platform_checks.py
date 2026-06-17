@@ -80,7 +80,11 @@ def _check_platform() -> DoctorCheck:
             return DoctorCheck("platform", "passed", "Windows via WSL2/Linux-compatible environment detected.")
         return DoctorCheck("platform", "passed", "Linux environment detected.")
     if system == "Windows":
-        return DoctorCheck("platform", "failed", "Native Windows is not supported yet. Use WSL2.")
+        return DoctorCheck(
+            "platform",
+            "warning",
+            "Native Windows support is experimental; prefer WSL2 for Docker and shell-script smoke tests.",
+        )
     return DoctorCheck("platform", "warning", f"{system} is not an officially tested platform.")
 
 
@@ -101,6 +105,12 @@ def _check_docker_binary() -> DoctorCheck:
 def _check_workspace_path(workspace_path: Path) -> DoctorCheck:
     resolved = workspace_path.resolve()
     path_text = str(resolved)
+    if "$PWD" in path_text:
+        return DoctorCheck(
+            "workspace_path",
+            "warning",
+            "Workspace path contains literal $PWD; use . in Windows CMD or a shell that expands $PWD.",
+        )
     if path_text.startswith("/mnt/c/") or path_text.startswith("/mnt/d/"):
         return DoctorCheck(
             "workspace_path",
