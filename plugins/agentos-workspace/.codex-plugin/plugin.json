@@ -1,6 +1,6 @@
 {
   "name": "agentos-workspace",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Route AI coding tasks through AgentOS copied sessions, review packages, and approval-gated sync.",
   "author": {
     "name": "AgentOS"

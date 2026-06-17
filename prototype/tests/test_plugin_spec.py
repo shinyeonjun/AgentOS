@@ -34,7 +34,9 @@ class PluginSpecTests(unittest.TestCase):
         self.assertEqual(manifest["mcpServers"], "./.mcp.json")
         self.assertEqual(manifest["skills"], "./skills/")
         self.assertEqual(marketplace["plugins"][0]["source"]["path"], "./plugins/agentos-workspace")
-        server = mcp_config["mcpServers"]["agentos"]
+        self.assertNotIn("mcpServers", mcp_config)
+        self.assertNotIn("mcp_servers", mcp_config)
+        server = mcp_config["agentos"]
         self.assertEqual(server["cwd"], ".")
         self.assertEqual(server["command"], "node")
         self.assertEqual(server["args"], ["./agentos_mcp_launcher.cjs"])
