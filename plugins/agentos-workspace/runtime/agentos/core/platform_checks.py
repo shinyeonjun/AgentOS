@@ -3,10 +3,37 @@ from __future__ import annotations
 import json
 import platform
 import shutil
+import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+DEFAULT_AGENTOS_IMAGE = "agentos-base:0.1"
+DEFAULT_DOCKER_TIMEOUT_SECONDS = 30
+
+_EMBEDDED_AGENTOS_DOCKERFILE = """\
+FROM busybox:1.36
+RUN mkdir -p /agentos/input /agentos/work /agentos/artifacts /agentos/logs /agentos/report \\
+    && printf '%s\\n' \\
+      '{' \\
+      '  "schema_version": "0.2",' \\
+      '  "image": "agentos-base:0.1",' \\
+      '  "capabilities": [' \\
+      '    {' \\
+      '      "name": "base",' \\
+      '      "kind": "runtime",' \\
+      '      "description": "AgentOS workspace, artifact, policy, review, approval, and sync contract.",' \\
+      '      "provides": ["/agentos/work", "/agentos/artifacts", "task.json", "review_package.json", "approval-gated sync"]' \\
+      '    }' \\
+      '  ],' \\
+      '  "notes": [' \\
+      '    "Image capabilities describe the sandbox environment contract.",' \\
+      '    "Worker binaries such as Codex remain host-side adapters unless a separate worker image is declared."' \\
+      '  ]' \\
+      '}' > /agentos/capabilities.json
+WORKDIR /agentos/work
+"""
 
 
 @dataclass(frozen=True)
@@ -42,14 +69,62 @@ class DoctorResult:
         return json.dumps(self.to_dict(), ensure_ascii=False, indent=2)
 
 
-def run_doctor(workspace_path: Path | None = None) -> DoctorResult:
+@dataclass(frozen=True)
+class PrepareResult:
+    status: str
+    image: str
+    action: str
+    docker_available: bool
+    image_available: bool
+    message: str
+    command: tuple[str, ...] = ()
+    exit_code: int | None = None
+    stdout_tail: str = ""
+    stderr_tail: str = ""
+
+    @property
+    def passed(self) -> bool:
+        return self.status == "passed"
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "status": self.status,
+            "image": self.image,
+            "action": self.action,
+            "docker_available": self.docker_available,
+            "image_available": self.image_available,
+            "message": self.message,
+            "command": list(self.command),
+            "exit_code": self.exit_code,
+            "stdout_tail": self.stdout_tail,
+            "stderr_tail": self.stderr_tail,
+        }
+
+
+def run_doctor(
+    workspace_path: Path | None = None,
+    *,
+    docker_bin: str = "docker",
+    docker_sudo: bool = False,
+    image: str = DEFAULT_AGENTOS_IMAGE,
+) -> DoctorResult:
     if workspace_path is None:
         workspace_path = Path.cwd()
+    docker_cli = _check_docker_binary(docker_bin=docker_bin, use_sudo=docker_sudo)
+    docker_daemon = _check_docker_daemon(docker_bin=docker_bin, use_sudo=docker_sudo, docker_cli=docker_cli)
+    docker_image = _check_docker_image(
+        docker_bin=docker_bin,
+        use_sudo=docker_sudo,
+        image=image,
+        docker_daemon=docker_daemon,
+    )
     checks = (
         _check_platform(),
         _check_python(),
         _check_agentos_cli(),
-        _check_docker_binary(),
+        docker_cli,
+        docker_daemon,
+        docker_image,
         _check_workspace_path(workspace_path),
     )
     status = "passed"
@@ -58,6 +133,90 @@ def run_doctor(workspace_path: Path | None = None) -> DoctorResult:
     elif any(check.status == "warning" for check in checks):
         status = "warning"
     return DoctorResult(status=status, checks=checks)
+
+
+def prepare_docker_environment(
+    *,
+    image: str = DEFAULT_AGENTOS_IMAGE,
+    docker_bin: str = "docker",
+    use_sudo: bool = False,
+    build_default: bool = True,
+    pull_missing: bool = False,
+    timeout_seconds: int = 120,
+) -> PrepareResult:
+    docker_cli = _check_docker_binary(docker_bin=docker_bin, use_sudo=use_sudo)
+    if docker_cli.status != "passed":
+        return PrepareResult(
+            status="failed",
+            image=image,
+            action="check_docker_cli",
+            docker_available=False,
+            image_available=False,
+            message=docker_cli.message,
+        )
+
+    docker_daemon = _check_docker_daemon(docker_bin=docker_bin, use_sudo=use_sudo, docker_cli=docker_cli)
+    if docker_daemon.status != "passed":
+        return PrepareResult(
+            status="failed",
+            image=image,
+            action="check_docker_daemon",
+            docker_available=False,
+            image_available=False,
+            message=docker_daemon.message,
+        )
+
+    if _docker_image_exists(image=image, docker_bin=docker_bin, use_sudo=use_sudo):
+        return PrepareResult(
+            status="passed",
+            image=image,
+            action="none",
+            docker_available=True,
+            image_available=True,
+            message=f"Docker image already available: {image}.",
+        )
+
+    if image == DEFAULT_AGENTOS_IMAGE and build_default:
+        return _build_default_agentos_image(
+            image=image,
+            docker_bin=docker_bin,
+            use_sudo=use_sudo,
+            timeout_seconds=timeout_seconds,
+        )
+
+    if pull_missing:
+        return _pull_docker_image(
+            image=image,
+            docker_bin=docker_bin,
+            use_sudo=use_sudo,
+            timeout_seconds=timeout_seconds,
+        )
+
+    return PrepareResult(
+        status="failed",
+        image=image,
+        action="none",
+        docker_available=True,
+        image_available=False,
+        message=(
+            f"Docker image is missing: {image}. Run agentos prepare --image {image} "
+            "or pass a locally available image."
+        ),
+    )
+
+
+def ensure_docker_environment(
+    *,
+    image: str = DEFAULT_AGENTOS_IMAGE,
+    docker_bin: str = "docker",
+    use_sudo: bool = False,
+) -> PrepareResult:
+    result = prepare_docker_environment(image=image, docker_bin=docker_bin, use_sudo=use_sudo)
+    if not result.passed:
+        if result.action == "check_docker_cli":
+            raise FileNotFoundError(result.message)
+        raise RuntimeError(result.message)
+    return result
 
 
 def render_doctor(result: DoctorResult) -> str:
@@ -107,11 +266,44 @@ def _check_agentos_cli() -> DoctorCheck:
     return DoctorCheck("agentos_cli", "passed", f"agentos executable found at {executable}.")
 
 
-def _check_docker_binary() -> DoctorCheck:
-    docker = shutil.which("docker")
+def _check_docker_binary(*, docker_bin: str, use_sudo: bool) -> DoctorCheck:
+    if use_sudo and shutil.which("sudo") is None:
+        return DoctorCheck("docker_cli", "warning", "sudo not found; cannot run Docker through sudo.")
+    docker = shutil.which(docker_bin)
     if docker is None:
-        return DoctorCheck("docker", "warning", "Docker CLI not found. Docker sandbox steps need Docker.")
-    return DoctorCheck("docker", "passed", f"Docker CLI found at {docker}.")
+        return DoctorCheck("docker_cli", "warning", f"Docker CLI not found: {docker_bin}.")
+    return DoctorCheck("docker_cli", "passed", f"Docker CLI found at {docker}.")
+
+
+def _check_docker_daemon(*, docker_bin: str, use_sudo: bool, docker_cli: DoctorCheck) -> DoctorCheck:
+    if docker_cli.status != "passed":
+        return DoctorCheck("docker_daemon", "warning", "Skipped because Docker CLI is unavailable.")
+    completed = _run_docker(
+        [*docker_prefix(docker_bin=docker_bin, use_sudo=use_sudo), "info"],
+        timeout_seconds=DEFAULT_DOCKER_TIMEOUT_SECONDS,
+    )
+    if isinstance(completed, Exception):
+        return DoctorCheck("docker_daemon", "warning", f"Docker daemon is unavailable: {completed}.")
+    if completed.returncode != 0:
+        detail = _command_error_tail(completed)
+        return DoctorCheck(
+            "docker_daemon",
+            "warning",
+            f"Docker daemon is not responding. Start Docker, then run agentos doctor again. {detail}".strip(),
+        )
+    return DoctorCheck("docker_daemon", "passed", "Docker daemon is responding.")
+
+
+def _check_docker_image(*, docker_bin: str, use_sudo: bool, image: str, docker_daemon: DoctorCheck) -> DoctorCheck:
+    if docker_daemon.status != "passed":
+        return DoctorCheck("docker_image", "warning", "Skipped because Docker daemon is unavailable.")
+    if _docker_image_exists(image=image, docker_bin=docker_bin, use_sudo=use_sudo):
+        return DoctorCheck("docker_image", "passed", f"Docker image available: {image}.")
+    return DoctorCheck(
+        "docker_image",
+        "warning",
+        f"Docker image missing: {image}. Run agentos prepare --image {image} before Docker sandbox steps.",
+    )
 
 
 def _check_workspace_path(workspace_path: Path) -> DoctorCheck:
@@ -130,3 +322,124 @@ def _check_workspace_path(workspace_path: Path) -> DoctorCheck:
             "Workspace is under a Windows-mounted drive; WSL ext4 paths are faster and safer.",
         )
     return DoctorCheck("workspace_path", "passed", f"Workspace path looks suitable: {resolved}.")
+
+
+def docker_prefix(docker_bin: str = "docker", use_sudo: bool = False) -> list[str]:
+    return ["sudo", docker_bin] if use_sudo else [docker_bin]
+
+
+def _docker_image_exists(*, image: str, docker_bin: str, use_sudo: bool) -> bool:
+    completed = _run_docker(
+        [*docker_prefix(docker_bin=docker_bin, use_sudo=use_sudo), "image", "inspect", image],
+        timeout_seconds=DEFAULT_DOCKER_TIMEOUT_SECONDS,
+    )
+    return not isinstance(completed, Exception) and completed.returncode == 0
+
+
+def _build_default_agentos_image(
+    *,
+    image: str,
+    docker_bin: str,
+    use_sudo: bool,
+    timeout_seconds: int,
+) -> PrepareResult:
+    command = [*docker_prefix(docker_bin=docker_bin, use_sudo=use_sudo), "build", "-t", image, "-"]
+    completed = _run_docker(command, input_text=_EMBEDDED_AGENTOS_DOCKERFILE, timeout_seconds=timeout_seconds)
+    return _prepare_result_from_completed(
+        image=image,
+        action="build_default_image",
+        command=command,
+        completed=completed,
+        success_message=f"Built AgentOS Docker image: {image}.",
+        failure_message=f"Failed to build AgentOS Docker image: {image}.",
+    )
+
+
+def _pull_docker_image(*, image: str, docker_bin: str, use_sudo: bool, timeout_seconds: int) -> PrepareResult:
+    command = [*docker_prefix(docker_bin=docker_bin, use_sudo=use_sudo), "pull", image]
+    completed = _run_docker(command, timeout_seconds=timeout_seconds)
+    return _prepare_result_from_completed(
+        image=image,
+        action="pull_image",
+        command=command,
+        completed=completed,
+        success_message=f"Pulled Docker image: {image}.",
+        failure_message=f"Failed to pull Docker image: {image}.",
+    )
+
+
+def _prepare_result_from_completed(
+    *,
+    image: str,
+    action: str,
+    command: list[str],
+    completed: subprocess.CompletedProcess[str] | Exception,
+    success_message: str,
+    failure_message: str,
+) -> PrepareResult:
+    if isinstance(completed, Exception):
+        return PrepareResult(
+            status="failed",
+            image=image,
+            action=action,
+            docker_available=False,
+            image_available=False,
+            message=f"{failure_message} {completed}",
+            command=tuple(command),
+        )
+    stdout_tail = _tail(completed.stdout)
+    stderr_tail = _tail(completed.stderr)
+    if completed.returncode == 0:
+        return PrepareResult(
+            status="passed",
+            image=image,
+            action=action,
+            docker_available=True,
+            image_available=True,
+            message=success_message,
+            command=tuple(command),
+            exit_code=completed.returncode,
+            stdout_tail=stdout_tail,
+            stderr_tail=stderr_tail,
+        )
+    return PrepareResult(
+        status="failed",
+        image=image,
+        action=action,
+        docker_available=True,
+        image_available=False,
+        message=f"{failure_message} {_command_error_tail(completed)}".strip(),
+        command=tuple(command),
+        exit_code=completed.returncode,
+        stdout_tail=stdout_tail,
+        stderr_tail=stderr_tail,
+    )
+
+
+def _run_docker(
+    command: list[str],
+    *,
+    input_text: str | None = None,
+    timeout_seconds: int,
+) -> subprocess.CompletedProcess[str] | Exception:
+    try:
+        return subprocess.run(
+            command,
+            input=input_text,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=timeout_seconds,
+        )
+    except (FileNotFoundError, PermissionError, subprocess.TimeoutExpired) as exc:
+        return exc
+
+
+def _command_error_tail(completed: subprocess.CompletedProcess[str]) -> str:
+    return _tail(completed.stderr or completed.stdout)
+
+
+def _tail(value: str | None, limit: int = 1200) -> str:
+    if not value:
+        return ""
+    return value[-limit:]

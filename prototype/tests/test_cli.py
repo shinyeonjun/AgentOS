@@ -7,6 +7,7 @@ import sys
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
+from subprocess import CompletedProcess
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
@@ -835,6 +836,23 @@ class AgentOSCliTests(unittest.TestCase):
         self.assertIn("sync_approved", tools)
         self.assertTrue(tools["sync_approved"]["human_approval_required"])
 
+    def test_prepare_json_builds_default_image_when_missing(self) -> None:
+        def fake_run(command: list[str], **_: object) -> CompletedProcess[str]:
+            if command[:3] == ["docker", "image", "inspect"]:
+                return CompletedProcess(command, 1, stdout="", stderr="No such image\n")
+            return CompletedProcess(command, 0, stdout="ok\n", stderr="")
+
+        with (
+            patch("agentos.core.platform_checks.shutil.which", return_value="/usr/bin/tool"),
+            patch("agentos.core.platform_checks.subprocess.run", side_effect=fake_run),
+        ):
+            exit_code, output = _run_cli(["prepare", "--json"])
+
+        self.assertEqual(exit_code, 0)
+        data = json.loads(output)
+        self.assertEqual(data["status"], "passed")
+        self.assertEqual(data["action"], "build_default_image")
+
     def test_verify_review_latest_json_uses_state_dir(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -1180,6 +1198,9 @@ def _run_cli_with_stderr(argv: list[str]) -> tuple[int, str, str]:
 def _write_fake_docker(path: Path, *, exit_code: int) -> Path:
     path.write_text(
         "#!/bin/sh\n"
+        "if [ \"$1\" = 'info' ]; then exit 0; fi\n"
+        "if [ \"$1\" = 'image' ] && [ \"$2\" = 'inspect' ]; then exit 0; fi\n"
+        "if [ \"$1\" = 'build' ]; then exit 0; fi\n"
         "artifacts=''\n"
         "while [ \"$#\" -gt 0 ]; do\n"
         "  if [ \"$1\" = '-v' ]; then\n"
@@ -1201,6 +1222,9 @@ def _write_fake_docker(path: Path, *, exit_code: int) -> Path:
 def _write_fake_docker_workspace_writer(path: Path) -> Path:
     path.write_text(
         "#!/bin/sh\n"
+        "if [ \"$1\" = 'info' ]; then exit 0; fi\n"
+        "if [ \"$1\" = 'image' ] && [ \"$2\" = 'inspect' ]; then exit 0; fi\n"
+        "if [ \"$1\" = 'build' ]; then exit 0; fi\n"
         "work=''\n"
         "artifacts=''\n"
         "while [ \"$#\" -gt 0 ]; do\n"

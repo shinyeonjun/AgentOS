@@ -20,6 +20,7 @@ class McpServerTests(unittest.TestCase):
         self.assertIsNotNone(tools)
         names = {tool["name"] for tool in tools["result"]["tools"]}
         self.assertIn("doctor", names)
+        self.assertIn("prepare_environment", names)
         self.assertIn("create_session", names)
         self.assertIn("run_command", names)
         self.assertIn("sync_approved", names)

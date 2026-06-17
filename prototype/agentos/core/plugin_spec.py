@@ -23,6 +23,20 @@ def build_plugin_spec() -> dict[str, Any]:
         },
         "tools": [
             _tool(
+                name="doctor",
+                command="agentos doctor --json",
+                purpose="Check platform, Python, Docker daemon, Docker image, and workspace path readiness.",
+                required=[],
+                outputs=["status", "checks"],
+            ),
+            _tool(
+                name="prepare_environment",
+                command="agentos prepare --json",
+                purpose="Prepare Docker dependencies, including the bundled default AgentOS image when missing.",
+                required=[],
+                outputs=["status", "image", "action", "message"],
+            ),
+            _tool(
                 name="create_session",
                 command="agentos session create --input <project-dir> --name <work-name> --json",
                 purpose="Create a persistent copied workspace for an agent task.",
@@ -111,6 +125,7 @@ def build_plugin_spec() -> dict[str, Any]:
         ],
         "agent_rules": [
             "Never edit the original host project while operating through AgentOS.",
+            "Start with doctor and run prepare_environment before Docker sandbox work if Docker or the image is not ready.",
             "Use workspace_path as the active project root.",
             "Do not call sync_approved until the user approves a concrete scope.",
             "Prefer sync dry-run before actual sync.",

@@ -17,7 +17,7 @@ from .cli_args import (
 )
 from .core.inspector import inspect_state, render_inspection
 from .core.integrity import render_verification, verify_review_package
-from .core.platform_checks import render_doctor, run_doctor
+from .core.platform_checks import prepare_docker_environment, render_doctor, run_doctor
 from .core.plugin_spec import build_plugin_spec
 from .core.review import (
     latest_review_package_path,
@@ -111,7 +111,33 @@ def _main_impl(argv: list[str]) -> int:
         default=Path.cwd(),
         help="Workspace path to inspect for WSL/Windows mount warnings",
     )
+    doctor.add_argument("--docker-bin", default="docker", help="Docker executable name or path")
+    doctor.add_argument(
+        "--docker-sudo",
+        action="store_true",
+        help="Run Docker checks through sudo for shells that do not have docker-group access yet",
+    )
+    doctor.add_argument("--image", default=DEFAULT_IMAGE, help="Docker image to check")
     add_json_arg(doctor, noun="doctor output")
+    prepare = subparsers.add_parser("prepare", help="Prepare local Docker dependencies for AgentOS")
+    prepare.add_argument("--image", default=DEFAULT_IMAGE, help="Docker image to prepare")
+    prepare.add_argument("--docker-bin", default="docker", help="Docker executable name or path")
+    prepare.add_argument(
+        "--docker-sudo",
+        action="store_true",
+        help="Run Docker through sudo for shells that do not have docker-group access yet",
+    )
+    prepare.add_argument(
+        "--pull-missing",
+        action="store_true",
+        help="Pull missing non-default images instead of only reporting that they are missing",
+    )
+    prepare.add_argument(
+        "--no-build-default",
+        action="store_true",
+        help="Do not build the bundled default agentos-base image when it is missing",
+    )
+    add_json_arg(prepare, noun="prepare output")
     inspect = subparsers.add_parser("inspect", help="Inspect AgentOS sessions and artifacts")
     add_state_dir_arg(inspect, default=DEFAULT_STATE_DIR)
     inspect.add_argument(
@@ -420,9 +446,31 @@ def _main_impl(argv: list[str]) -> int:
         return 0 if result.passed else 1
 
     if args.command == "doctor":
-        result = run_doctor(workspace_path=args.workspace)
+        result = run_doctor(
+            workspace_path=args.workspace,
+            docker_bin=args.docker_bin,
+            docker_sudo=args.docker_sudo,
+            image=args.image,
+        )
         print(result.to_json() if args.json else render_doctor(result))
         return 0 if result.status in {"passed", "warning"} else 1
+
+    if args.command == "prepare":
+        result = prepare_docker_environment(
+            image=args.image,
+            docker_bin=args.docker_bin,
+            use_sudo=args.docker_sudo,
+            build_default=not args.no_build_default,
+            pull_missing=args.pull_missing,
+        )
+        if args.json:
+            _print_json(result.to_dict())
+        else:
+            print(f"status: {result.status}")
+            print(f"image: {result.image}")
+            print(f"action: {result.action}")
+            print(f"message: {result.message}")
+        return 0 if result.passed else 1
 
     if args.command == "inspect":
         data = inspect_state(args.state_dir, session_id=args.session)

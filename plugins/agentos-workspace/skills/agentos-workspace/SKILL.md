@@ -19,11 +19,17 @@ Do not edit the user's original project directly when an AgentOS workflow is
 requested. Create or reuse an AgentOS session and treat the returned
 `workspace_path` as the active project root.
 
+Docker is optional for MCP startup and ordinary host-session work. If Docker is
+unavailable, do not fall back to direct host edits. Report the exact doctor
+failure and the setup step needed. If the Docker image is missing, prepare it
+through AgentOS before Docker sandbox work.
+
 ## Standard Flow
 
-1. Prefer AgentOS MCP tools when they are available. Start with `doctor`, then
-   `create_session`, `run_command`, `review_session`, `verify_review`,
-   `approve_scope`, and `sync_approved`.
+1. Prefer AgentOS MCP tools when they are available. Start with `doctor`. If
+   Docker checks warn or fail and the task needs Docker sandbox work, call
+   `prepare_environment`. Then use `create_session`, `run_command`,
+   `review_session`, `verify_review`, `approve_scope`, and `sync_approved`.
 
 2. If MCP tools are unavailable immediately after installing or updating this
    plugin, first assume the current Codex conversation started before the MCP
@@ -41,6 +47,12 @@ requested. Create or reuse an AgentOS session and treat the returned
 
 ```bash
 agentos doctor --json
+```
+
+If Docker is needed and doctor reports a missing daemon or image:
+
+```bash
+agentos prepare --json
 ```
 
 If neither MCP tools nor an installed `agentos` CLI are available, stop and ask
@@ -71,6 +83,7 @@ agentos session exec <work-name> --json -- <test-command>
 9. Use Docker only through the session when needed:
 
 ```bash
+agentos prepare --json
 agentos session docker-exec <work-name> --image agentos-base:0.1 --json -- <command>
 ```
 
@@ -103,6 +116,11 @@ agentos sync --latest --target <project-dir> --require-clean-git --json
   accepts that risk.
 - If the session workspace is missing, create a new session instead of syncing
   from stale artifacts.
+- If Docker is not running, stop with the doctor/prepare error and tell the user
+  to start Docker Desktop or the Docker daemon. Do not edit the host project as a
+  workaround.
+- If the default `agentos-base:0.1` image is missing, use AgentOS prepare. Do
+  not ask the user to manually pre-build it unless prepare fails.
 
 ## Harness Note
 

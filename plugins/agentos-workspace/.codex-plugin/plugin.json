@@ -1,6 +1,6 @@
 {
   "name": "agentos-workspace",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "description": "Route AI coding tasks through AgentOS copied sessions, review packages, and approval-gated sync.",
   "author": {
     "name": "AgentOS"
@@ -13,14 +13,14 @@
   "interface": {
     "displayName": "AgentOS Workspace",
     "shortDescription": "Route coding work through AgentOS sessions.",
-    "longDescription": "AgentOS Workspace routes Codex coding work through copied AgentOS session workspaces, review packages, approval gates, and approved sync instead of editing host projects directly. When selected, Codex must use the bundled AgentOS skill and MCP server to create or reuse an AgentOS session before changing files.",
+    "longDescription": "AgentOS Workspace routes Codex coding work through copied AgentOS session workspaces, review packages, approval gates, and approved sync instead of editing host projects directly. When selected, Codex must use the bundled AgentOS skill and MCP server to run doctor, prepare Docker dependencies when needed, and create or reuse an AgentOS session before changing files.",
     "developerName": "AgentOS",
     "category": "Productivity",
     "capabilities": ["Write", "Code"],
     "defaultPrompt": [
       "Use AgentOS for this task. Create or reuse an AgentOS session before editing files, work only inside the session workspace, produce a review package, and do not sync until I approve.",
       "Route this coding task through AgentOS instead of editing the current workspace directly.",
-      "Start with AgentOS doctor/session setup, then make the requested changes inside the AgentOS workspace and show the review package."
+      "Start with AgentOS doctor. If Docker or the AgentOS image is not ready, run AgentOS environment prepare before Docker sandbox work. Then make the requested changes inside the AgentOS workspace and show the review package."
     ],
     "brandColor": "#2563EB"
   }

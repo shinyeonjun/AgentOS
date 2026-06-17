@@ -25,6 +25,7 @@ from .contracts import (
 )
 from .integrity import build_artifact_manifest, build_manifest_integrity
 from .inspector import inspect_state
+from .platform_checks import ensure_docker_environment
 from .runtime import AgentOSRuntime, Session
 from .session_ops import load_session
 from .storage import StateStore
@@ -221,6 +222,7 @@ def docker_exec_work_session(
     artifact_dir.mkdir(parents=True, exist_ok=True)
     suffix = uuid.uuid4().hex[:8]
 
+    ensure_docker_environment(image=image, docker_bin=docker_bin, use_sudo=use_sudo)
     image_provenance = inspect_image_provenance(
         image=image,
         docker_prefix=docker_prefix(docker_bin=docker_bin, use_sudo=use_sudo),

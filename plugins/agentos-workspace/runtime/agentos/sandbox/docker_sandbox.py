@@ -15,6 +15,7 @@ from ..core.contracts import (
     build_review_package,
 )
 from ..core.integrity import build_artifact_manifest, build_manifest_integrity
+from ..core.platform_checks import ensure_docker_environment
 from ..core.runtime import AgentOSRuntime, Session
 
 
@@ -133,6 +134,7 @@ def run_docker_task(
     workspace_path = runtime.import_input(session, input_path)
     artifact_dir = runtime.artifacts_dir / session.session_id
     artifact_dir.mkdir(parents=True, exist_ok=True)
+    ensure_docker_environment(image=image, docker_bin=docker_bin, use_sudo=use_sudo)
     image_provenance = inspect_image_provenance(
         image=image,
         docker_prefix=docker_prefix(docker_bin=docker_bin, use_sudo=use_sudo),

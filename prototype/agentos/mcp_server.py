@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from .core.integrity import verify_review_package
-from .core.platform_checks import run_doctor
+from .core.platform_checks import prepare_docker_environment, run_doctor
 from .core.review import latest_review_package_path, render_review_diffs, summarize_review_package
 from .core.session_ops import approve_review_package, sync_approved_review
 from .core.work_sessions import (
@@ -94,9 +94,11 @@ def _initialize_result(params: dict[str, Any]) -> dict[str, Any]:
         },
         "instructions": (
             "When AgentOS is selected or requested, do not edit the original project directly. "
-            "First call doctor, then create or reuse a copied session. Work only inside the "
-            "returned workspace_path, build and verify a review package, and wait for explicit "
-            "human approval before syncing approved changes back to the original project."
+            "First call doctor. If Docker is unavailable or the AgentOS image is missing, call "
+            "prepare_environment before Docker sandbox work. Then create or reuse a copied "
+            "session. Work only inside the returned workspace_path, build and verify a review "
+            "package, and wait for explicit human approval before syncing approved changes back "
+            "to the original project."
         ),
     }
 
@@ -110,6 +112,7 @@ def _handle_tool_call(params: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("tools/call arguments must be an object")
     tools: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
         "doctor": _tool_doctor,
+        "prepare_environment": _tool_prepare_environment,
         "create_session": _tool_create_session,
         "list_sessions": _tool_list_sessions,
         "session_status": _tool_session_status,
@@ -130,7 +133,22 @@ def _handle_tool_call(params: dict[str, Any]) -> dict[str, Any]:
 
 def _tool_doctor(arguments: dict[str, Any]) -> dict[str, Any]:
     workspace = _optional_path(arguments, "workspace")
-    return run_doctor(workspace_path=workspace).to_dict()
+    return run_doctor(
+        workspace_path=workspace,
+        docker_bin=_str_arg(arguments, "docker_bin", "docker"),
+        docker_sudo=_bool_arg(arguments, "docker_sudo", False),
+        image=_str_arg(arguments, "image", "agentos-base:0.1"),
+    ).to_dict()
+
+
+def _tool_prepare_environment(arguments: dict[str, Any]) -> dict[str, Any]:
+    return prepare_docker_environment(
+        image=_str_arg(arguments, "image", "agentos-base:0.1"),
+        docker_bin=_str_arg(arguments, "docker_bin", "docker"),
+        use_sudo=_bool_arg(arguments, "docker_sudo", False),
+        build_default=_bool_arg(arguments, "build_default", True),
+        pull_missing=_bool_arg(arguments, "pull_missing", False),
+    ).to_dict()
 
 
 def _tool_create_session(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -320,8 +338,24 @@ def _tool_definitions() -> list[dict[str, Any]]:
     return [
         _tool_definition(
             "doctor",
-            "Check whether the local AgentOS runtime environment is usable.",
-            {"workspace": _string_schema("Workspace path to inspect.")},
+            "Check whether the local AgentOS runtime environment is usable without failing MCP startup.",
+            {
+                "workspace": _string_schema("Workspace path to inspect."),
+                "image": {"type": "string", "default": "agentos-base:0.1"},
+                "docker_bin": {"type": "string", "default": "docker"},
+                "docker_sudo": {"type": "boolean", "default": False},
+            },
+        ),
+        _tool_definition(
+            "prepare_environment",
+            "Prepare Docker dependencies for AgentOS, including building the bundled default image when missing.",
+            {
+                "image": {"type": "string", "default": "agentos-base:0.1"},
+                "docker_bin": {"type": "string", "default": "docker"},
+                "docker_sudo": {"type": "boolean", "default": False},
+                "build_default": {"type": "boolean", "default": True},
+                "pull_missing": {"type": "boolean", "default": False},
+            },
         ),
         _tool_definition(
             "create_session",

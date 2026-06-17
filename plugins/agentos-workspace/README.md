@@ -7,6 +7,18 @@ The plugin rule is simple: Codex should work inside an AgentOS session
 workspace, produce a review package, and wait for explicit approval before any
 sync back to the host project.
 
+AgentOS MCP startup does not require Docker to already be running. Docker is
+checked by `doctor` and prepared only before Docker sandbox work. If the default
+`agentos-base:0.1` image is missing, AgentOS can build the bundled minimal image
+with:
+
+```bash
+agentos prepare --json
+```
+
+If Docker Desktop or the Docker daemon is not running, `doctor`/`prepare` returns
+a setup error instead of letting Codex silently edit the original workspace.
+
 ## Install From Git
 
 This repository includes a marketplace file at:
@@ -34,6 +46,7 @@ you want to debug from a terminal, install the CLI and check it with:
 
 ```bash
 agentos doctor --json
+agentos prepare --json
 ```
 
 If the bundled MCP server cannot start, check that Node and Python 3 are
