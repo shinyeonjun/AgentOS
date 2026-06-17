@@ -72,14 +72,14 @@ class AgentOSRuntime:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.store.init_db()
 
-    def create_session(self) -> Session:
+    def create_session(self, name: str | None = None) -> Session:
         session_id = uuid.uuid4().hex[:12]
         session_dir = self.sessions_dir / session_id
         workspace_dir = session_dir / "workspace"
         original_dir = session_dir / "original"
         workspace_dir.mkdir(parents=True)
         original_dir.mkdir()
-        self.store.create_session(session_id=session_id, created_at=utc_now(), session_dir=session_dir)
+        self.store.create_session(session_id=session_id, name=name, created_at=utc_now(), session_dir=session_dir)
         return Session(session_id, session_dir, workspace_dir, original_dir)
 
     def import_input(self, session: Session, input_path: Path) -> Path:

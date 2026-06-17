@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import json
 import subprocess
+import sys
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
@@ -156,6 +157,310 @@ class AgentOSCliTests(unittest.TestCase):
             self.assertEqual(data["policy_status"], "passed")
             self.assertEqual(data["image_provenance_status"], "unavailable")
             self.assertIsNone(data["pinned_image_ref"])
+
+    def test_persistent_session_exec_review_and_sync(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            input_project = root / "input-project"
+            input_project.mkdir()
+            (input_project / "README.md").write_text("# Demo\n", encoding="utf-8")
+            target_project = root / "target-project"
+            target_project.mkdir()
+            (target_project / "README.md").write_text("# Demo\n", encoding="utf-8")
+
+            create_exit_code, create_output = _run_cli(
+                [
+                    "session",
+                    "create",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--input",
+                    str(input_project),
+                    "--name",
+                    "work1",
+                    "--json",
+                ]
+            )
+            self.assertEqual(create_exit_code, 0)
+            session_data = json.loads(create_output)
+            workspace_path = Path(session_data["workspace_path"])
+            self.assertTrue((workspace_path / "README.md").exists())
+
+            exec_exit_code, exec_output = _run_cli(
+                [
+                    "session",
+                    "exec",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "work1",
+                    "--json",
+                    "--",
+                    sys.executable,
+                    "-c",
+                    "from pathlib import Path; Path('README.md').write_text('# Demo\\n\\nupdated\\n', encoding='utf-8')",
+                ]
+            )
+            self.assertEqual(exec_exit_code, 0)
+            self.assertEqual(json.loads(exec_output)["exit_code"], 0)
+
+            review_exit_code, review_output = _run_cli(
+                [
+                    "session",
+                    "review",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "work1",
+                    "--json",
+                ]
+            )
+            self.assertEqual(review_exit_code, 0)
+            review_data = json.loads(review_output)
+            self.assertEqual(review_data["changed_files"], ["README.md"])
+            self.assertEqual(review_data["validation_status"], "passed")
+
+            approve_exit_code, _approve_output = _run_cli(
+                [
+                    "approve",
+                    "--latest",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--scope",
+                    "sync_selected:README.md",
+                    "--json",
+                ]
+            )
+            self.assertEqual(approve_exit_code, 0)
+
+            sync_exit_code, sync_output = _run_cli(
+                [
+                    "sync",
+                    "--latest",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--target",
+                    str(target_project),
+                    "--json",
+                ]
+            )
+            self.assertEqual(sync_exit_code, 0)
+            self.assertEqual(json.loads(sync_output)["copied_paths"], ["README.md"])
+            self.assertIn("updated", (target_project / "README.md").read_text(encoding="utf-8"))
+
+    def test_persistent_session_docker_exec_uses_existing_workspace(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            input_project = root / "input-project"
+            input_project.mkdir()
+            (input_project / "README.md").write_text("hello\n", encoding="utf-8")
+            fake_docker = _write_fake_docker(root / "fake-docker", exit_code=0)
+
+            create_exit_code, _create_output = _run_cli(
+                [
+                    "session",
+                    "create",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--input",
+                    str(input_project),
+                    "--name",
+                    "docker-work",
+                    "--json",
+                ]
+            )
+            self.assertEqual(create_exit_code, 0)
+
+            docker_exit_code, docker_output = _run_cli(
+                [
+                    "session",
+                    "docker-exec",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "docker-work",
+                    "--docker-bin",
+                    str(fake_docker),
+                    "--json",
+                    "--",
+                    "sh",
+                    "-c",
+                    "cat README.md",
+                ]
+            )
+
+            self.assertEqual(docker_exit_code, 0)
+            data = json.loads(docker_output)
+            self.assertEqual(data["exit_code"], 0)
+            self.assertEqual(data["policy_status"], "passed")
+            self.assertEqual(data["image_provenance_status"], "unavailable")
+
+    def test_persistent_session_docker_write_reviews_and_syncs(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            input_project = root / "input-project"
+            input_project.mkdir()
+            (input_project / "README.md").write_text("hello\n", encoding="utf-8")
+            target_project = root / "target-project"
+            target_project.mkdir()
+            (target_project / "README.md").write_text("hello\n", encoding="utf-8")
+            fake_docker = _write_fake_docker_workspace_writer(root / "fake-docker")
+
+            create_exit_code, _create_output = _run_cli(
+                [
+                    "session",
+                    "create",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--input",
+                    str(input_project),
+                    "--name",
+                    "docker-write",
+                    "--json",
+                ]
+            )
+            self.assertEqual(create_exit_code, 0)
+
+            docker_exit_code, docker_output = _run_cli(
+                [
+                    "session",
+                    "docker-exec",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "docker-write",
+                    "--docker-bin",
+                    str(fake_docker),
+                    "--json",
+                    "--",
+                    "sh",
+                    "-c",
+                    "ignored by fake docker",
+                ]
+            )
+            self.assertEqual(docker_exit_code, 0)
+            self.assertEqual(json.loads(docker_output)["exit_code"], 0)
+
+            review_exit_code, review_output = _run_cli(
+                [
+                    "session",
+                    "review",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "docker-write",
+                    "--json",
+                ]
+            )
+            self.assertEqual(review_exit_code, 0)
+            self.assertEqual(json.loads(review_output)["changed_files"], ["README.md"])
+
+            approve_exit_code, _approve_output = _run_cli(
+                [
+                    "approve",
+                    "--latest",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--scope",
+                    "sync_selected:README.md",
+                    "--json",
+                ]
+            )
+            self.assertEqual(approve_exit_code, 0)
+
+            sync_exit_code, _sync_output = _run_cli(
+                [
+                    "sync",
+                    "--latest",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--target",
+                    str(target_project),
+                    "--json",
+                ]
+            )
+            self.assertEqual(sync_exit_code, 0)
+            self.assertIn("docker updated", (target_project / "README.md").read_text(encoding="utf-8"))
+
+    def test_persistent_session_list_and_destroy(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            input_project = root / "input-project"
+            input_project.mkdir()
+            (input_project / "README.md").write_text("hello\n", encoding="utf-8")
+
+            create_exit_code, create_output = _run_cli(
+                [
+                    "session",
+                    "create",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--input",
+                    str(input_project),
+                    "--name",
+                    "temporary-work",
+                    "--json",
+                ]
+            )
+            self.assertEqual(create_exit_code, 0)
+            workspace_path = Path(json.loads(create_output)["workspace_path"])
+            self.assertTrue(workspace_path.exists())
+
+            list_exit_code, list_output = _run_cli(
+                ["session", "list", "--state-dir", str(root / "state"), "--json"]
+            )
+            self.assertEqual(list_exit_code, 0)
+            self.assertTrue(json.loads(list_output)["sessions"])
+
+            destroy_exit_code, destroy_output = _run_cli(
+                [
+                    "session",
+                    "destroy",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "temporary-work",
+                    "--json",
+                ]
+            )
+            self.assertEqual(destroy_exit_code, 0)
+            self.assertTrue(json.loads(destroy_output)["destroyed"])
+            self.assertFalse(workspace_path.exists())
+
+            status_exit_code, status_output = _run_cli(
+                [
+                    "session",
+                    "status",
+                    "--state-dir",
+                    str(root / "state"),
+                    "temporary-work",
+                    "--json",
+                ]
+            )
+            self.assertEqual(status_exit_code, 0)
+            self.assertEqual(json.loads(status_output)["session"]["state"], "destroyed")
 
     def test_codex_prepare_json_outputs_session_metadata(self) -> None:
         with TemporaryDirectory() as tmp:
@@ -709,6 +1014,30 @@ def _write_fake_docker(path: Path, *, exit_code: int) -> Path:
         "done\n"
         "printf 'fake docker\\n' > \"$artifacts/result.txt\"\n"
         f"exit {exit_code}\n",
+        encoding="utf-8",
+    )
+    path.chmod(0o755)
+    return path
+
+
+def _write_fake_docker_workspace_writer(path: Path) -> Path:
+    path.write_text(
+        "#!/bin/sh\n"
+        "work=''\n"
+        "artifacts=''\n"
+        "while [ \"$#\" -gt 0 ]; do\n"
+        "  if [ \"$1\" = '-v' ]; then\n"
+        "    shift\n"
+        "    case \"$1\" in\n"
+        "      *:/agentos/work) work=${1%:/agentos/work} ;;\n"
+        "      *:/agentos/artifacts) artifacts=${1%:/agentos/artifacts} ;;\n"
+        "    esac\n"
+        "  fi\n"
+        "  shift\n"
+        "done\n"
+        "printf 'docker updated\\n' >> \"$work/README.md\"\n"
+        "printf 'ok\\n' > \"$artifacts/result.txt\"\n"
+        "exit 0\n",
         encoding="utf-8",
     )
     path.chmod(0o755)

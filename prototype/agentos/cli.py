@@ -27,6 +27,14 @@ from .core.review import (
     summarize_review_package,
 )
 from .core.session_ops import approve_review_package, sync_approved_review
+from .core.work_sessions import (
+    create_work_session,
+    destroy_work_session,
+    docker_exec_work_session,
+    exec_work_session,
+    review_work_session,
+    status_work_session,
+)
 from .demos.demo import run_code_fix_demo
 from .demos.document_demo import run_markdown_document_demo
 from .demos.rehearsal import run_rehearsal
@@ -112,6 +120,54 @@ def _main_impl(argv: list[str]) -> int:
     sessions = subparsers.add_parser("sessions", help="List AgentOS sessions")
     add_state_dir_arg(sessions, default=DEFAULT_STATE_DIR)
     add_json_arg(sessions, noun="sessions")
+    session = subparsers.add_parser("session", help="Create and operate persistent AgentOS workspace sessions")
+    session_subparsers = session.add_subparsers(dest="session_command", required=True)
+    session_list = session_subparsers.add_parser("list", help="List persistent AgentOS workspace sessions")
+    add_state_dir_arg(session_list, default=DEFAULT_STATE_DIR)
+    add_json_arg(session_list, noun="session list output")
+    session_create = session_subparsers.add_parser("create", help="Create a long-lived workspace session")
+    add_state_dir_arg(session_create, default=DEFAULT_STATE_DIR)
+    add_output_dir_arg(session_create, default=DEFAULT_OUTPUT_DIR)
+    session_create.add_argument("--input", required=True, type=Path, help="Project directory to copy into the session")
+    session_create.add_argument("--name", help="Optional human-friendly session name")
+    add_json_arg(session_create, noun="session creation output")
+    session_exec = session_subparsers.add_parser("exec", help="Run a command inside an existing workspace session")
+    add_state_dir_arg(session_exec, default=DEFAULT_STATE_DIR)
+    add_output_dir_arg(session_exec, default=DEFAULT_OUTPUT_DIR)
+    session_exec.add_argument("session_ref", help="Session id, id prefix, or name")
+    session_exec.add_argument("--cwd", help="Workspace-relative working directory")
+    session_exec.add_argument("workspace_command", nargs=argparse.REMAINDER, help="Command to run after --")
+    add_json_arg(session_exec, noun="session exec output")
+    session_docker_exec = session_subparsers.add_parser(
+        "docker-exec",
+        help="Run a Docker sandbox command against an existing workspace session",
+    )
+    add_state_dir_arg(session_docker_exec, default=DEFAULT_STATE_DIR)
+    add_output_dir_arg(session_docker_exec, default=DEFAULT_OUTPUT_DIR)
+    session_docker_exec.add_argument("session_ref", help="Session id, id prefix, or name")
+    session_docker_exec.add_argument("--image", default=DEFAULT_IMAGE, help="Docker image to run")
+    session_docker_exec.add_argument("--docker-bin", default="docker", help="Docker executable name or path")
+    session_docker_exec.add_argument(
+        "--docker-sudo",
+        action="store_true",
+        help="Run Docker through sudo for shells that do not have docker-group access yet",
+    )
+    session_docker_exec.add_argument("sandbox_command", nargs=argparse.REMAINDER, help="Command to run after --")
+    add_json_arg(session_docker_exec, noun="session Docker exec output")
+    session_status = session_subparsers.add_parser("status", help="Inspect one persistent session or list sessions")
+    add_state_dir_arg(session_status, default=DEFAULT_STATE_DIR)
+    session_status.add_argument("session_ref", nargs="?", help="Session id, id prefix, or name")
+    add_json_arg(session_status, noun="session status output")
+    session_review = session_subparsers.add_parser("review", help="Build a review package for a persistent session")
+    add_state_dir_arg(session_review, default=DEFAULT_STATE_DIR)
+    add_output_dir_arg(session_review, default=DEFAULT_OUTPUT_DIR)
+    session_review.add_argument("session_ref", help="Session id, id prefix, or name")
+    add_json_arg(session_review, noun="session review output")
+    session_destroy = session_subparsers.add_parser("destroy", help="Destroy a persistent session workspace")
+    add_state_dir_arg(session_destroy, default=DEFAULT_STATE_DIR)
+    add_output_dir_arg(session_destroy, default=DEFAULT_OUTPUT_DIR)
+    session_destroy.add_argument("session_ref", help="Session id, id prefix, or name")
+    add_json_arg(session_destroy, noun="session destroy output")
     reviews = subparsers.add_parser("reviews", help="List review packages")
     add_state_dir_arg(reviews, default=DEFAULT_STATE_DIR)
     reviews.add_argument(
@@ -345,6 +401,121 @@ def _main_impl(argv: list[str]) -> int:
         print(render_inspection(data, as_json=args.json))
         return 0
 
+    if args.command == "session":
+        if args.session_command == "list":
+            data = status_work_session(state_dir=args.state_dir)
+            print(render_inspection(data, as_json=args.json))
+            return 0
+        if args.session_command == "create":
+            result = create_work_session(
+                state_dir=args.state_dir,
+                output_dir=args.output_dir,
+                input_path=args.input,
+                name=args.name,
+            )
+            if args.json:
+                _print_json(result.to_dict())
+                return 0
+            print(f"session: {result.session_id}")
+            print(f"name: {result.name}")
+            print(f"workspace_path: {result.workspace_path}")
+            print(f"original_path: {result.original_path}")
+            print(f"task_manifest_artifact: {result.task_manifest_artifact}")
+            return 0
+        if args.session_command == "exec":
+            workspace_command = _command_after_double_dash(
+                _extract_remainder_options(args.workspace_command, args, value_options={"--cwd": "cwd"}),
+                parser,
+                "session exec",
+            )
+            result = exec_work_session(
+                state_dir=args.state_dir,
+                output_dir=args.output_dir,
+                session_ref=args.session_ref,
+                command=workspace_command,
+                cwd=args.cwd,
+            )
+            if args.json:
+                _print_json(result.to_dict())
+                return result.exit_code
+            print(f"session: {result.session_id}")
+            print(f"tool_call: {result.tool_call_id}")
+            print(f"cwd: {result.cwd}")
+            print(f"exit_code: {result.exit_code}")
+            if result.stdout_tail:
+                print("stdout:")
+                print(result.stdout_tail, end="" if result.stdout_tail.endswith("\n") else "\n")
+            if result.stderr_tail:
+                print("stderr:")
+                print(result.stderr_tail, end="" if result.stderr_tail.endswith("\n") else "\n")
+            return result.exit_code
+        if args.session_command == "docker-exec":
+            sandbox_command = _command_after_double_dash(
+                _extract_remainder_options(
+                    args.sandbox_command,
+                    args,
+                    value_options={"--image": "image", "--docker-bin": "docker_bin"},
+                    bool_options={"--docker-sudo": "docker_sudo"},
+                ),
+                parser,
+                "session docker-exec",
+            )
+            result = docker_exec_work_session(
+                state_dir=args.state_dir,
+                output_dir=args.output_dir,
+                session_ref=args.session_ref,
+                command=sandbox_command,
+                image=args.image,
+                docker_bin=args.docker_bin,
+                use_sudo=args.docker_sudo,
+            )
+            if args.json:
+                _print_json(result.to_dict())
+                return result.exit_code
+            print(f"session: {result.session_id}")
+            print(f"tool_call: {result.tool_call_id}")
+            print(f"exit_code: {result.exit_code}")
+            print(f"policy_status: {result.policy_status}")
+            print(f"image_provenance_status: {result.image_provenance_status}")
+            print(f"pinned_image_ref: {result.pinned_image_ref}")
+            print(f"command_artifact: {result.command_artifact}")
+            return result.exit_code
+        if args.session_command == "status":
+            data = status_work_session(state_dir=args.state_dir, session_ref=args.session_ref)
+            print(render_inspection(data, as_json=args.json))
+            return 0
+        if args.session_command == "review":
+            result = review_work_session(
+                state_dir=args.state_dir,
+                output_dir=args.output_dir,
+                session_ref=args.session_ref,
+            )
+            if args.json:
+                _print_json(result.to_dict())
+                return 0
+            print(f"session: {result.session_id}")
+            print(f"validation_status: {result.validation_status}")
+            print(f"changed_files: {len(result.changed_files)}")
+            for path in result.changed_files:
+                print(f"- {path}")
+            print(f"report_artifact: {result.report_artifact}")
+            print(f"review_package_artifact: {result.review_package_artifact}")
+            return 0
+        if args.session_command == "destroy":
+            result = destroy_work_session(
+                state_dir=args.state_dir,
+                output_dir=args.output_dir,
+                session_ref=args.session_ref,
+            )
+            if args.json:
+                _print_json(result.to_dict())
+                return 0
+            print(f"session: {result.session_id}")
+            print(f"session_dir: {result.session_dir}")
+            print(f"workspace_path: {result.workspace_path}")
+            print(f"destroyed: {result.destroyed}")
+            return 0
+
     if args.command == "reviews":
         items = list_review_packages(args.state_dir, limit=args.limit)
         if args.json:
@@ -554,6 +725,49 @@ def _review_package_arg(args: argparse.Namespace, parser: argparse.ArgumentParse
         return latest_review_package_path(args.state_dir)
     parser.error(f"{args.command} requires review_package or --latest")
     raise AssertionError("parser.error should exit")
+
+
+def _command_after_double_dash(command: list[str], parser: argparse.ArgumentParser, command_name: str) -> list[str]:
+    if command and command[0] == "--":
+        command = command[1:]
+    if not command:
+        parser.error(f"{command_name} requires a command after --")
+    return command
+
+
+def _extract_remainder_options(
+    command: list[str],
+    args: argparse.Namespace,
+    *,
+    value_options: dict[str, str] | None = None,
+    bool_options: dict[str, str] | None = None,
+) -> list[str]:
+    value_options = value_options or {}
+    bool_options = bool_options or {}
+    normalized: list[str] = []
+    index = 0
+    while index < len(command):
+        item = command[index]
+        if item == "--":
+            normalized.extend(command[index:])
+            break
+        if item == "--json":
+            args.json = True
+            index += 1
+            continue
+        if item in value_options:
+            if index + 1 >= len(command):
+                raise ValueError(f"{item} requires a value")
+            setattr(args, value_options[item], command[index + 1])
+            index += 2
+            continue
+        if item in bool_options:
+            setattr(args, bool_options[item], True)
+            index += 1
+            continue
+        normalized.extend(command[index:])
+        break
+    return normalized
 
 
 def _render_cli_error(exc: Exception, *, as_json: bool) -> int:

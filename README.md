@@ -1,26 +1,27 @@
 # AgentOS
 
-AgentOS is a plugin-style AI sandbox runtime for existing AI agents.
+AgentOS is a plugin-style safe workspace runtime for existing AI agents.
 
-The project is built around one rule: an AI agent may work inside an
-independent task environment, but the user's real project or computer changes
-only after an explicit approval step.
+The project is built around one rule: an AI agent may create, edit, test, and
+accumulate work inside an independent workspace session, but the user's real
+project or computer changes only after an explicit approval step.
 
 The core idea is simple:
 
 ```text
-Session -> Tool Call -> Artifact -> Preview/Diff -> Approval -> Sync -> Destroy
+Workspace Session -> Tool Calls -> Artifacts -> Preview/Diff -> Approval -> Sync
 ```
 
-AI agents should be able to experiment inside a disposable task workspace, while
+AI agents should be able to keep working inside a safe project workspace, while
 the host environment changes only after human review and approval.
 
 ## Current Direction
 
 AgentOS is not the primary AI brain and it is not mainly a tool-plugin manager.
 Codex CLI, Claude Code, Antigravity, Jarvis/OpenClaw, or another external agent
-does the thinking. AgentOS provides the work environment, lifecycle boundary,
-review package, approval gate, sync, and cleanup.
+does the thinking. AgentOS provides the safe work environment, persistent
+workspace session, lifecycle boundary, review package, approval gate, sync, and
+cleanup.
 
 First integration target: Codex CLI.
 
@@ -110,8 +111,8 @@ Without installation, the prototype still works with
 `PYTHONPATH=prototype python3 -m agentos ...` from the repo root.
 
 Add `--json` to `run-demo`, `run-doc-demo`, `rehearse`, `inspect`,
-`review`, `verify-review`, `run`, `codex`, `codex-smoke`, or `docker-run` when another tool
-should consume the result.
+`review`, `verify-review`, `run`, `codex`, `codex-smoke`, `docker-run`, or `session`
+subcommands when another tool should consume the result.
 
 Run the exhibition rehearsal path:
 
@@ -138,6 +139,42 @@ agentos sessions
 agentos reviews
 agentos inspect --json
 ```
+
+## Persistent Sessions
+
+Use `agentos session` when an external agent should keep working inside the
+same copied project workspace across multiple commands instead of creating a
+fresh task session every run:
+
+```bash
+agentos session create \
+  --input ../some-project \
+  --name work1 \
+  --json
+
+agentos session exec work1 --json -- python3 -m pytest
+
+agentos session docker-exec work1 \
+  --image agentos-base:0.1 \
+  --json \
+  -- sh -c 'cat README.md'
+
+agentos session review work1 --json
+agentos review --latest
+agentos diff --latest
+agentos approve --latest --scope sync_selected:README.md
+agentos sync --latest --target ../some-project --dry-run
+agentos sync --latest --target ../some-project
+```
+
+The real project is still not modified during `session exec`,
+`session docker-exec`, or `session review`. Only `agentos sync` copies approved
+changed files back to the explicit target directory.
+
+For Codex or another external coding agent, use
+`docs/codex-plugin-instructions.md` as the operating contract: the agent works
+inside the AgentOS session workspace, creates a review package, and waits for
+explicit approval before sync.
 
 ## Verify Review Package
 

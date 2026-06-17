@@ -28,6 +28,7 @@ class StateStore:
                 """
                 create table if not exists sessions (
                     session_id text primary key,
+                    name text,
                     created_at text not null,
                     destroyed_at text,
                     state text not null,
@@ -74,12 +75,13 @@ class StateStore:
                 );
                 """
             )
+            _ensure_column(conn, table="sessions", column="name", definition="text")
 
-    def create_session(self, *, session_id: str, created_at: str, session_dir: Path) -> None:
+    def create_session(self, *, session_id: str, created_at: str, session_dir: Path, name: str | None = None) -> None:
         with self.connect() as conn:
             conn.execute(
-                "insert into sessions(session_id, created_at, state, session_dir) values (?, ?, ?, ?)",
-                (session_id, created_at, "created", str(session_dir)),
+                "insert into sessions(session_id, name, created_at, state, session_dir) values (?, ?, ?, ?, ?)",
+                (session_id, name, created_at, "created", str(session_dir)),
             )
 
     def mark_input_imported(self, *, session_id: str, input_path: Path, workspace_path: Path) -> None:
@@ -188,3 +190,9 @@ class StateStore:
                 "update sessions set state = ? where session_id = ?",
                 (state, session_id),
             )
+
+
+def _ensure_column(conn: sqlite3.Connection, *, table: str, column: str, definition: str) -> None:
+    columns = {row[1] for row in conn.execute(f"pragma table_info({table})").fetchall()}
+    if column not in columns:
+        conn.execute(f"alter table {table} add column {column} {definition}")
