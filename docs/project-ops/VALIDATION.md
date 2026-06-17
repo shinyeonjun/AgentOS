@@ -1029,3 +1029,55 @@ Observed result:
 - `agentos run` creates a review-ready Codex task session using the same worker contract as `agentos codex`.
 - `agentos run --json` includes next review commands for `review`, `diff`, `verify-review`, `approve`, and dry-run `sync`.
 - Default WSL smoke path passed with rehearsal `bc92e405eadf`.
+
+## 2026-06-17 Real Codex Sample E2E Validation
+
+Commands run against a disposable sample project under `/tmp/agentos-real-e2e-sample`:
+
+```bash
+PYTHONPATH=prototype python3 -m agentos run \
+  --state-dir /tmp/agentos-real-e2e-sample/state \
+  --output-dir /tmp/agentos-real-e2e-sample/output \
+  --input /tmp/agentos-real-e2e-sample/source \
+  --task 'Update README.md by adding a concise Usage section for running python3 app.py. Only edit README.md.' \
+  --execute \
+  --json
+PYTHONPATH=prototype python3 -m agentos review --state-dir /tmp/agentos-real-e2e-sample/state --latest
+PYTHONPATH=prototype python3 -m agentos diff --state-dir /tmp/agentos-real-e2e-sample/state --latest
+PYTHONPATH=prototype python3 -m agentos verify-review --state-dir /tmp/agentos-real-e2e-sample/state --latest --json
+AGENTOS_APPROVAL_KEY=e2e-secret AGENTOS_APPROVAL_KEY_ID=e2e PYTHONPATH=prototype python3 -m agentos approve \
+  --state-dir /tmp/agentos-real-e2e-sample/state \
+  --output-dir /tmp/agentos-real-e2e-sample/output \
+  --latest \
+  --scope sync_selected:README.md \
+  --approver e2e-human \
+  --json
+AGENTOS_APPROVAL_KEY=e2e-secret PYTHONPATH=prototype python3 -m agentos sync \
+  --state-dir /tmp/agentos-real-e2e-sample/state \
+  --output-dir /tmp/agentos-real-e2e-sample/output \
+  --latest \
+  --target /tmp/agentos-real-e2e-sample/target \
+  --dry-run \
+  --require-clean-git \
+  --require-signed-approval \
+  --json
+AGENTOS_APPROVAL_KEY=e2e-secret PYTHONPATH=prototype python3 -m agentos sync \
+  --state-dir /tmp/agentos-real-e2e-sample/state \
+  --output-dir /tmp/agentos-real-e2e-sample/output \
+  --latest \
+  --target /tmp/agentos-real-e2e-sample/target \
+  --require-clean-git \
+  --require-signed-approval \
+  --json
+```
+
+Observed result:
+
+- Real Codex session `3d684ec7aa52` completed with exit code 0.
+- Codex edited only `README.md`.
+- `agentos review --latest` showed validation `passed` and scopes for `README.md`.
+- `agentos diff --latest` showed the new Usage section.
+- `agentos verify-review --latest --json` passed artifact integrity with the expected unsigned-manifest warning.
+- Signed approval for `sync_selected:README.md` produced `approval-record.json`.
+- Dry-run sync reported `copied_paths: ["README.md"]`, `git_status: clean`, and `approval_verification_status: passed` without changing the target.
+- Actual sync copied only `README.md`; `app.py` stayed unchanged and target git status became `M README.md`.

@@ -90,6 +90,7 @@ core loop:
 - Docker image `/agentos/capabilities.json`
 - Docker run `image-capabilities.json` artifact
 - Docker run `image-provenance.json` artifact
+- real Codex sample E2E validated through `agentos run -> review -> diff -> verify -> approve -> sync`
 - Docker runner pins execution to a repo digest or local image id when available
 - JSON output for `run-demo`, `run-doc-demo`, `rehearse`, `codex`, and `docker-run`
 - human-friendly and JSON output for `agentos review`
