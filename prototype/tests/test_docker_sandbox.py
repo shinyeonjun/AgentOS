@@ -4,6 +4,7 @@ import json
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 from agentos.sandbox.docker_sandbox import DEFAULT_IMAGE, build_docker_run_command, run_docker_task
 from agentos.sandbox.sandbox_policy import (
@@ -46,6 +47,19 @@ class DockerSandboxTests(unittest.TestCase):
         )
 
         self.assertEqual(command[:2], ["sudo", "docker"])
+
+    def test_build_docker_run_command_omits_user_when_uid_is_unavailable(self) -> None:
+        with (
+            patch("agentos.sandbox.docker_sandbox.os.getuid", None),
+            patch("agentos.sandbox.docker_sandbox.os.getgid", None),
+        ):
+            command = build_docker_run_command(
+                workspace_dir=Path("/tmp/work"),
+                artifact_dir=Path("/tmp/artifacts"),
+                command=["true"],
+            )
+
+        self.assertNotIn("--user", command)
 
     def test_build_docker_run_command_rejects_unsafe_network(self) -> None:
         with self.assertRaises(ValueError):

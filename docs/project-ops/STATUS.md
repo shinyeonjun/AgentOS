@@ -86,6 +86,7 @@ core loop:
 - `agentos doctor` preflight checks for Linux/WSL, Python, Docker, and workspace path
 - native Windows `agentos doctor` warning path for experimental non-Docker CLI usage
 - sync dry-run validates live workspace sources before reporting approved paths
+- Docker run command omits POSIX `--user uid:gid` on native Windows
 - demo validation commands use the current Python executable instead of hardcoded `python3`
 - base/code/document capability catalog
 - task and review package capability details

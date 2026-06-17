@@ -86,8 +86,7 @@ def build_docker_run_command(
         "--read-only",
         "--tmpfs",
         DEFAULT_TMPFS,
-        "--user",
-        f"{os.getuid()}:{os.getgid()}",
+        *_docker_user_args(),
         "-v",
         f"{workspace_dir}:/agentos/work",
         "-v",
@@ -97,6 +96,14 @@ def build_docker_run_command(
         image,
         *command,
     ]
+
+
+def _docker_user_args() -> list[str]:
+    getuid = getattr(os, "getuid", None)
+    getgid = getattr(os, "getgid", None)
+    if not callable(getuid) or not callable(getgid):
+        return []
+    return ["--user", f"{getuid()}:{getgid()}"]
 
 
 def run_docker_task(

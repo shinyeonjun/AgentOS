@@ -1142,3 +1142,22 @@ Observed result:
 - Compileall passed.
 - `agentos sync --dry-run` now validates that approved source files still exist.
 - Sync from a destroyed demo session now fails before dry-run with a message recommending `--keep-session` or a live worker session.
+
+## 2026-06-17 Native Windows Docker User Flag Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest prototype.tests.test_docker_sandbox -v
+/home/ubuntu/.openclaw/workspace/scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+```
+
+Observed result:
+
+- Docker sandbox focused tests passed: 8 tests.
+- Full unit suite passed: 67 tests.
+- Ruff passed.
+- Compileall passed.
+- Docker command building now omits `--user uid:gid` when the host Python runtime does not expose `os.getuid` and `os.getgid`, such as native Windows.
