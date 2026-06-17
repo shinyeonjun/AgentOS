@@ -34,7 +34,7 @@ class PluginSpecTests(unittest.TestCase):
         mcp_config = json.loads((plugin_root / ".mcp.json").read_text(encoding="utf-8"))
         marketplace = json.loads((repo_root / ".agents" / "plugins" / "marketplace.json").read_text(encoding="utf-8"))
 
-        self.assertEqual(manifest["version"], "0.3.7")
+        self.assertEqual(manifest["version"], "0.3.8")
         self.assertEqual(manifest["mcpServers"], "./.mcp.json")
         self.assertEqual(manifest["skills"], "./skills/")
         self.assertIn("Before any file edit", manifest["interface"]["defaultPrompt"][0])
@@ -47,6 +47,17 @@ class PluginSpecTests(unittest.TestCase):
         self.assertEqual(server["command"], "node")
         self.assertEqual(server["args"], ["./agentos_mcp_launcher.cjs"])
         self.assertTrue((plugin_root / "runtime" / "agentos" / "mcp_server.py").exists())
+
+    def test_codex_plugin_launcher_handles_windows_python_aliases(self) -> None:
+        repo_root = Path(__file__).resolve().parents[2]
+        launcher = (repo_root / "plugins" / "agentos-workspace" / "agentos_mcp_launcher.cjs").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn('process.platform === "win32"', launcher)
+        self.assertLess(launcher.index('command: "py"'), launcher.index('const posixCandidates'))
+        self.assertIn("exited with code", launcher)
+        self.assertIn("tryNext();", launcher)
 
 
 if __name__ == "__main__":

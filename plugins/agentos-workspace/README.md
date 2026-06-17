@@ -54,7 +54,8 @@ agentos prepare --json
 ```
 
 If the bundled MCP server cannot start, check that Node and Python 3 are
-available to Codex. The launcher tries `python`, `python3`, then `py -3`. The
+available to Codex. The launcher tries Windows `py -3` first on Windows and
+`python3` first on POSIX, then falls through to the other Python candidates. The
 skill can still fall back to an installed `agentos` CLI when present.
 
 When adding this repository as a Git marketplace, leave the sparse path empty.
