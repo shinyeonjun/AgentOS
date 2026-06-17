@@ -85,6 +85,7 @@ core loop:
 - Python-native unified diff apply for approved patch sync
 - `agentos doctor` preflight checks for Linux/WSL, Python, Docker, and workspace path
 - native Windows `agentos doctor` warning path for experimental non-Docker CLI usage
+- sync dry-run validates live workspace sources before reporting approved paths
 - demo validation commands use the current Python executable instead of hardcoded `python3`
 - base/code/document capability catalog
 - task and review package capability details

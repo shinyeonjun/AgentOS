@@ -36,6 +36,44 @@ class AgentOSCliTests(unittest.TestCase):
             self.assertTrue(data["destroyed"])
             self.assertTrue(data["approval_record_artifact"].endswith("approval-record.json"))
 
+    def test_sync_destroyed_demo_session_fails_before_dry_run(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            run_exit_code, run_output = _run_cli(
+                [
+                    "run-demo",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--json",
+                ]
+            )
+            self.assertEqual(run_exit_code, 0)
+            self.assertTrue(json.loads(run_output)["destroyed"])
+
+            target = root / "target"
+            target.mkdir()
+            sync_exit_code, sync_output = _run_cli(
+                [
+                    "sync",
+                    "--latest",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--target",
+                    str(target),
+                    "--dry-run",
+                    "--json",
+                ]
+            )
+
+            self.assertEqual(sync_exit_code, 1)
+            data = json.loads(sync_output)
+            self.assertEqual(data["error"]["type"], "RuntimeError")
+            self.assertIn("--keep-session", data["error"]["message"])
+
     def test_rehearse_json_outputs_steps(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)

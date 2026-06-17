@@ -1122,3 +1122,23 @@ Observed result:
 - Native Windows `agentos doctor` now returns a warning instead of a hard failure.
 - Native Windows support is documented as experimental for non-Docker CLI commands.
 - `agentos doctor --workspace "$PWD"` now warns when `$PWD` is passed literally from a shell that does not expand it.
+
+## 2026-06-17 Destroyed Session Sync Guard Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest prototype.tests.test_cli -v
+/home/ubuntu/.openclaw/workspace/scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+```
+
+Observed result:
+
+- CLI focused tests passed: 19 tests.
+- Full unit suite passed: 66 tests.
+- Ruff passed.
+- Compileall passed.
+- `agentos sync --dry-run` now validates that approved source files still exist.
+- Sync from a destroyed demo session now fails before dry-run with a message recommending `--keep-session` or a live worker session.

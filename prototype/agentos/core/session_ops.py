@@ -106,6 +106,8 @@ def sync_approved_review(
         raise RuntimeError(f"approval record verification failed: {approval_path}")
     scope = approval_scope_from_path(approval_path)
     paths = _sync_paths(scope=scope, review_package=summary.package)
+    workspace_root = Path(session.workspace_dir)
+    _validate_sync_sources(workspace_root=workspace_root, relative_paths=paths)
     git_status = check_clean_git(target_dir) if require_clean_git else "not_checked"
     if dry_run:
         return SyncCliResult(
@@ -120,7 +122,7 @@ def sync_approved_review(
     runtime = AgentOSRuntime(state_dir=state_dir, output_dir=output_dir)
     result = runtime.sync_approved_selected(
         session,
-        workspace_root=Path(session.workspace_dir),
+        workspace_root=workspace_root,
         relative_paths=paths,
         target_dir=target_dir,
     )
@@ -213,6 +215,23 @@ def _sync_paths(*, scope: dict[str, Any], review_package: dict[str, Any]) -> lis
     if not paths:
         raise ValueError("approved scope has no file paths to sync")
     return paths
+
+
+def _validate_sync_sources(*, workspace_root: Path, relative_paths: list[str]) -> None:
+    if not workspace_root.exists():
+        raise RuntimeError(
+            f"session workspace is unavailable for sync: {workspace_root}. "
+            "Rerun the task with --keep-session or sync from a live worker session."
+        )
+    root_resolved = workspace_root.resolve()
+    for relative_path in relative_paths:
+        relative = Path(relative_path)
+        if relative.is_absolute() or ".." in relative.parts:
+            raise ValueError(f"selected sync path must stay inside workspace: {relative_path}")
+        source = (root_resolved / relative).resolve()
+        source.relative_to(root_resolved)
+        if not source.exists():
+            raise FileNotFoundError(f"selected sync source does not exist: {relative_path}")
 
 
 def _latest_artifact_path(*, state_dir: Path, session_id: str, artifact_name: str) -> Path:
