@@ -1,22 +1,22 @@
 # AgentOS Workspace Codex Plugin
 
-This local Codex plugin teaches Codex to use AgentOS as a safe workspace
-runtime for coding tasks.
+This Codex plugin teaches Codex to use AgentOS as a safe workspace runtime for
+coding tasks.
 
 The plugin rule is simple: Codex should work inside an AgentOS session
 workspace, produce a review package, and wait for explicit approval before any
 sync back to the host project.
 
-## Install From This Repository
+## Install From Git
 
-This repository includes a local marketplace file at:
+This repository includes a marketplace file at:
 
 ```text
 .agents/plugins/marketplace.json
 ```
 
-From a Codex app or CLI environment that supports local marketplaces, add or
-open this marketplace, then install `agentos-workspace`.
+Add the AgentOS repository as a Codex plugin marketplace, then install
+`agentos-workspace`.
 
 When adding this repository as a Git marketplace, leave the sparse path empty.
 The marketplace file lives under `.agents/plugins/`, but the plugin package
@@ -36,8 +36,12 @@ CLI equivalent:
 
 ```bash
 codex plugin marketplace add https://github.com/shinyeonjun/AgentOS --ref main
-codex plugin add agentos-workspace@personal
+codex
+/plugins
 ```
+
+In the plugin browser, open the `AgentOS` marketplace and install
+`agentos-workspace`.
 
 ## Main Skill
 

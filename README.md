@@ -185,6 +185,18 @@ This repository also includes a local Codex plugin scaffold at
 `plugins/agentos-workspace/`. Its marketplace entry lives in
 `.agents/plugins/marketplace.json`.
 
+Install it in Codex by adding this repository as a plugin marketplace:
+
+```bash
+codex plugin marketplace add https://github.com/shinyeonjun/AgentOS --ref main
+codex
+/plugins
+```
+
+Then open the `AgentOS` marketplace and install `agentos-workspace`. Leave the
+sparse path empty when adding this repository; the marketplace file and plugin
+package live in different top-level directories.
+
 ## Verify Review Package
 
 Review packages include an `artifact-manifest.json` reference. Verify that the
