@@ -197,6 +197,31 @@ def render_review_summary(summary: ReviewSummary) -> str:
     return "\n".join(lines)
 
 
+def render_review_diffs(summary: ReviewSummary) -> str:
+    diff_sections = []
+    for change in summary.changed_files:
+        diff_ref = change.get("diff_ref")
+        if not diff_ref:
+            continue
+        diff_path = _resolve_artifact_ref(summary.review_package_path.parent, diff_ref)
+        if not diff_path.exists():
+            diff_sections.append(f"## {change.get('path', '<unknown>')}\nmissing diff artifact: {diff_ref}")
+            continue
+        diff_sections.append(
+            "\n".join(
+                [
+                    f"## {change.get('path', '<unknown>')}",
+                    f"diff: {diff_ref}",
+                    "",
+                    diff_path.read_text(encoding="utf-8").rstrip(),
+                ]
+            )
+        )
+    if not diff_sections:
+        return "No diff artifacts recorded for this review package."
+    return "\n\n".join(diff_sections)
+
+
 def _render_changed_files(changed_files: list[dict[str, Any]]) -> list[str]:
     if not changed_files:
         return ["- none"]
@@ -276,3 +301,12 @@ def _check_detail(check: dict[str, Any]) -> str:
         if key in check and check[key] is not None:
             parts.append(f"{key}={check[key]}")
     return f" ({', '.join(parts)})" if parts else ""
+
+
+def _resolve_artifact_ref(artifact_dir: Path, ref: str) -> Path:
+    if not ref.startswith("artifact://"):
+        raise ValueError(f"unsupported artifact ref: {ref}")
+    _session_id, _, artifact_name = ref.removeprefix("artifact://").partition("/")
+    if not artifact_name or "/" in artifact_name or artifact_name in {".", ".."}:
+        raise ValueError(f"unsafe artifact ref: {ref}")
+    return artifact_dir / artifact_name

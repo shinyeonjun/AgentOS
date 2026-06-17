@@ -934,3 +934,28 @@ Observed result:
 - `agentos sync --dry-run` returns approved paths without changing the target.
 - `agentos sync --require-clean-git` rejects a dirty git target.
 - Default WSL smoke path passed with rehearsal `c5feaef2eda9`.
+
+## 2026-06-17 Diff Preview and Sync Verification Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests -p 'test_cli.py' -v
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests
+/home/ubuntu/.openclaw/workspace/scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+cd /mnt/usb/projects/agentos
+PYTHONPATH=prototype python3 -m agentos diff --latest
+scripts/wsl-smoke.sh
+```
+
+Observed result:
+
+- CLI focused tests passed: 17 tests.
+- Full unit suite passed: 61 tests.
+- Ruff passed.
+- Compileall passed.
+- `agentos diff --latest` rendered recorded diff artifacts for the latest review package.
+- `agentos sync` verifies review package integrity before copying approved paths.
+- Sync JSON and text output now include `review_verification_status`.
+- Default WSL smoke path passed with rehearsal `44a244dc1959`.

@@ -232,6 +232,28 @@ class AgentOSCliTests(unittest.TestCase):
             self.assertEqual(data["state"], "REVIEW_READY")
             self.assertEqual(data["validation_status"], "passed")
 
+    def test_diff_latest_outputs_diff_artifact(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            run_exit_code, _run_output = _run_cli(
+                [
+                    "run-demo",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--json",
+                ]
+            )
+            self.assertEqual(run_exit_code, 0)
+
+            exit_code, output = _run_cli(["diff", "--latest", "--state-dir", str(root / "state")])
+
+            self.assertEqual(exit_code, 0)
+            self.assertIn("calculator.py", output)
+            self.assertIn("---", output)
+            self.assertIn("+++", output)
+
     def test_sessions_and_reviews_json_list_state(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -353,6 +375,7 @@ class AgentOSCliTests(unittest.TestCase):
             dry_run_data = json.loads(dry_run_output)
             self.assertTrue(dry_run_data["dry_run"])
             self.assertEqual(dry_run_data["copied_paths"], ["README.md"])
+            self.assertEqual(dry_run_data["review_verification_status"], "warning")
             self.assertNotIn(SMOKE_LINE, (target_project / "README.md").read_text(encoding="utf-8"))
 
             sync_exit_code, sync_output = _run_cli(
@@ -372,6 +395,7 @@ class AgentOSCliTests(unittest.TestCase):
             self.assertEqual(sync_exit_code, 0)
             data = json.loads(sync_output)
             self.assertEqual(data["copied_paths"], ["README.md"])
+            self.assertEqual(data["review_verification_status"], "warning")
             self.assertIn(SMOKE_LINE, (target_project / "README.md").read_text(encoding="utf-8"))
             self.assertTrue((target_project / "KEEP.md").exists())
 

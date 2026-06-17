@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .integrity import verify_review_package
 from .review import latest_review_package_path, summarize_review_package
 from .runtime import AgentOSRuntime, Session
 
@@ -32,6 +33,7 @@ class SyncCliResult:
     copied_paths: tuple[str, ...]
     dry_run: bool = False
     git_status: str = "not_checked"
+    review_verification_status: str = "not_checked"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -40,6 +42,7 @@ class SyncCliResult:
             "copied_paths": list(self.copied_paths),
             "dry_run": self.dry_run,
             "git_status": self.git_status,
+            "review_verification_status": self.review_verification_status,
         }
 
 
@@ -53,6 +56,9 @@ def approve_review_package(
     approver: str = "human",
 ) -> ApprovalCliResult:
     review_path = _review_path(state_dir=state_dir, review_package_path=review_package_path, latest=latest)
+    verification = verify_review_package(review_path)
+    if not verification.passed:
+        raise RuntimeError(f"review package verification failed: {review_path}")
     summary = summarize_review_package(review_path)
     scope = _select_approval_scope(summary.package, scope_id=scope_id)
     runtime = AgentOSRuntime(state_dir=state_dir, output_dir=output_dir)
@@ -81,6 +87,9 @@ def sync_approved_review(
     require_clean_git: bool = False,
 ) -> SyncCliResult:
     review_path = _review_path(state_dir=state_dir, review_package_path=review_package_path, latest=latest)
+    verification = verify_review_package(review_path)
+    if not verification.passed:
+        raise RuntimeError(f"review package verification failed: {review_path}")
     summary = summarize_review_package(review_path)
     session = load_session(state_dir=state_dir, session_id=summary.session_id)
     scope = latest_approval_scope(state_dir=state_dir, session_id=summary.session_id)
@@ -93,6 +102,7 @@ def sync_approved_review(
             copied_paths=tuple(paths),
             dry_run=True,
             git_status=git_status,
+            review_verification_status=verification.status,
         )
     runtime = AgentOSRuntime(state_dir=state_dir, output_dir=output_dir)
     result = runtime.sync_approved_selected(
@@ -107,6 +117,7 @@ def sync_approved_review(
         copied_paths=result.copied_paths,
         dry_run=False,
         git_status=git_status,
+        review_verification_status=verification.status,
     )
 
 

@@ -14,6 +14,7 @@ from .core.review import (
     latest_review_package_path,
     list_review_packages,
     render_review_list,
+    render_review_diffs,
     render_review_summary,
     summarize_review_package,
 )
@@ -238,6 +239,24 @@ def _main_impl(argv: list[str]) -> int:
         "--json",
         action="store_true",
         help="Render review summary as JSON",
+    )
+    diff = subparsers.add_parser("diff", help="Render diff artifacts from a review package")
+    diff.add_argument(
+        "review_package",
+        nargs="?",
+        type=Path,
+        help="Path to a review_package.json artifact. Omit with --latest.",
+    )
+    diff.add_argument(
+        "--state-dir",
+        type=Path,
+        default=DEFAULT_STATE_DIR,
+        help="Persistent control-plane state directory for --latest",
+    )
+    diff.add_argument(
+        "--latest",
+        action="store_true",
+        help="Render diffs from the latest review_package.json recorded in --state-dir",
     )
     approve = subparsers.add_parser("approve", help="Approve a review package scope for sync")
     approve.add_argument(
@@ -591,6 +610,11 @@ def _main_impl(argv: list[str]) -> int:
             print(render_review_summary(result))
         return 0
 
+    if args.command == "diff":
+        result = summarize_review_package(_review_package_arg(args, parser))
+        print(render_review_diffs(result))
+        return 0
+
     if args.command == "approve":
         result = approve_review_package(
             state_dir=args.state_dir,
@@ -625,6 +649,7 @@ def _main_impl(argv: list[str]) -> int:
             print(f"target_dir: {result.target_dir}")
             print(f"dry_run: {result.dry_run}")
             print(f"git_status: {result.git_status}")
+            print(f"review_verification_status: {result.review_verification_status}")
             print(f"copied_paths: {len(result.copied_paths)}")
             for path in result.copied_paths:
                 print(f"- {path}")

@@ -146,6 +146,7 @@ Render a compact terminal review screen for demos and manual inspection:
 
 ```bash
 agentos review --latest
+agentos diff --latest
 ```
 
 The summary shows session metadata, changed files, validation checks, approval
@@ -165,7 +166,8 @@ agentos sync --latest --target ../some-project --require-clean-git
 
 `sync` copies only the paths allowed by the approval scope. It does not remove
 unrelated files from the target directory. Use `--dry-run` before copying, and
-use `--require-clean-git` when syncing into a git repository.
+use `--require-clean-git` when syncing into a git repository. Sync verifies the
+review package manifest before copying.
 
 ## Codex Prepare
 

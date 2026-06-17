@@ -123,6 +123,7 @@ Show the latest review package without copying artifact paths:
 agentos sessions
 agentos reviews
 agentos review --latest
+agentos diff --latest
 agentos verify-review --latest --json
 ```
 
