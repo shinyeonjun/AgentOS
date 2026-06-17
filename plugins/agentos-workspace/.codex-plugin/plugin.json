@@ -1,6 +1,6 @@
 {
   "name": "agentos-workspace",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Use AgentOS as a safe workspace runtime for AI coding tasks.",
   "author": {
     "name": "AgentOS"

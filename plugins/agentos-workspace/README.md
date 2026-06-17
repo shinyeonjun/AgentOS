@@ -59,6 +59,11 @@ codex
 In the plugin browser, open the `AgentOS` marketplace and install
 `agentos-workspace`.
 
+After installing or updating the plugin, start a new Codex conversation before
+testing AgentOS. Codex conversations may keep the MCP tool registry they had at
+startup, so an old conversation can read the updated plugin files while still
+missing `mcp__agentos.*` tools.
+
 ## Main Skill
 
 The skill lives at:
