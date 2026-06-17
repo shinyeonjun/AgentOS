@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -86,6 +87,27 @@ def summarize_review_package(review_package_path: Path) -> ReviewSummary:
     path = review_package_path.resolve()
     package = json.loads(path.read_text(encoding="utf-8"))
     return ReviewSummary(review_package_path=path, package=package)
+
+
+def latest_review_package_path(state_dir: Path) -> Path:
+    db_path = state_dir / "agentos.sqlite3"
+    if not db_path.exists():
+        raise FileNotFoundError(f"No AgentOS database found at {state_dir}")
+
+    with sqlite3.connect(db_path) as conn:
+        row = conn.execute(
+            """
+            select a.path
+            from artifacts a
+            join sessions s on s.session_id = a.session_id
+            where a.name = 'review_package.json'
+            order by a.created_at desc, s.created_at desc
+            limit 1
+            """
+        ).fetchone()
+    if row is None:
+        raise FileNotFoundError(f"No review_package.json artifacts found in {state_dir}")
+    return Path(row[0])
 
 
 def render_review_summary(summary: ReviewSummary) -> str:

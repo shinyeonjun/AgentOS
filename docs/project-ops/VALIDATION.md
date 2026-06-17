@@ -835,3 +835,31 @@ Observed result:
 - Default rehearsal `d7351cd61657` passed.
 - `agentos review` rendered a compact terminal summary for real-worker review package `3ee6f95913eb`.
 - Summary output includes session metadata, changed files, validation checks, approval scopes, risk notes, artifact digests, and integrity references.
+
+## 2026-06-17 Relative Path and Latest Review Flow Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests -p 'test_cli.py' -v
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests -p 'test_review.py' -v
+cd /mnt/usb/projects/agentos
+PYTHONPATH=prototype python3 -m agentos rehearse --docker-sudo --json
+PYTHONPATH=prototype python3 -m agentos review --latest
+PYTHONPATH=prototype python3 -m agentos verify-review --latest --json
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests
+/home/ubuntu/.openclaw/workspace/scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+```
+
+Observed result:
+
+- CLI focused tests passed: 13 tests.
+- Review focused tests passed: 2 tests.
+- Full unit suite passed: 57 tests.
+- Ruff passed.
+- Compileall passed.
+- Repo-root relative rehearsal `ec5fb63b6adc` passed with no explicit state/output paths.
+- Latest Docker review session `bcdf70689568` rendered through `agentos review --latest`.
+- `agentos verify-review --latest --json` passed integrity checks with only the expected unsigned-manifest warning.
+- Docker sandbox policy now resolves relative state/output paths before host mount validation, so relative CLI defaults still satisfy absolute Docker mount requirements.

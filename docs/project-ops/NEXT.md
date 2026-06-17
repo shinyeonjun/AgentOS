@@ -2,7 +2,7 @@
 
 ## Immediate Next Move
 
-Prepare for exhibition rehearsal polish and interactive review flow.
+Prepare for Windows/WSL rehearsal polish and interactive review flow.
 
 The first contract slice now exists:
 
@@ -41,13 +41,16 @@ The first contract slice now exists:
 - optional `agentos rehearse --include-real-worker` execution path
 - exhibition demo script at `docs/exhibition-demo-script.md`
 - `agentos review` terminal summary for review packages
+- repo-relative defaults for `.agentos-state` and `.agentos-output`
+- `agentos review --latest` and `agentos verify-review --latest`
 
-Next, make review selection/navigation easier without jumping straight to a web dashboard.
+Next, test the setup on an actual Windows laptop through WSL2 and only then
+decide whether a fuller TUI is worth it.
 
 ## Next 7 Actions
 
 1. Polish the exhibition demo path and presenter script with one clean command sequence.
-2. Consider an interactive review selector for recent sessions.
+2. Test the setup on the Windows laptop through WSL2 and Docker Desktop.
 3. Keep signed approval and scope enforcement covered by regression tests.
 4. Continue polishing CLI failure messages as new commands appear.
 5. Consider a minimal review dashboard only after the CLI demo is solid.

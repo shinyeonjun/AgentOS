@@ -201,6 +201,65 @@ class AgentOSCliTests(unittest.TestCase):
             self.assertTrue(data["changed_files"])
             self.assertTrue(data["approval_scopes"])
 
+    def test_review_latest_json_uses_state_dir(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            run_exit_code, _run_output = _run_cli(
+                [
+                    "run-demo",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--json",
+                ]
+            )
+            self.assertEqual(run_exit_code, 0)
+
+            exit_code, output = _run_cli(
+                [
+                    "review",
+                    "--latest",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--json",
+                ]
+            )
+
+            self.assertEqual(exit_code, 0)
+            data = json.loads(output)
+            self.assertEqual(data["state"], "REVIEW_READY")
+            self.assertEqual(data["validation_status"], "passed")
+
+    def test_verify_review_latest_json_uses_state_dir(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            run_exit_code, _run_output = _run_cli(
+                [
+                    "run-demo",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--json",
+                ]
+            )
+            self.assertEqual(run_exit_code, 0)
+
+            exit_code, output = _run_cli(
+                [
+                    "verify-review",
+                    "--latest",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--json",
+                ]
+            )
+
+            self.assertEqual(exit_code, 0)
+            data = json.loads(output)
+            self.assertEqual(data["status"], "warning")
+
     def test_codex_smoke_prepare_json_outputs_validation_status(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)

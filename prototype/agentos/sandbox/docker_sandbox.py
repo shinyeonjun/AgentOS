@@ -58,6 +58,8 @@ def build_docker_run_command(
     use_sudo: bool = False,
     network: str = "none",
 ) -> list[str]:
+    workspace_dir = workspace_dir.resolve()
+    artifact_dir = artifact_dir.resolve()
     policy = build_default_policy(
         image=image,
         network=network,
@@ -87,9 +89,9 @@ def build_docker_run_command(
         "--user",
         f"{os.getuid()}:{os.getgid()}",
         "-v",
-        f"{workspace_dir.resolve()}:/agentos/work",
+        f"{workspace_dir}:/agentos/work",
         "-v",
-        f"{artifact_dir.resolve()}:/agentos/artifacts",
+        f"{artifact_dir}:/agentos/artifacts",
         "-w",
         "/agentos/work",
         image,
@@ -107,6 +109,9 @@ def run_docker_task(
     docker_bin: str = "docker",
     use_sudo: bool = False,
 ) -> DockerRunResult:
+    state_dir = state_dir.resolve()
+    output_dir = output_dir.resolve()
+    input_path = input_path.resolve()
     _validate_docker_input_path(input_path)
     runtime = AgentOSRuntime(state_dir=state_dir, output_dir=output_dir)
     session = runtime.create_session()

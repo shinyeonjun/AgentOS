@@ -30,10 +30,7 @@ Show that AgentOS can:
 3. Run the deterministic rehearsal:
 
 ```bash
-PYTHONPATH=/mnt/usb/projects/agentos/prototype \
-python3 -m agentos rehearse \
-  --state-dir /mnt/usb/projects/agentos/.agentos-state \
-  --output-dir /mnt/usb/projects/agentos/.agentos-output \
+agentos rehearse \
   --docker-sudo \
   --json
 ```
@@ -45,37 +42,26 @@ python3 -m agentos rehearse \
 5. Show the review package summary:
 
 ```bash
-PYTHONPATH=/mnt/usb/projects/agentos/prototype \
-python3 -m agentos review \
-  /mnt/usb/projects/agentos/.agentos-state/artifacts/<session>/review_package.json
+agentos review --latest
 ```
 
 6. If deeper session history is needed, inspect the state:
 
 ```bash
-PYTHONPATH=/mnt/usb/projects/agentos/prototype \
-python3 -m agentos inspect \
-  --state-dir /mnt/usb/projects/agentos/.agentos-state \
-  --json
+agentos inspect --json
 ```
 
 7. Verify one review package:
 
 ```bash
-PYTHONPATH=/mnt/usb/projects/agentos/prototype \
-python3 -m agentos verify-review \
-  /mnt/usb/projects/agentos/.agentos-state/artifacts/<session>/review_package.json \
-  --json
+agentos verify-review --latest --json
 ```
 
 8. If Codex auth is available and token spend is acceptable, run the real worker
    rehearsal:
 
 ```bash
-PYTHONPATH=/mnt/usb/projects/agentos/prototype \
-python3 -m agentos rehearse \
-  --state-dir /mnt/usb/projects/agentos/.agentos-state \
-  --output-dir /mnt/usb/projects/agentos/.agentos-output \
+agentos rehearse \
   --docker-sudo \
   --include-real-worker \
   --json

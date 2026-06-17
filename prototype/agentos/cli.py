@@ -10,13 +10,16 @@ from typing import Any
 from .core.inspector import inspect_state, render_inspection
 from .core.integrity import render_verification, verify_review_package
 from .core.platform_checks import render_doctor, run_doctor
-from .core.review import render_review_summary, summarize_review_package
+from .core.review import latest_review_package_path, render_review_summary, summarize_review_package
 from .demos.demo import run_code_fix_demo
 from .demos.document_demo import run_markdown_document_demo
 from .demos.rehearsal import run_rehearsal
 from .sandbox.docker_sandbox import DEFAULT_IMAGE, run_docker_task
 from .workers.codex_adapter import run_codex_task
 from .workers.codex_smoke import run_codex_smoke
+
+DEFAULT_STATE_DIR = Path(".agentos-state")
+DEFAULT_OUTPUT_DIR = Path(".agentos-output")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -35,13 +38,13 @@ def _main_impl(argv: list[str]) -> int:
     demo.add_argument(
         "--state-dir",
         type=Path,
-        default=Path("projects/agentos/.agentos-state"),
+        default=DEFAULT_STATE_DIR,
         help="Persistent control-plane state directory",
     )
     demo.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("projects/agentos/.agentos-output"),
+        default=DEFAULT_OUTPUT_DIR,
         help="Safe approved-sync output directory",
     )
     demo.add_argument(
@@ -58,13 +61,13 @@ def _main_impl(argv: list[str]) -> int:
     doc_demo.add_argument(
         "--state-dir",
         type=Path,
-        default=Path("projects/agentos/.agentos-state"),
+        default=DEFAULT_STATE_DIR,
         help="Persistent control-plane state directory",
     )
     doc_demo.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("projects/agentos/.agentos-output"),
+        default=DEFAULT_OUTPUT_DIR,
         help="Safe approved-sync output directory",
     )
     doc_demo.add_argument(
@@ -81,13 +84,13 @@ def _main_impl(argv: list[str]) -> int:
     rehearse.add_argument(
         "--state-dir",
         type=Path,
-        default=Path("projects/agentos/.agentos-state"),
+        default=DEFAULT_STATE_DIR,
         help="Persistent control-plane state directory",
     )
     rehearse.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("projects/agentos/.agentos-output"),
+        default=DEFAULT_OUTPUT_DIR,
         help="Safe approved-sync output directory",
     )
     rehearse.add_argument(
@@ -141,7 +144,7 @@ def _main_impl(argv: list[str]) -> int:
     inspect.add_argument(
         "--state-dir",
         type=Path,
-        default=Path("projects/agentos/.agentos-state"),
+        default=DEFAULT_STATE_DIR,
         help="Persistent control-plane state directory",
     )
     inspect.add_argument(
@@ -156,8 +159,20 @@ def _main_impl(argv: list[str]) -> int:
     verify_review = subparsers.add_parser("verify-review", help="Verify review package artifact integrity")
     verify_review.add_argument(
         "review_package",
+        nargs="?",
         type=Path,
-        help="Path to a review_package.json artifact",
+        help="Path to a review_package.json artifact. Omit with --latest.",
+    )
+    verify_review.add_argument(
+        "--state-dir",
+        type=Path,
+        default=DEFAULT_STATE_DIR,
+        help="Persistent control-plane state directory for --latest",
+    )
+    verify_review.add_argument(
+        "--latest",
+        action="store_true",
+        help="Verify the latest review_package.json recorded in --state-dir",
     )
     verify_review.add_argument(
         "--json",
@@ -167,8 +182,20 @@ def _main_impl(argv: list[str]) -> int:
     review = subparsers.add_parser("review", help="Render a human-friendly review package summary")
     review.add_argument(
         "review_package",
+        nargs="?",
         type=Path,
-        help="Path to a review_package.json artifact",
+        help="Path to a review_package.json artifact. Omit with --latest.",
+    )
+    review.add_argument(
+        "--state-dir",
+        type=Path,
+        default=DEFAULT_STATE_DIR,
+        help="Persistent control-plane state directory for --latest",
+    )
+    review.add_argument(
+        "--latest",
+        action="store_true",
+        help="Render the latest review_package.json recorded in --state-dir",
     )
     review.add_argument(
         "--json",
@@ -179,13 +206,13 @@ def _main_impl(argv: list[str]) -> int:
     codex.add_argument(
         "--state-dir",
         type=Path,
-        default=Path("projects/agentos/.agentos-state"),
+        default=DEFAULT_STATE_DIR,
         help="Persistent control-plane state directory",
     )
     codex.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("projects/agentos/.agentos-output"),
+        default=DEFAULT_OUTPUT_DIR,
         help="Safe approved-sync output directory",
     )
     codex.add_argument(
@@ -248,13 +275,13 @@ def _main_impl(argv: list[str]) -> int:
     codex_smoke.add_argument(
         "--state-dir",
         type=Path,
-        default=Path("projects/agentos/.agentos-state"),
+        default=DEFAULT_STATE_DIR,
         help="Persistent control-plane state directory",
     )
     codex_smoke.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("projects/agentos/.agentos-output"),
+        default=DEFAULT_OUTPUT_DIR,
         help="Safe approved-sync output directory",
     )
     codex_smoke.add_argument(
@@ -291,13 +318,13 @@ def _main_impl(argv: list[str]) -> int:
     docker_run.add_argument(
         "--state-dir",
         type=Path,
-        default=Path("projects/agentos/.agentos-state"),
+        default=DEFAULT_STATE_DIR,
         help="Persistent control-plane state directory",
     )
     docker_run.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("projects/agentos/.agentos-output"),
+        default=DEFAULT_OUTPUT_DIR,
         help="Safe approved-sync output directory",
     )
     docker_run.add_argument(
@@ -416,7 +443,7 @@ def _main_impl(argv: list[str]) -> int:
         return 0
 
     if args.command == "verify-review":
-        result = verify_review_package(args.review_package)
+        result = verify_review_package(_review_package_arg(args, parser))
         if args.json:
             _print_json(result.to_dict())
         else:
@@ -424,7 +451,7 @@ def _main_impl(argv: list[str]) -> int:
         return 0 if result.passed else 1
 
     if args.command == "review":
-        result = summarize_review_package(args.review_package)
+        result = summarize_review_package(_review_package_arg(args, parser))
         if args.json:
             _print_json(result.to_dict())
         else:
@@ -529,6 +556,15 @@ def _main_impl(argv: list[str]) -> int:
 
 def _print_json(data: dict[str, Any]) -> None:
     print(json.dumps(data, ensure_ascii=False, indent=2) + "\n", end="")
+
+
+def _review_package_arg(args: argparse.Namespace, parser: argparse.ArgumentParser) -> Path:
+    if args.review_package is not None:
+        return args.review_package
+    if args.latest:
+        return latest_review_package_path(args.state_dir)
+    parser.error(f"{args.command} requires review_package or --latest")
+    raise AssertionError("parser.error should exit")
 
 
 def _render_cli_error(exc: Exception, *, as_json: bool) -> int:

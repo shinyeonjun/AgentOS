@@ -64,7 +64,7 @@ For a clean first-time setup, use `docs/setup-linux-wsl.md`.
 Install the prototype in editable mode when developing locally:
 
 ```bash
-cd /mnt/usb/projects/agentos
+cd AgentOS
 python3 -m venv .venv
 . .venv/bin/activate
 python3 -m pip install -e .
@@ -73,19 +73,17 @@ python3 -m pip install -e .
 Check local runtime readiness first:
 
 ```bash
-agentos doctor --workspace /mnt/usb/projects/agentos
+agentos doctor --workspace "$PWD"
 ```
 
-From any directory after install:
+From the repo root after install:
 
 ```bash
-agentos run-demo \
-  --state-dir /mnt/usb/projects/agentos/.agentos-state \
-  --output-dir /mnt/usb/projects/agentos/.agentos-output
+agentos run-demo
 ```
 
 Without installation, the prototype still works with
-`PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos ...`.
+`PYTHONPATH=prototype python3 -m agentos ...` from the repo root.
 
 Add `--json` to `run-demo`, `run-doc-demo`, `rehearse`, `inspect`,
 `review`, `verify-review`, `codex`, `codex-smoke`, or `docker-run` when another tool
@@ -95,8 +93,6 @@ Run the exhibition rehearsal path:
 
 ```bash
 agentos rehearse \
-  --state-dir /mnt/usb/projects/agentos/.agentos-state \
-  --output-dir /mnt/usb/projects/agentos/.agentos-output \
   --docker-sudo \
   --json
 ```
@@ -108,16 +104,13 @@ should include real worker evidence.
 ## Test
 
 ```bash
-PYTHONPATH=/mnt/usb/projects/agentos/prototype \
-python3 -m unittest discover /mnt/usb/projects/agentos/prototype/tests -v
+PYTHONPATH=prototype python3 -m unittest discover -s prototype/tests -v
 ```
 
 ## Inspect
 
 ```bash
-agentos inspect \
-  --state-dir /mnt/usb/projects/agentos/.agentos-state \
-  --json
+agentos inspect --json
 ```
 
 ## Verify Review Package
@@ -126,9 +119,7 @@ Review packages include an `artifact-manifest.json` reference. Verify that the
 manifest digest, artifact sizes, and artifact SHA-256 digests still match:
 
 ```bash
-agentos verify-review \
-  /mnt/usb/projects/agentos/.agentos-state/artifacts/<session>/review_package.json \
-  --json
+agentos verify-review --latest --json
 ```
 
 If `AGENTOS_MANIFEST_KEY` is set, `verify-review` also verifies the manifest
@@ -140,8 +131,7 @@ warning rather than a hard failure.
 Render a compact terminal review screen for demos and manual inspection:
 
 ```bash
-agentos review \
-  /mnt/usb/projects/agentos/.agentos-state/artifacts/<session>/review_package.json
+agentos review --latest
 ```
 
 The summary shows session metadata, changed files, validation checks, approval
@@ -158,9 +148,7 @@ Codex worker session. Codex CLI is not bundled into the image.
 
 ```bash
 agentos codex \
-  --state-dir /mnt/usb/projects/agentos/.agentos-state \
-  --output-dir /mnt/usb/projects/agentos/.agentos-output \
-  --input /path/to/project \
+  --input ../some-project \
   --task "Fix failing tests" \
   --json
 ```
@@ -170,18 +158,13 @@ agentos codex \
 Run the smoke path without spending Codex tokens:
 
 ```bash
-agentos codex-smoke \
-  --state-dir /mnt/usb/projects/agentos/.agentos-state \
-  --output-dir /mnt/usb/projects/agentos/.agentos-output \
-  --json
+agentos codex-smoke --json
 ```
 
 Run the real host-side Codex execution smoke on demand:
 
 ```bash
 agentos codex-smoke \
-  --state-dir /mnt/usb/projects/agentos/.agentos-state \
-  --output-dir /mnt/usb/projects/agentos/.agentos-output \
   --execute \
   --json
 ```
@@ -200,16 +183,14 @@ key, the record is explicitly marked `not_signed`.
 Build the first AI OS base image:
 
 ```bash
-sudo docker build -t agentos-base:0.1 /mnt/usb/projects/agentos/docker/agentos-base
+sudo docker build -t agentos-base:0.1 docker/agentos-base
 ```
 
 Run a command in the Docker-backed AgentOS workspace:
 
 ```bash
 agentos docker-run \
-  --state-dir /mnt/usb/projects/agentos/.agentos-state \
-  --output-dir /mnt/usb/projects/agentos/.agentos-output \
-  --input /path/to/project \
+  --input ../some-project \
   --docker-sudo \
   --json \
   -- sh -c 'cat README.md'

@@ -82,8 +82,6 @@ Without Docker:
 
 ```bash
 agentos rehearse \
-  --state-dir .agentos-state \
-  --output-dir .agentos-output \
   --skip-docker \
   --json
 ```
@@ -92,8 +90,6 @@ With Docker:
 
 ```bash
 agentos rehearse \
-  --state-dir .agentos-state \
-  --output-dir .agentos-output \
   --docker-sudo \
   --json
 ```
@@ -104,7 +100,15 @@ The rehearsal should pass these steps:
 
 - `code_fix_lifecycle`
 - `markdown_document_lifecycle`
+- `real_worker_codex_smoke`, skipped unless `--include-real-worker` is used
 - `docker_sandbox_policy`, unless skipped
+
+Show the latest review package without copying artifact paths:
+
+```bash
+agentos review --latest
+agentos verify-review --latest --json
+```
 
 ## 5. Run a Codex Smoke Test
 
@@ -112,8 +116,6 @@ Prepare mode does not spend Codex tokens:
 
 ```bash
 agentos codex-smoke \
-  --state-dir .agentos-state \
-  --output-dir .agentos-output \
   --json
 ```
 
@@ -121,8 +123,6 @@ Real execution mode calls Codex:
 
 ```bash
 agentos codex-smoke \
-  --state-dir .agentos-state \
-  --output-dir .agentos-output \
   --execute \
   --json
 ```
