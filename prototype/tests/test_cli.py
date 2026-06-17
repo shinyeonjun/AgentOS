@@ -306,6 +306,67 @@ class AgentOSCliTests(unittest.TestCase):
             self.assertEqual(data["policy_status"], "passed")
             self.assertEqual(data["image_provenance_status"], "unavailable")
 
+    def test_persistent_session_review_without_changes_recommends_keep_session(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            input_project = root / "input-project"
+            input_project.mkdir()
+            (input_project / "README.md").write_text("hello\n", encoding="utf-8")
+
+            create_exit_code, _create_output = _run_cli(
+                [
+                    "session",
+                    "create",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--input",
+                    str(input_project),
+                    "--name",
+                    "nochange",
+                    "--json",
+                ]
+            )
+            self.assertEqual(create_exit_code, 0)
+
+            exec_exit_code, _exec_output = _run_cli(
+                [
+                    "session",
+                    "exec",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "nochange",
+                    "--json",
+                    "--",
+                    sys.executable,
+                    "-c",
+                    "print('checked')",
+                ]
+            )
+            self.assertEqual(exec_exit_code, 0)
+
+            review_exit_code, review_output = _run_cli(
+                [
+                    "session",
+                    "review",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "nochange",
+                    "--json",
+                ]
+            )
+            self.assertEqual(review_exit_code, 0)
+            review_package = json.loads(Path(json.loads(review_output)["review_package_artifact"]).read_text())
+
+            self.assertEqual(review_package["changes"]["changed_files"], [])
+            self.assertEqual(review_package["approval"]["recommended"], "keep_session")
+            self.assertEqual(review_package["approval"]["scopes"], [])
+
     def test_persistent_session_docker_write_reviews_and_syncs(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -431,7 +492,9 @@ class AgentOSCliTests(unittest.TestCase):
                 ["session", "list", "--state-dir", str(root / "state"), "--json"]
             )
             self.assertEqual(list_exit_code, 0)
-            self.assertTrue(json.loads(list_output)["sessions"])
+            sessions = json.loads(list_output)["sessions"]
+            self.assertTrue(sessions)
+            self.assertEqual(sessions[0]["name"], "temporary-work")
 
             destroy_exit_code, destroy_output = _run_cli(
                 [

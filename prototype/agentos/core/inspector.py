@@ -43,7 +43,11 @@ def render_inspection(data: dict[str, Any], as_json: bool = False) -> str:
             return "No sessions recorded."
         lines = ["AgentOS sessions:"]
         for item in sessions:
-            lines.append(f"- {item['session_id']} [{item['state']}] tools={item['tool_call_count']} artifacts={item['artifact_count']}")
+            name = f" name={item['name']}" if item.get("name") else ""
+            lines.append(
+                f"- {item['session_id']} [{item['state']}]{name} "
+                f"tools={item['tool_call_count']} artifacts={item['artifact_count']}"
+            )
         return "\n".join(lines)
 
     session = data["session"]
@@ -52,6 +56,7 @@ def render_inspection(data: dict[str, Any], as_json: bool = False) -> str:
 
     lines = [
         f"session: {session['session_id']}",
+        f"name: {session['name']}",
         f"state: {session['state']}",
         f"created_at: {session['created_at']}",
         f"destroyed_at: {session['destroyed_at']}",
@@ -70,6 +75,7 @@ def _list_sessions(conn: sqlite3.Connection) -> list[dict[str, Any]]:
         """
         select
             s.session_id,
+            s.name,
             s.created_at,
             s.destroyed_at,
             s.state,

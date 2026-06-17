@@ -105,6 +105,10 @@ def build_review_package(
         elif any(check.get("status") != "passed" for check in validation_checks):
             validation_status = "partial"
 
+    approval_scopes = build_approval_scopes(changed_files)
+    approval_options = ["sync_all", "sync_selected", "discard", "keep_session"] if changed_files else ["discard", "keep_session"]
+    recommended_approval = "sync_all" if validation_status == "passed" and changed_files else "keep_session"
+
     return {
         "schema_version": SCHEMA_VERSION,
         "session_id": session_id,
@@ -145,9 +149,9 @@ def build_review_package(
         "risk_notes": risk_notes or [],
         "approval": {
             "required": True,
-            "options": ["sync_all", "sync_selected", "discard", "keep_session"],
-            "recommended": "sync_all" if validation_status == "passed" else "keep_session",
-            "scopes": build_approval_scopes(changed_files),
+            "options": approval_options,
+            "recommended": recommended_approval,
+            "scopes": approval_scopes,
         },
     }
 
