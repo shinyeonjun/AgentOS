@@ -313,6 +313,53 @@ class AgentOSCliTests(unittest.TestCase):
             self.assertEqual(review_data["session_id"], session_id)
             self.assertEqual(review_data["changed_files"][0]["path"], "README.md")
 
+    def test_persistent_session_codex_missing_binary_names_executable(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            input_project = root / "input-project"
+            input_project.mkdir()
+            (input_project / "README.md").write_text("# Demo\n", encoding="utf-8")
+            create_exit_code, _create_output = _run_cli(
+                [
+                    "session",
+                    "create",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--input",
+                    str(input_project),
+                    "--name",
+                    "missing-codex",
+                    "--json",
+                ]
+            )
+            self.assertEqual(create_exit_code, 0)
+
+            exit_code, output = _run_cli(
+                [
+                    "session",
+                    "codex",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "missing-codex",
+                    "--task",
+                    "Update README.",
+                    "--codex-bin",
+                    str(root / "missing-codex-bin"),
+                    "--execute",
+                    "--json",
+                ]
+            )
+
+            self.assertEqual(exit_code, 127)
+            data = json.loads(output)
+            self.assertEqual(data["error"]["type"], "FileNotFoundError")
+            self.assertIn("executable not found", data["error"]["message"])
+            self.assertIn("codex", data["error"]["hint"].lower())
+
     def test_persistent_session_docker_exec_uses_existing_workspace(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)

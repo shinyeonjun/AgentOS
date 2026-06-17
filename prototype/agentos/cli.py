@@ -834,6 +834,8 @@ def _render_cli_error(exc: Exception, *, as_json: bool) -> int:
 
 def _error_hint(exc: Exception, message: str) -> str | None:
     if isinstance(exc, FileNotFoundError):
+        if "codex" in message.lower():
+            return "Install Codex CLI, add it to PATH, or pass --codex-bin with the full executable path."
         return "Check the path or executable name, then run agentos doctor if this is an environment dependency."
     if isinstance(exc, PermissionError):
         return "Check file permissions or use --docker-sudo for Docker commands when your shell lacks docker-group access."

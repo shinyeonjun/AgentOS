@@ -119,6 +119,9 @@ class AgentOSRuntime:
             exit_code = completed.returncode
             stdout = completed.stdout
             stderr = completed.stderr
+        except FileNotFoundError as exc:
+            executable = command[0] if command else "<empty command>"
+            raise FileNotFoundError(f"executable not found: {executable}") from exc
         except subprocess.TimeoutExpired as exc:
             timed_out = True
             exit_code = COMMAND_TIMEOUT_EXIT_CODE
