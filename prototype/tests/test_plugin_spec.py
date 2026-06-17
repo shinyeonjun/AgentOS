@@ -29,11 +29,16 @@ class PluginSpecTests(unittest.TestCase):
         plugin_root = repo_root / "plugins" / "agentos-workspace"
         manifest = json.loads((plugin_root / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
         mcp_config = json.loads((plugin_root / ".mcp.json").read_text(encoding="utf-8"))
+        marketplace = json.loads((repo_root / ".agents" / "plugins" / "marketplace.json").read_text(encoding="utf-8"))
 
         self.assertEqual(manifest["mcpServers"], "./.mcp.json")
+        self.assertEqual(manifest["skills"], "./skills/")
+        self.assertEqual(marketplace["plugins"][0]["source"]["path"], "./plugins/agentos-workspace")
         server = mcp_config["mcpServers"]["agentos"]
-        self.assertEqual(server["command"], "agentos")
-        self.assertEqual(server["args"], ["mcp", "serve"])
+        self.assertEqual(server["cwd"], ".")
+        self.assertEqual(server["command"], "node")
+        self.assertEqual(server["args"], ["./agentos_mcp_launcher.cjs"])
+        self.assertTrue((plugin_root / "runtime" / "agentos" / "mcp_server.py").exists())
 
 
 if __name__ == "__main__":

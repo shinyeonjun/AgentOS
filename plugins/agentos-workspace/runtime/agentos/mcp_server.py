@@ -1,0 +1,466 @@
+from __future__ import annotations
+
+import json
+import sys
+from dataclasses import asdict, is_dataclass
+from pathlib import Path
+from typing import Any, Callable
+
+from .core.integrity import verify_review_package
+from .core.platform_checks import run_doctor
+from .core.review import latest_review_package_path, render_review_diffs, summarize_review_package
+from .core.session_ops import approve_review_package, sync_approved_review
+from .core.work_sessions import (
+    create_work_session,
+    destroy_work_session,
+    docker_exec_work_session,
+    exec_work_session,
+    review_work_session,
+    status_work_session,
+)
+
+SERVER_NAME = "agentos"
+SERVER_VERSION = "0.2.0"
+DEFAULT_STATE_DIR = Path(".agentos-state")
+DEFAULT_OUTPUT_DIR = Path(".agentos-output")
+
+
+def run_stdio() -> int:
+    for line in sys.stdin:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            decoded = json.loads(line)
+        except json.JSONDecodeError as exc:
+            _write_rpc(_rpc_error(None, -32700, f"Parse error: {exc}"))
+            continue
+        if isinstance(decoded, list):
+            responses = [_handle_rpc(item) for item in decoded]
+            responses = [item for item in responses if item is not None]
+            if responses:
+                _write_rpc(responses)
+            continue
+        response = _handle_rpc(decoded)
+        if response is not None:
+            _write_rpc(response)
+    return 0
+
+
+def _handle_rpc(message: Any) -> dict[str, Any] | None:
+    if not isinstance(message, dict):
+        return _rpc_error(None, -32600, "Invalid Request")
+    message_id = message.get("id")
+    method = message.get("method")
+    params = message.get("params") if isinstance(message.get("params"), dict) else {}
+    if not isinstance(method, str):
+        return _rpc_error(message_id, -32600, "Invalid Request") if message_id is not None else None
+    if method.startswith("notifications/") or method == "$/cancelRequest":
+        return None
+    try:
+        if method == "initialize":
+            return _rpc_response(message_id, _initialize_result(params))
+        if method == "ping":
+            return _rpc_response(message_id, {})
+        if method == "tools/list":
+            return _rpc_response(message_id, {"tools": _tool_definitions()})
+        if method == "tools/call":
+            return _rpc_response(message_id, _handle_tool_call(params))
+        if method == "resources/list":
+            return _rpc_response(message_id, {"resources": []})
+        if method == "resources/templates/list":
+            return _rpc_response(message_id, {"resourceTemplates": []})
+        if method == "prompts/list":
+            return _rpc_response(message_id, {"prompts": []})
+    except Exception as exc:  # MCP servers report tool failures as structured tool errors.
+        if method == "tools/call":
+            return _rpc_response(message_id, _tool_error(str(exc)))
+        return _rpc_error(message_id, -32000, str(exc))
+    return _rpc_error(message_id, -32601, f"Method not found: {method}")
+
+
+def _initialize_result(params: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "protocolVersion": params.get("protocolVersion") or "2024-11-05",
+        "capabilities": {
+            "tools": {"listChanged": False},
+            "resources": {"subscribe": False, "listChanged": False},
+        },
+        "serverInfo": {
+            "name": SERVER_NAME,
+            "title": "AgentOS",
+            "version": SERVER_VERSION,
+            "description": "Safe workspace runtime for approval-gated AI coding sessions.",
+        },
+        "instructions": (
+            "Use AgentOS tools to create copied project sessions, work only inside returned "
+            "workspace paths, build review packages, verify them, and wait for explicit human "
+            "approval before syncing approved changes back to the original project."
+        ),
+    }
+
+
+def _handle_tool_call(params: dict[str, Any]) -> dict[str, Any]:
+    name = params.get("name")
+    arguments = params.get("arguments") or {}
+    if not isinstance(name, str):
+        raise ValueError("tools/call requires a string tool name")
+    if not isinstance(arguments, dict):
+        raise ValueError("tools/call arguments must be an object")
+    tools: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
+        "doctor": _tool_doctor,
+        "create_session": _tool_create_session,
+        "list_sessions": _tool_list_sessions,
+        "session_status": _tool_session_status,
+        "run_command": _tool_run_command,
+        "run_docker_command": _tool_run_docker_command,
+        "review_session": _tool_review_session,
+        "render_review": _tool_render_review,
+        "render_diff": _tool_render_diff,
+        "verify_review": _tool_verify_review,
+        "approve_scope": _tool_approve_scope,
+        "sync_approved": _tool_sync_approved,
+        "destroy_session": _tool_destroy_session,
+    }
+    if name not in tools:
+        raise ValueError(f"unknown AgentOS tool: {name}")
+    return _tool_result(tools[name](arguments))
+
+
+def _tool_doctor(arguments: dict[str, Any]) -> dict[str, Any]:
+    workspace = _optional_path(arguments, "workspace")
+    return run_doctor(workspace_path=workspace).to_dict()
+
+
+def _tool_create_session(arguments: dict[str, Any]) -> dict[str, Any]:
+    project_dir = _required_path(arguments, "project_dir")
+    name = arguments.get("work_name")
+    if name is not None and not isinstance(name, str):
+        raise ValueError("work_name must be a string")
+    return create_work_session(
+        state_dir=_state_dir(arguments),
+        output_dir=_output_dir(arguments),
+        input_path=project_dir,
+        name=name,
+    ).to_dict()
+
+
+def _tool_list_sessions(arguments: dict[str, Any]) -> dict[str, Any]:
+    return status_work_session(state_dir=_state_dir(arguments))
+
+
+def _tool_session_status(arguments: dict[str, Any]) -> dict[str, Any]:
+    return status_work_session(state_dir=_state_dir(arguments), session_ref=_required_str(arguments, "work_name"))
+
+
+def _tool_run_command(arguments: dict[str, Any]) -> dict[str, Any]:
+    command = arguments.get("command")
+    if not isinstance(command, list) or not command or not all(isinstance(item, str) for item in command):
+        raise ValueError("command must be a non-empty string array")
+    cwd = arguments.get("cwd")
+    if cwd is not None and not isinstance(cwd, str):
+        raise ValueError("cwd must be a workspace-relative string")
+    return exec_work_session(
+        state_dir=_state_dir(arguments),
+        output_dir=_output_dir(arguments),
+        session_ref=_required_str(arguments, "work_name"),
+        command=command,
+        cwd=cwd,
+    ).to_dict()
+
+
+def _tool_run_docker_command(arguments: dict[str, Any]) -> dict[str, Any]:
+    command = arguments.get("command")
+    if not isinstance(command, list) or not command or not all(isinstance(item, str) for item in command):
+        raise ValueError("command must be a non-empty string array")
+    return docker_exec_work_session(
+        state_dir=_state_dir(arguments),
+        output_dir=_output_dir(arguments),
+        session_ref=_required_str(arguments, "work_name"),
+        command=command,
+        image=_str_arg(arguments, "image", "agentos-base:0.1"),
+        docker_bin=_str_arg(arguments, "docker_bin", "docker"),
+        use_sudo=_bool_arg(arguments, "docker_sudo", False),
+    ).to_dict()
+
+
+def _tool_review_session(arguments: dict[str, Any]) -> dict[str, Any]:
+    return review_work_session(
+        state_dir=_state_dir(arguments),
+        output_dir=_output_dir(arguments),
+        session_ref=_required_str(arguments, "work_name"),
+    ).to_dict()
+
+
+def _tool_render_review(arguments: dict[str, Any]) -> dict[str, Any]:
+    review_path = _review_path(arguments)
+    return summarize_review_package(review_path).to_dict()
+
+
+def _tool_render_diff(arguments: dict[str, Any]) -> dict[str, Any]:
+    review_path = _review_path(arguments)
+    summary = summarize_review_package(review_path)
+    return {"diff_text": render_review_diffs(summary)}
+
+
+def _tool_verify_review(arguments: dict[str, Any]) -> dict[str, Any]:
+    return verify_review_package(_review_path(arguments)).to_dict()
+
+
+def _tool_approve_scope(arguments: dict[str, Any]) -> dict[str, Any]:
+    return approve_review_package(
+        state_dir=_state_dir(arguments),
+        output_dir=_output_dir(arguments),
+        review_package_path=_optional_path(arguments, "review_package"),
+        latest=_bool_arg(arguments, "latest", True),
+        scope_id=arguments.get("scope_id") if arguments.get("scope_id") is not None else None,
+        approver=_str_arg(arguments, "approver", "human"),
+    ).to_dict()
+
+
+def _tool_sync_approved(arguments: dict[str, Any]) -> dict[str, Any]:
+    return sync_approved_review(
+        state_dir=_state_dir(arguments),
+        output_dir=_output_dir(arguments),
+        target_dir=_required_path(arguments, "project_dir"),
+        review_package_path=_optional_path(arguments, "review_package"),
+        latest=_bool_arg(arguments, "latest", True),
+        dry_run=_bool_arg(arguments, "dry_run", True),
+        require_clean_git=_bool_arg(arguments, "require_clean_git", False),
+        require_signed_approval=_bool_arg(arguments, "require_signed_approval", False),
+    ).to_dict()
+
+
+def _tool_destroy_session(arguments: dict[str, Any]) -> dict[str, Any]:
+    return destroy_work_session(
+        state_dir=_state_dir(arguments),
+        output_dir=_output_dir(arguments),
+        session_ref=_required_str(arguments, "work_name"),
+    ).to_dict()
+
+
+def _review_path(arguments: dict[str, Any]) -> Path:
+    explicit = _optional_path(arguments, "review_package")
+    if explicit is not None:
+        return explicit
+    if _bool_arg(arguments, "latest", True):
+        return latest_review_package_path(_state_dir(arguments))
+    raise ValueError("review_package is required when latest is false")
+
+
+def _state_dir(arguments: dict[str, Any]) -> Path:
+    return _path_arg(arguments, "state_dir", DEFAULT_STATE_DIR)
+
+
+def _output_dir(arguments: dict[str, Any]) -> Path:
+    return _path_arg(arguments, "output_dir", DEFAULT_OUTPUT_DIR)
+
+
+def _required_path(arguments: dict[str, Any], name: str) -> Path:
+    value = arguments.get(name)
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"{name} is required")
+    return Path(value).expanduser()
+
+
+def _optional_path(arguments: dict[str, Any], name: str) -> Path | None:
+    value = arguments.get(name)
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"{name} must be a path string")
+    return Path(value).expanduser()
+
+
+def _path_arg(arguments: dict[str, Any], name: str, default: Path) -> Path:
+    value = arguments.get(name)
+    if value is None:
+        return default
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"{name} must be a path string")
+    return Path(value).expanduser()
+
+
+def _required_str(arguments: dict[str, Any], name: str) -> str:
+    value = arguments.get(name)
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"{name} is required")
+    return value
+
+
+def _str_arg(arguments: dict[str, Any], name: str, default: str) -> str:
+    value = arguments.get(name)
+    if value is None:
+        return default
+    if not isinstance(value, str):
+        raise ValueError(f"{name} must be a string")
+    return value
+
+
+def _bool_arg(arguments: dict[str, Any], name: str, default: bool) -> bool:
+    value = arguments.get(name)
+    if value is None:
+        return default
+    if not isinstance(value, bool):
+        raise ValueError(f"{name} must be a boolean")
+    return value
+
+
+def _tool_definitions() -> list[dict[str, Any]]:
+    common_paths = {
+        "state_dir": _string_schema("AgentOS state directory. Defaults to .agentos-state in the MCP process cwd."),
+        "output_dir": _string_schema("AgentOS output directory. Defaults to .agentos-output in the MCP process cwd."),
+    }
+    review_selector = {
+        **common_paths,
+        "latest": {"type": "boolean", "default": True},
+        "review_package": _string_schema("Explicit review_package.json path. Optional when latest is true."),
+    }
+    return [
+        _tool_definition(
+            "doctor",
+            "Check whether the local AgentOS runtime environment is usable.",
+            {"workspace": _string_schema("Workspace path to inspect.")},
+        ),
+        _tool_definition(
+            "create_session",
+            "Create a copied AgentOS workspace session. Work only inside returned workspace_path.",
+            {
+                **common_paths,
+                "project_dir": _string_schema("Original project directory to copy into the session."),
+                "work_name": _string_schema("Optional human-friendly session name."),
+            },
+            required=["project_dir"],
+        ),
+        _tool_definition("list_sessions", "List known AgentOS sessions.", common_paths),
+        _tool_definition(
+            "session_status",
+            "Inspect one AgentOS session by id, id prefix, or name.",
+            {**common_paths, "work_name": _string_schema("Session id, id prefix, or name.")},
+            required=["work_name"],
+        ),
+        _tool_definition(
+            "run_command",
+            "Run a host command inside an AgentOS session workspace.",
+            {
+                **common_paths,
+                "work_name": _string_schema("Session id, id prefix, or name."),
+                "command": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+                "cwd": _string_schema("Optional workspace-relative cwd."),
+            },
+            required=["work_name", "command"],
+        ),
+        _tool_definition(
+            "run_docker_command",
+            "Run a Docker sandbox command mounted against an AgentOS session workspace.",
+            {
+                **common_paths,
+                "work_name": _string_schema("Session id, id prefix, or name."),
+                "command": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+                "image": {"type": "string", "default": "agentos-base:0.1"},
+                "docker_bin": {"type": "string", "default": "docker"},
+                "docker_sudo": {"type": "boolean", "default": False},
+            },
+            required=["work_name", "command"],
+        ),
+        _tool_definition(
+            "review_session",
+            "Build a review package by comparing the session workspace to its original snapshot.",
+            {**common_paths, "work_name": _string_schema("Session id, id prefix, or name.")},
+            required=["work_name"],
+        ),
+        _tool_definition("render_review", "Return a structured review package summary.", review_selector),
+        _tool_definition("render_diff", "Render review diff text.", review_selector),
+        _tool_definition("verify_review", "Verify review package artifact integrity.", review_selector),
+        _tool_definition(
+            "approve_scope",
+            "Record explicit human approval for one review scope. Do not call without user approval.",
+            {
+                **review_selector,
+                "scope_id": _string_schema("Approval scope id. Defaults to the first scope."),
+                "approver": {"type": "string", "default": "human"},
+            },
+        ),
+        _tool_definition(
+            "sync_approved",
+            "Preview or sync approved files to the original project. Requires explicit user approval.",
+            {
+                **review_selector,
+                "project_dir": _string_schema("Target project directory to receive approved files."),
+                "dry_run": {"type": "boolean", "default": True},
+                "require_clean_git": {"type": "boolean", "default": False},
+                "require_signed_approval": {"type": "boolean", "default": False},
+            },
+            required=["project_dir"],
+        ),
+        _tool_definition(
+            "destroy_session",
+            "Destroy a session workspace while keeping metadata and artifacts.",
+            {**common_paths, "work_name": _string_schema("Session id, id prefix, or name.")},
+            required=["work_name"],
+        ),
+    ]
+
+
+def _tool_definition(
+    name: str,
+    description: str,
+    properties: dict[str, Any],
+    *,
+    required: list[str] | None = None,
+) -> dict[str, Any]:
+    return {
+        "name": name,
+        "description": description,
+        "inputSchema": {
+            "type": "object",
+            "properties": properties,
+            "required": required or [],
+            "additionalProperties": False,
+        },
+    }
+
+
+def _string_schema(description: str) -> dict[str, str]:
+    return {"type": "string", "description": description}
+
+
+def _tool_result(payload: dict[str, Any]) -> dict[str, Any]:
+    payload = _jsonable(payload)
+    return {
+        "content": [{"type": "text", "text": json.dumps(payload, ensure_ascii=False, indent=2)}],
+        "structuredContent": payload,
+    }
+
+
+def _tool_error(message: str) -> dict[str, Any]:
+    payload = {"ok": False, "error": message}
+    return {
+        "content": [{"type": "text", "text": json.dumps(payload, ensure_ascii=False)}],
+        "structuredContent": payload,
+        "isError": True,
+    }
+
+
+def _jsonable(value: Any) -> Any:
+    if is_dataclass(value):
+        return _jsonable(asdict(value))
+    if isinstance(value, Path):
+        return str(value)
+    if isinstance(value, dict):
+        return {str(key): _jsonable(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_jsonable(item) for item in value]
+    return value
+
+
+def _rpc_response(message_id: Any, result: dict[str, Any]) -> dict[str, Any]:
+    return {"jsonrpc": "2.0", "id": message_id, "result": result}
+
+
+def _rpc_error(message_id: Any, code: int, message: str) -> dict[str, Any]:
+    return {"jsonrpc": "2.0", "id": message_id, "error": {"code": code, "message": message}}
+
+
+def _write_rpc(message: Any) -> None:
+    print(json.dumps(message, ensure_ascii=False), flush=True)

@@ -18,26 +18,27 @@ This repository includes a marketplace file at:
 Add the AgentOS repository as a Codex plugin marketplace, then install
 `agentos-workspace`.
 
-Install the AgentOS CLI before using the plugin:
+The plugin packages the AgentOS Python runtime and starts its MCP server with:
+
+```bash
+node ./agentos_mcp_launcher.cjs
+```
+
+So a separate `agentos` CLI install is optional for normal Codex plugin use. If
+you want to debug from a terminal, install the CLI and check it with:
 
 ```bash
 agentos doctor --json
 ```
 
-The plugin bundles an MCP server declaration that starts:
-
-```bash
-agentos mcp serve
-```
-
-If `agentos` is not on `PATH`, Codex can still read the skill instructions but
-the MCP tools cannot start.
+If the bundled MCP server cannot start, check that Node and Python 3 are
+available to Codex. The launcher tries `python`, `python3`, then `py -3`. The
+skill can still fall back to an installed `agentos` CLI when present.
 
 When adding this repository as a Git marketplace, leave the sparse path empty.
-The marketplace file lives under `.agents/plugins/`, but the plugin package
-lives under `plugins/agentos-workspace/`; checking out only `.agents/plugins`
-will list the plugin but fail during install because `plugin.json` is not in the
-snapshot.
+The marketplace file lives under `.agents/plugins/`, while the installable
+plugin package lives under `plugins/agentos-workspace/` and includes a vendored
+AgentOS runtime under `runtime/`.
 
 Working Git marketplace values:
 

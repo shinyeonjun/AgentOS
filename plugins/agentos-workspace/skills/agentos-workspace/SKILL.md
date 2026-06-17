@@ -20,43 +20,50 @@ requested. Create or reuse an AgentOS session and treat the returned
    `create_session`, `run_command`, `review_session`, `verify_review`,
    `approve_scope`, and `sync_approved`.
 
-2. If MCP tools are unavailable, verify that the AgentOS CLI is installed:
+2. If MCP tools are unavailable, check whether the bundled MCP server failed to
+   start because Node or Python 3 is missing or blocked. The plugin normally
+   bundles the AgentOS runtime and does not require a separate `agentos` CLI
+   install.
+
+3. If MCP tools are unavailable but the AgentOS CLI is installed, use CLI
+   fallback:
 
 ```bash
 agentos doctor --json
 ```
 
-If `agentos` is not found, stop and tell the user to install AgentOS CLI. Do
-not clone the AgentOS source repo into a temp directory as an implicit runtime.
+If neither MCP tools nor an installed `agentos` CLI are available, stop and ask
+the user to enable Node/Python for the plugin or install AgentOS CLI. Do not
+clone the AgentOS source repo into a temp directory as an implicit runtime.
 
-3. Inspect the AgentOS tool contract:
+4. Inspect the AgentOS tool contract:
 
 ```bash
 agentos plugin-spec --json
 ```
 
-4. Create a persistent session:
+5. Create a persistent session:
 
 ```bash
 agentos session create --input <project-dir> --name <work-name> --json
 ```
 
-5. Work only inside the session workspace. Use `cd <workspace_path>` before
+6. Work only inside the session workspace. Use `cd <workspace_path>` before
    reading or editing project files.
 
-6. Run checks inside the session:
+7. Run checks inside the session:
 
 ```bash
 agentos session exec <work-name> --json -- <test-command>
 ```
 
-7. Use Docker only through the session when needed:
+8. Use Docker only through the session when needed:
 
 ```bash
 agentos session docker-exec <work-name> --image agentos-base:0.1 --json -- <command>
 ```
 
-8. Build and inspect a review package:
+9. Build and inspect a review package:
 
 ```bash
 agentos session review <work-name> --json
@@ -65,9 +72,9 @@ agentos diff --latest
 agentos verify-review --latest --json
 ```
 
-9. Report changed files, validation status, and approval scopes to the user.
+10. Report changed files, validation status, and approval scopes to the user.
 
-10. Do not sync until the user explicitly approves a scope. After approval:
+11. Do not sync until the user explicitly approves a scope. After approval:
 
 ```bash
 agentos approve --latest --scope <scope-id> --json

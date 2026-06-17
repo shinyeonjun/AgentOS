@@ -197,9 +197,9 @@ Then open the `AgentOS` marketplace and install `agentos-workspace`. Leave the
 sparse path empty when adding this repository; the marketplace file and plugin
 package live in different top-level directories.
 
-The plugin expects the `agentos` CLI to be installed on `PATH`. It also bundles
-an MCP server declaration for `agentos mcp serve`, so Codex can call AgentOS
-tools directly instead of inferring shell commands from instructions alone.
+The plugin bundles an MCP server launcher and a vendored AgentOS Python runtime,
+so a separate `agentos` CLI install is optional for normal Codex plugin use.
+The CLI is still useful for terminal debugging and CI.
 
 ## Verify Review Package
 

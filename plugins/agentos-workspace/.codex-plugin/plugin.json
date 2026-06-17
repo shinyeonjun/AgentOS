@@ -1,6 +1,6 @@
 {
   "name": "agentos-workspace",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Use AgentOS as a safe workspace runtime for AI coding tasks.",
   "author": {
     "name": "AgentOS"
@@ -13,7 +13,7 @@
   "interface": {
     "displayName": "AgentOS Workspace",
     "shortDescription": "Work through safe AgentOS sessions.",
-    "longDescription": "AgentOS Workspace helps Codex use copied project workspaces, review packages, approval gates, and approved sync instead of editing host projects directly.",
+    "longDescription": "AgentOS Workspace helps Codex use copied project workspaces, review packages, approval gates, and approved sync instead of editing host projects directly. It bundles the AgentOS Python runtime for MCP use, so a separate AgentOS CLI install is optional.",
     "developerName": "AgentOS",
     "category": "Productivity",
     "capabilities": ["Write", "Code"],

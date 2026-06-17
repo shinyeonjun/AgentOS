@@ -91,6 +91,38 @@ class McpServerTests(unittest.TestCase):
         self.assertEqual(response["id"], 1)
         self.assertIn("tools", response["result"])
 
+    def test_bundled_plugin_launcher_smoke(self) -> None:
+        repo_root = Path(__file__).resolve().parents[2]
+        request = {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}
+        result = subprocess.run(
+            [sys.executable, str(repo_root / "plugins" / "agentos-workspace" / "agentos_mcp_launcher.py")],
+            input=json.dumps(request) + "\n",
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=5,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        response = json.loads(result.stdout)
+        self.assertEqual(response["result"]["serverInfo"]["name"], "agentos")
+
+    def test_node_plugin_launcher_smoke(self) -> None:
+        repo_root = Path(__file__).resolve().parents[2]
+        request = {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}
+        result = subprocess.run(
+            ["node", str(repo_root / "plugins" / "agentos-workspace" / "agentos_mcp_launcher.cjs")],
+            input=json.dumps(request) + "\n",
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=5,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        response = json.loads(result.stdout)
+        self.assertIn("tools", response["result"])
+
 
 if __name__ == "__main__":
     unittest.main()
