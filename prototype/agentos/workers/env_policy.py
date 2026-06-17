@@ -12,6 +12,7 @@ DEFAULT_WORKER_ENV_ALLOWLIST = (
     "LC_ALL",
     "LOGNAME",
     "NO_COLOR",
+    "PATHEXT",
     "PATH",
     "SHELL",
     "SSL_CERT_FILE",

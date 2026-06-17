@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -101,7 +102,7 @@ def run_codex_session_task(
 
 def _codex_command(*, codex_bin: str, task: str) -> list[str]:
     return [
-        codex_bin,
+        _resolve_codex_executable(codex_bin),
         "exec",
         "--json",
         "--sandbox",
@@ -110,6 +111,12 @@ def _codex_command(*, codex_bin: str, task: str) -> list[str]:
         "--ephemeral",
         task,
     ]
+
+
+def _resolve_codex_executable(codex_bin: str) -> str:
+    if os.name != "nt" or "\\" in codex_bin or "/" in codex_bin:
+        return codex_bin
+    return shutil.which(codex_bin) or codex_bin
 
 
 def _codex_env() -> dict[str, str]:

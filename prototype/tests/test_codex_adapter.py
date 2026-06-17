@@ -60,6 +60,29 @@ class CodexAdapterTests(unittest.TestCase):
             self.assertFalse(worker_result["executed"])
             self.assertEqual(worker_result["changed_files"], [])
 
+    def test_codex_prepare_resolves_windows_cmd_shim(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            input_project = root / "input-project"
+            input_project.mkdir()
+            (input_project / "README.md").write_text("# Demo\n", encoding="utf-8")
+
+            with (
+                patch("agentos.workers.codex_adapter.os.name", "nt"),
+                patch("agentos.workers.codex_adapter.shutil.which", return_value=r"C:\Users\test\AppData\Roaming\npm\codex.cmd"),
+                patch("agentos.workers.codex_adapter._codex_env", return_value={}),
+            ):
+                result = run_codex_task(
+                    state_dir=root / "state",
+                    output_dir=root / "output",
+                    input_path=input_project,
+                    task="Summarize the project.",
+                    execute=False,
+                )
+
+            command_artifact = json.loads(result.command_artifact.read_text())
+            self.assertEqual(command_artifact["worker_command"][0], r"C:\Users\test\AppData\Roaming\npm\codex.cmd")
+
     def test_codex_execute_collects_changed_files(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
