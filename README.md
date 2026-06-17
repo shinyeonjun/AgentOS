@@ -181,6 +181,10 @@ For Codex or another external coding agent, use
 inside the AgentOS session workspace, creates a review package, and waits for
 explicit approval before sync.
 
+This repository also includes a local Codex plugin scaffold at
+`plugins/agentos-workspace/`. Its marketplace entry lives in
+`.agents/plugins/marketplace.json`.
+
 ## Verify Review Package
 
 Review packages include an `artifact-manifest.json` reference. Verify that the

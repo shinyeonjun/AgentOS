@@ -1,0 +1,26 @@
+{
+  "name": "agentos-workspace",
+  "version": "0.1.0",
+  "description": "Use AgentOS as a safe workspace runtime for AI coding tasks.",
+  "author": {
+    "name": "AgentOS"
+  },
+  "repository": "https://github.com/shinyeonjun/AgentOS",
+  "license": "MIT",
+  "keywords": ["agentos", "codex", "sandbox", "workspace", "approval"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "AgentOS Workspace",
+    "shortDescription": "Work through safe AgentOS sessions.",
+    "longDescription": "AgentOS Workspace helps Codex use copied project workspaces, review packages, approval gates, and approved sync instead of editing host projects directly.",
+    "developerName": "AgentOS",
+    "category": "Productivity",
+    "capabilities": ["Write", "Code"],
+    "defaultPrompt": [
+      "Use AgentOS to safely edit this project.",
+      "Create an AgentOS session and review changes.",
+      "Work in AgentOS and wait before syncing."
+    ],
+    "brandColor": "#2563EB"
+  }
+}
