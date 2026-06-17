@@ -9,6 +9,7 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from agentos.cli import main
+from agentos.workers.codex_smoke import SMOKE_LINE
 
 
 class AgentOSCliTests(unittest.TestCase):
@@ -54,6 +55,34 @@ class AgentOSCliTests(unittest.TestCase):
             self.assertTrue(data["passed"])
             self.assertEqual(data["steps"][-1]["name"], "docker_sandbox_policy")
             self.assertEqual(data["steps"][-1]["status"], "skipped")
+            self.assertEqual(data["steps"][-2]["name"], "real_worker_codex_smoke")
+            self.assertEqual(data["steps"][-2]["status"], "skipped")
+
+    def test_rehearse_json_can_include_real_worker_step(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            fake_codex = _write_fake_codex(root / "fake-codex", edit_readme=True)
+            exit_code, output = _run_cli(
+                [
+                    "rehearse",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--skip-docker",
+                    "--include-real-worker",
+                    "--codex-bin",
+                    str(fake_codex),
+                    "--json",
+                ]
+            )
+
+            self.assertEqual(exit_code, 0)
+            data = json.loads(output)
+            self.assertTrue(data["passed"])
+            self.assertEqual(data["steps"][2]["name"], "real_worker_codex_smoke")
+            self.assertEqual(data["steps"][2]["status"], "passed")
+            self.assertIn("worker_result", data["steps"][2]["artifacts"])
 
     def test_docker_run_json_returns_sandbox_exit_code(self) -> None:
         with TemporaryDirectory() as tmp:
@@ -290,7 +319,15 @@ def _write_fake_docker(path: Path, *, exit_code: int) -> Path:
 def _write_fake_codex(path: Path, *, edit_readme: bool) -> Path:
     body = "#!/bin/sh\n"
     if edit_readme:
-        body += "printf 'updated\\n' >> README.md\n"
+        body += (
+            "python3 - <<'PY'\n"
+            "from pathlib import Path\n"
+            "path = Path('README.md')\n"
+            "text = path.read_text(encoding='utf-8')\n"
+            f"line = {SMOKE_LINE!r}\n"
+            "path.write_text(text.replace('\\n\\n', f'\\n\\n{line}\\n\\n', 1), encoding='utf-8')\n"
+            "PY\n"
+        )
     body += "exit 0\n"
     path.write_text(body, encoding="utf-8")
     path.chmod(0o755)

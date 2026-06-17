@@ -781,3 +781,33 @@ Observed result:
 - Full unit suite passed: 50 tests.
 - Compileall passed.
 - Docker rehearsal `3bef413c7c9b` passed.
+
+## 2026-06-17 Real-Worker Rehearsal Promotion Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests -p 'test_rehearsal.py' -v
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests -p 'test_cli.py' -v
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests
+/home/ubuntu/.openclaw/workspace/scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos rehearse --state-dir /mnt/usb/projects/agentos/.agentos-state --output-dir /mnt/usb/projects/agentos/.agentos-output --docker-sudo --json
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos rehearse --state-dir /mnt/usb/projects/agentos/.agentos-state --output-dir /mnt/usb/projects/agentos/.agentos-output --docker-sudo --include-real-worker --json
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m agentos verify-review /mnt/usb/projects/agentos/.agentos-state/artifacts/3ee6f95913eb/review_package.json --json
+```
+
+Observed result:
+
+- Rehearsal and CLI focused tests passed: 13 tests.
+- Full unit suite passed: 52 tests.
+- Ruff passed.
+- Compileall passed.
+- Default rehearsal `e5874a0a93de` passed.
+- Default rehearsal now records `real_worker_codex_smoke` as skipped unless explicitly enabled.
+- Real-worker rehearsal `7babc038da27` passed.
+- Real Codex worker smoke session `3ee6f95913eb` passed.
+- Worker evidence artifacts were written: `worker-command.json`, `worker-env-policy.json`, `worker-result.json`, and `review_package.json`.
+- Docker policy session `0d97419c1e0c` passed in the real-worker rehearsal.
+- `agentos verify-review` on the real-worker review package returned `warning` only because the manifest was intentionally unsigned.
+- Manifest digest, artifact sizes, and artifact SHA-256 digests passed for the real-worker review package.

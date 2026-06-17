@@ -11,6 +11,7 @@ from typing import Any
 from .demo import run_code_fix_demo
 from .document_demo import run_markdown_document_demo
 from ..sandbox.docker_sandbox import DEFAULT_IMAGE, run_docker_task
+from ..workers.codex_smoke import run_codex_smoke
 
 
 @dataclass(frozen=True)
@@ -47,12 +48,33 @@ def run_rehearsal(
     docker_sudo: bool = False,
     docker_image: str = DEFAULT_IMAGE,
     skip_docker: bool = False,
+    include_real_worker: bool = False,
+    codex_bin: str = "codex",
 ) -> RehearsalResult:
     rehearsal_id = uuid.uuid4().hex[:12]
     steps = [
         _run_code_demo_step(state_dir=state_dir, output_dir=output_dir),
         _run_document_demo_step(state_dir=state_dir, output_dir=output_dir),
     ]
+    if include_real_worker:
+        steps.append(
+            _run_real_worker_step(
+                state_dir=state_dir,
+                output_dir=output_dir,
+                codex_bin=codex_bin,
+                docker_image=docker_image,
+            )
+        )
+    else:
+        steps.append(
+            RehearsalStep(
+                name="real_worker_codex_smoke",
+                status="skipped",
+                session_id=None,
+                detail="Real Codex worker step skipped. Pass --include-real-worker to execute it.",
+                artifacts={},
+            )
+        )
     if skip_docker:
         steps.append(
             RehearsalStep(
@@ -123,6 +145,24 @@ def _run_docker_policy_step(
     )
 
 
+def _run_real_worker_step(
+    *,
+    state_dir: Path,
+    output_dir: Path,
+    codex_bin: str,
+    docker_image: str,
+) -> RehearsalStep:
+    return _capture_step(
+        name="real_worker_codex_smoke",
+        callback=lambda: _real_worker_step(
+            state_dir=state_dir,
+            output_dir=output_dir,
+            codex_bin=codex_bin,
+            docker_image=docker_image,
+        ),
+    )
+
+
 def _capture_step(name: str, callback: Callable[[], RehearsalStep]) -> RehearsalStep:
     try:
         return callback()
@@ -153,6 +193,36 @@ def _code_demo_step(*, state_dir: Path, output_dir: Path) -> RehearsalStep:
         artifacts={
             "diff": str(result.diff_artifact),
             "report": str(result.report_artifact),
+            "review_package": str(result.review_package_artifact),
+        },
+    )
+
+
+def _real_worker_step(
+    *,
+    state_dir: Path,
+    output_dir: Path,
+    codex_bin: str,
+    docker_image: str,
+) -> RehearsalStep:
+    result = run_codex_smoke(
+        state_dir=state_dir,
+        output_dir=output_dir,
+        execute=True,
+        codex_bin=codex_bin,
+        use_docker=True,
+        docker_image=docker_image,
+    )
+    passed = result.validation_status == "passed"
+    return RehearsalStep(
+        name="real_worker_codex_smoke",
+        status="passed" if passed else "failed",
+        session_id=result.session_id,
+        detail="Real Codex worker smoke completed with worker evidence artifacts.",
+        artifacts={
+            "command": str(result.command_artifact),
+            "env_policy": str(result.env_policy_artifact),
+            "worker_result": str(result.worker_result_artifact),
             "review_package": str(result.review_package_artifact),
         },
     )

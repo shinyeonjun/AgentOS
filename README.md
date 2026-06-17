@@ -91,6 +91,20 @@ Add `--json` to `run-demo`, `run-doc-demo`, `rehearse`, `inspect`,
 `verify-review`, `codex`, `codex-smoke`, or `docker-run` when another tool
 should consume the result.
 
+Run the exhibition rehearsal path:
+
+```bash
+agentos rehearse \
+  --state-dir /mnt/usb/projects/agentos/.agentos-state \
+  --output-dir /mnt/usb/projects/agentos/.agentos-output \
+  --docker-sudo \
+  --json
+```
+
+The default rehearsal keeps real Codex execution skipped so it does not spend
+tokens. Add `--include-real-worker` when Codex auth is available and the demo
+should include real worker evidence.
+
 ## Test
 
 ```bash
@@ -212,6 +226,7 @@ filesystem rather than under `/mnt/c`.
 - Requirements: `docs/requirements.md`
 - Architecture: `docs/architecture.md`
 - Functional spec: `docs/functional-spec.md`
+- Exhibition demo script: `docs/exhibition-demo-script.md`
 - Database/table spec: `docs/database-spec.md`
 - System flow: `docs/system-flow.md`
 - Diagrams: `docs/diagrams.md`

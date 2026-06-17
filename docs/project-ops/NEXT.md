@@ -2,7 +2,7 @@
 
 ## Immediate Next Move
 
-Prepare for real-worker evidence polish and storage cleanup.
+Prepare for exhibition rehearsal polish and review-package presentation.
 
 The first contract slice now exists:
 
@@ -37,15 +37,18 @@ The first contract slice now exists:
 - worker `worker-env-policy.json` and allowlisted host-side worker environment
 - `approval-record.json` with chosen scope, review digest, and optional HMAC signature
 - approval scope enforcement for sync, patch, and selected-file operations
+- real-worker Codex smoke represented in the main rehearsal suite
+- optional `agentos rehearse --include-real-worker` execution path
+- exhibition demo script at `docs/exhibition-demo-script.md`
 
-Next, promote real-worker evidence into the main rehearsal suite.
+Next, make the review package easy to explain and inspect during a live demo.
 
 ## Next 7 Actions
 
-1. Add real-worker execution rehearsals after the deterministic demo story is stable.
-2. Keep signed approval and scope enforcement covered by regression tests.
-3. Continue polishing CLI failure messages as new commands appear.
-4. Document supported install/runtime paths for Linux and WSL2.
+1. Polish the exhibition demo path and presenter script with one clean command sequence.
+2. Add a compact review-package summary command if live inspection feels too verbose.
+3. Keep signed approval and scope enforcement covered by regression tests.
+4. Continue polishing CLI failure messages as new commands appear.
 5. Consider a minimal review dashboard only after the CLI demo is solid.
 6. Add release packaging only after the local install path is stable.
 7. Keep UI/dashboard work behind the CLI and review contract.

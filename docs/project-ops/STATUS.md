@@ -1,10 +1,10 @@
 # AgentOS Status
 
-Last updated: 2026-06-16
+Last updated: 2026-06-17
 
 ## Phase
 
-v0.2 contract, sandbox, and CLI JSON polish slice implemented.
+v0.2 contract, sandbox, CLI JSON polish, and real-worker rehearsal option implemented.
 
 ## Current Assets
 
@@ -32,6 +32,7 @@ v0.2 contract, sandbox, and CLI JSON polish slice implemented.
 - Algorithms/data structures draft: `/mnt/usb/projects/agentos/docs/algorithms-data-structures.md`
 - Linux/WSL2 setup guide: `/mnt/usb/projects/agentos/docs/setup-linux-wsl.md`
 - Sandbox threat model: `/mnt/usb/projects/agentos/docs/sandbox-threat-model.md`
+- Exhibition demo script: `/mnt/usb/projects/agentos/docs/exhibition-demo-script.md`
 - Latest local control-plane run state: `/mnt/usb/projects/agentos/.agentos-state/`
 - Latest approved demo output: `/mnt/usb/projects/agentos/.agentos-output/`
 - Archived old technical plan: `/mnt/usb/projects/agentos/docs/archive/legacy-technical-plan-v3.md`
@@ -61,6 +62,7 @@ core loop:
 - approval scope enforcement for sync, patch, and selected-file operations
 - Markdown document workflow demo with document diff, validation, review, approval, and selected sync
 - end-to-end `agentos rehearse` command with code, document, and Docker policy steps
+- optional `agentos rehearse --include-real-worker` Codex smoke step with worker evidence artifacts
 - Codex prepare wrapper with optional `--execute`
 - Codex execute result collection with changed-file detection and diff artifacts
 - Docker-backed sandbox command runner using `agentos-base:0.1`
@@ -85,6 +87,7 @@ core loop:
 - `agentos` console script entry point
 - on-demand `agentos codex-smoke` command
 - real Codex smoke execution passed with changed-file detection
+- real Codex smoke can be promoted into the main rehearsal suite with an explicit flag
 - worker execution evidence artifact: `worker-result.json`
 - worker environment policy artifact: `worker-env-policy.json`
 - host-side workers use an allowlisted environment instead of inheriting full host env
@@ -180,11 +183,13 @@ artifact manifests, optional HMAC manifest signatures, review verification,
 Docker image provenance/pinning, worker environment allowlisting, signed
 approval record support, approval scope enforcement, a Linux/WSL2 setup guide,
 sandbox threat model, and a separated SQLite storage boundary now exist.
+The main rehearsal suite now records a real-worker Codex smoke step by default
+as skipped, and can execute it with `--include-real-worker`.
 Next build:
 
-1. continuing real-worker rehearsal coverage
-2. real-worker rehearsal coverage in the main rehearsal suite
-3. continuing CLI UX polish as new commands appear
+1. polish the exhibition demo path and presenter script
+2. continue CLI UX polish as new commands appear
+3. consider a minimal review dashboard only after the CLI demo story is stable
 
 ## Docker Image State
 

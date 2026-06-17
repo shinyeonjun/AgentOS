@@ -110,6 +110,16 @@ def _main_impl(argv: list[str]) -> int:
         help="Skip the Docker policy step when Docker is unavailable",
     )
     rehearse.add_argument(
+        "--include-real-worker",
+        action="store_true",
+        help="Execute the real Codex worker smoke step. This may spend Codex tokens.",
+    )
+    rehearse.add_argument(
+        "--codex-bin",
+        default="codex",
+        help="Codex executable name or path for --include-real-worker",
+    )
+    rehearse.add_argument(
         "--json",
         action="store_true",
         help="Render rehearsal output as JSON",
@@ -370,6 +380,8 @@ def _main_impl(argv: list[str]) -> int:
             docker_sudo=args.docker_sudo,
             docker_image=args.docker_image,
             skip_docker=args.skip_docker,
+            include_real_worker=args.include_real_worker,
+            codex_bin=args.codex_bin,
         )
         if args.json:
             _print_json(_result_to_dict(result))
