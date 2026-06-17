@@ -31,6 +31,40 @@ class RuntimeHardeningTests(unittest.TestCase):
             self.assertTrue(result.timed_out)
             self.assertIn("command timed out after 1 seconds", result.stderr_tail)
 
+    def test_run_command_preserves_utf8_stdout(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            runtime = AgentOSRuntime(state_dir=root / "state", output_dir=root / "output")
+            session = runtime.create_session()
+
+            result = runtime.run_command(
+                session=session,
+                command=[sys.executable, "-c", "print('계산기')"],
+                cwd=session.workspace_dir,
+            )
+
+            self.assertEqual(result.exit_code, 0)
+            self.assertIn("계산기", result.stdout_tail)
+
+    def test_run_command_and_artifacts_replace_invalid_unicode(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            runtime = AgentOSRuntime(state_dir=root / "state", output_dir=root / "output")
+            session = runtime.create_session()
+
+            result = runtime.run_command(
+                session=session,
+                command=[sys.executable, "-c", "import sys; sys.stdout.buffer.write(b'bad-\\xff')"],
+                cwd=session.workspace_dir,
+            )
+            artifact = runtime.write_artifact(session, "bad.txt", "bad-\udcff", "text/plain")
+            json_artifact = runtime.write_json_artifact(session, "bad.json", {"bad": "bad-\udcff"})
+
+            self.assertEqual(result.exit_code, 0)
+            self.assertNotIn("\udcff", result.stdout_tail)
+            self.assertNotIn("\udcff", artifact.read_text(encoding="utf-8"))
+            self.assertNotIn("\udcff", json_artifact.read_text(encoding="utf-8"))
+
     def test_sqlite_connections_are_closed_after_store_context(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)

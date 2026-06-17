@@ -349,6 +349,7 @@ def _tool_definitions() -> list[dict[str, Any]]:
                 "docker_bin": {"type": "string", "default": "docker"},
                 "docker_sudo": {"type": "boolean", "default": False},
             },
+            annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True},
         ),
         _tool_definition(
             "prepare_environment",
@@ -360,27 +361,35 @@ def _tool_definitions() -> list[dict[str, Any]]:
                 "build_default": {"type": "boolean", "default": True},
                 "pull_missing": {"type": "boolean", "default": False},
             },
+            annotations={"readOnlyHint": False, "destructiveHint": False, "idempotentHint": True},
         ),
         _tool_definition(
             "create_session",
-            "Create the copied AgentOS workspace before editing. Work only inside returned workspace_path.",
+            "Create a copied AgentOS workspace before editing. No user approval is needed because the original project is not changed.",
             {
                 **common_paths,
                 "project_dir": _string_schema("Original project directory to copy into the session."),
                 "work_name": _string_schema("Optional human-friendly session name."),
             },
             required=["project_dir"],
+            annotations={"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False},
         ),
-        _tool_definition("list_sessions", "List known AgentOS sessions before choosing reuse or create_session.", common_paths),
+        _tool_definition(
+            "list_sessions",
+            "List known AgentOS sessions before choosing reuse or create_session.",
+            common_paths,
+            annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True},
+        ),
         _tool_definition(
             "session_status",
             "Inspect one AgentOS session by id, id prefix, or name.",
             {**common_paths, "work_name": _string_schema("Session id, id prefix, or name.")},
             required=["work_name"],
+            annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True},
         ),
         _tool_definition(
             "run_command",
-            "Run a host command inside an AgentOS session workspace, never in the original project.",
+            "Run a host command inside an AgentOS session workspace, never in the original project. No sync approval is needed for session-only work.",
             {
                 **common_paths,
                 "work_name": _string_schema("Session id, id prefix, or name."),
@@ -388,6 +397,7 @@ def _tool_definitions() -> list[dict[str, Any]]:
                 "cwd": _string_schema("Optional workspace-relative cwd."),
             },
             required=["work_name", "command"],
+            annotations={"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False},
         ),
         _tool_definition(
             "run_docker_command",
@@ -401,16 +411,33 @@ def _tool_definitions() -> list[dict[str, Any]]:
                 "docker_sudo": {"type": "boolean", "default": False},
             },
             required=["work_name", "command"],
+            annotations={"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False},
         ),
         _tool_definition(
             "review_session",
-            "Build the required review package before reporting completion or asking for sync approval.",
+            "Build the required review package before reporting completion or asking for sync approval. Does not change the original project.",
             {**common_paths, "work_name": _string_schema("Session id, id prefix, or name.")},
             required=["work_name"],
+            annotations={"readOnlyHint": False, "destructiveHint": False, "idempotentHint": True},
         ),
-        _tool_definition("render_review", "Return the structured review package summary for the human.", review_selector),
-        _tool_definition("render_diff", "Render review diff text for human inspection before approval.", review_selector),
-        _tool_definition("verify_review", "Verify review package integrity before approval or sync.", review_selector),
+        _tool_definition(
+            "render_review",
+            "Return the structured review package summary for the human.",
+            review_selector,
+            annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True},
+        ),
+        _tool_definition(
+            "render_diff",
+            "Render review diff text for human inspection before approval.",
+            review_selector,
+            annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True},
+        ),
+        _tool_definition(
+            "verify_review",
+            "Verify review package integrity before approval or sync.",
+            review_selector,
+            annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True},
+        ),
         _tool_definition(
             "approve_scope",
             "Record explicit human approval for one review scope. Do not call without user approval.",
@@ -419,10 +446,11 @@ def _tool_definitions() -> list[dict[str, Any]]:
                 "scope_id": _string_schema("Approval scope id. Defaults to the first scope."),
                 "approver": {"type": "string", "default": "human"},
             },
+            annotations={"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False},
         ),
         _tool_definition(
             "sync_approved",
-            "Preview or sync approved files to the original project. Requires explicit user approval.",
+            "Preview or sync approved files to the original project. This is the approval boundary and requires explicit user approval.",
             {
                 **review_selector,
                 "project_dir": _string_schema("Target project directory to receive approved files."),
@@ -431,12 +459,14 @@ def _tool_definitions() -> list[dict[str, Any]]:
                 "require_signed_approval": {"type": "boolean", "default": False},
             },
             required=["project_dir"],
+            annotations={"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False},
         ),
         _tool_definition(
             "destroy_session",
             "Destroy a session workspace while keeping metadata and artifacts.",
             {**common_paths, "work_name": _string_schema("Session id, id prefix, or name.")},
             required=["work_name"],
+            annotations={"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False},
         ),
     ]
 
@@ -447,8 +477,9 @@ def _tool_definition(
     properties: dict[str, Any],
     *,
     required: list[str] | None = None,
+    annotations: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    return {
+    definition = {
         "name": name,
         "description": description,
         "inputSchema": {
@@ -458,6 +489,9 @@ def _tool_definition(
             "additionalProperties": False,
         },
     }
+    if annotations:
+        definition["annotations"] = annotations
+    return definition
 
 
 def _string_schema(description: str) -> dict[str, str]:
@@ -467,15 +501,15 @@ def _string_schema(description: str) -> dict[str, str]:
 def _tool_result(payload: dict[str, Any]) -> dict[str, Any]:
     payload = _jsonable(payload)
     return {
-        "content": [{"type": "text", "text": json.dumps(payload, ensure_ascii=False, indent=2)}],
+        "content": [{"type": "text", "text": _safe_json_dumps(payload, indent=2)}],
         "structuredContent": payload,
     }
 
 
 def _tool_error(message: str) -> dict[str, Any]:
-    payload = {"ok": False, "error": message}
+    payload = {"ok": False, "error": _safe_text(message)}
     return {
-        "content": [{"type": "text", "text": json.dumps(payload, ensure_ascii=False)}],
+        "content": [{"type": "text", "text": _safe_json_dumps(payload)}],
         "structuredContent": payload,
         "isError": True,
     }
@@ -485,12 +519,22 @@ def _jsonable(value: Any) -> Any:
     if is_dataclass(value):
         return _jsonable(asdict(value))
     if isinstance(value, Path):
-        return str(value)
+        return _safe_text(str(value))
+    if isinstance(value, str):
+        return _safe_text(value)
     if isinstance(value, dict):
-        return {str(key): _jsonable(item) for key, item in value.items()}
+        return {_safe_text(str(key)): _jsonable(item) for key, item in value.items()}
     if isinstance(value, (list, tuple)):
         return [_jsonable(item) for item in value]
     return value
+
+
+def _safe_json_dumps(value: Any, *, indent: int | None = None) -> str:
+    return json.dumps(_jsonable(value), ensure_ascii=False, indent=indent)
+
+
+def _safe_text(value: str) -> str:
+    return value.encode("utf-8", errors="replace").decode("utf-8")
 
 
 def _rpc_response(message_id: Any, result: dict[str, Any]) -> dict[str, Any]:
@@ -498,8 +542,8 @@ def _rpc_response(message_id: Any, result: dict[str, Any]) -> dict[str, Any]:
 
 
 def _rpc_error(message_id: Any, code: int, message: str) -> dict[str, Any]:
-    return {"jsonrpc": "2.0", "id": message_id, "error": {"code": code, "message": message}}
+    return {"jsonrpc": "2.0", "id": message_id, "error": {"code": code, "message": _safe_text(message)}}
 
 
 def _write_rpc(message: Any) -> None:
-    print(json.dumps(message, ensure_ascii=False), flush=True)
+    print(_safe_json_dumps(message), flush=True)

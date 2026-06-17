@@ -30,6 +30,19 @@ class McpServerTests(unittest.TestCase):
         self.assertIn("sync_approved", names)
         self.assertIn("MUST CALL FIRST", tools_by_name["doctor"]["description"])
         self.assertIn("before editing", tools_by_name["create_session"]["description"])
+        self.assertFalse(tools_by_name["create_session"]["annotations"]["destructiveHint"])
+        self.assertFalse(tools_by_name["run_command"]["annotations"]["destructiveHint"])
+        self.assertFalse(tools_by_name["review_session"]["annotations"]["destructiveHint"])
+        self.assertTrue(tools_by_name["sync_approved"]["annotations"]["destructiveHint"])
+        self.assertIn("approval boundary", tools_by_name["sync_approved"]["description"])
+
+    def test_tool_result_replaces_unpaired_surrogates(self) -> None:
+        from agentos.mcp_server import _tool_result
+
+        result = _tool_result({"stdout_tail": "bad-\udcff"})
+
+        self.assertNotIn("\udcff", result["content"][0]["text"])
+        self.assertNotIn("\udcff", result["structuredContent"]["stdout_tail"])
 
     def test_tool_call_creates_session_and_runs_command(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

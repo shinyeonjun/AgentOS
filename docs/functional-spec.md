@@ -239,6 +239,17 @@ Rules:
 
 ## 9. F7 Approval
 
+Default policy: AgentOS uses sync-only approval. Session creation, session-local
+commands, tests, and review generation may run without extra approval because
+they do not mutate the source project. Approval is required when recording a
+review scope approval or syncing reviewed output back to the source project.
+
+Optional host/user policies:
+
+- strict: request approval before session creation or command execution too
+- fast/auto-sync: allow sync without per-review approval only after explicit
+  opt-in or trusted host policy
+
 ### F7.1 Request Approval
 
 Presents approval options through external agent/app.

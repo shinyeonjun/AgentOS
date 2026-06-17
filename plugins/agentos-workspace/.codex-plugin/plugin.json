@@ -1,6 +1,6 @@
 {
   "name": "agentos-workspace",
-  "version": "0.4.1",
+  "version": "0.4.3",
   "description": "Force selected coding tasks through AgentOS MCP sessions before any file edits.",
   "author": {
     "name": "AgentOS"
@@ -13,14 +13,15 @@
   "interface": {
     "displayName": "AgentOS Workspace",
     "shortDescription": "Route coding work through AgentOS sessions.",
-      "longDescription": "AgentOS Workspace routes Codex coding work through copied AgentOS session workspaces, review packages, approval gates, and approved sync instead of editing host projects directly. When selected, Codex must call the bundled AgentOS MCP server before any file edit: run doctor, prepare Docker dependencies when needed, create or reuse an AgentOS session, work only inside the returned workspace_path, and run the setup workflow if AgentOS tools are unavailable.",
+      "longDescription": "AgentOS Workspace routes Codex coding work through copied AgentOS session workspaces, review packages, and approval-gated sync instead of editing host projects directly. The default UX is sync-only approval: doctor, session creation, session work, tests, and review can run without extra prompts because they do not mutate the original project; syncing back to the original project remains the explicit human approval boundary. When selected, Codex must call the bundled AgentOS MCP server before any file edit and run the setup workflow if AgentOS tools are unavailable.",
     "developerName": "AgentOS",
     "category": "Productivity",
     "capabilities": ["Write", "Code"],
     "defaultPrompt": [
       "Use AgentOS MCP for this task. Before any file edit, call agentos doctor. If tools are unavailable, offer to run AgentOS setup.",
-      "Do not edit the current/original workspace directly. Create or reuse an AgentOS session, then work only inside the returned workspace_path.",
-      "If Docker or the AgentOS image is not ready, call prepare_environment before Docker sandbox work. Produce and verify a review package, then wait for approval before sync."
+      "Use the normal approval policy by default: create/reuse sessions, run commands, test, and review without asking because the original workspace is not changed.",
+      "Do not edit the current/original workspace directly. Work only inside the returned workspace_path. If Docker or the AgentOS image is not ready, call prepare_environment before Docker sandbox work.",
+      "Produce and verify a review package, then wait for explicit human approval before approve_scope or sync_approved changes the original project."
     ],
     "brandColor": "#2563EB"
   }

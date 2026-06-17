@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import difflib
 import json
+import locale
 import os
 import shutil
 import subprocess
@@ -111,32 +112,32 @@ class AgentOSRuntime:
                 command,
                 cwd=cwd,
                 env=_command_env(env=env, inherit_env=inherit_env),
-                text=True,
+                text=False,
                 capture_output=True,
                 check=False,
                 timeout=self.command_timeout_seconds,
             )
             exit_code = completed.returncode
-            stdout = completed.stdout
-            stderr = completed.stderr
+            stdout = _output_to_text(completed.stdout)
+            stderr = _output_to_text(completed.stderr)
         except FileNotFoundError as exc:
             executable = command[0] if command else "<empty command>"
             raise FileNotFoundError(f"executable not found: {executable}") from exc
         except subprocess.TimeoutExpired as exc:
             timed_out = True
             exit_code = COMMAND_TIMEOUT_EXIT_CODE
-            stdout = _timeout_output_to_text(exc.stdout)
-            stderr = _timeout_output_to_text(exc.stderr)
+            stdout = _output_to_text(exc.stdout)
+            stderr = _output_to_text(exc.stderr)
             stderr = (
                 f"{stderr}\n" if stderr else ""
             ) + f"command timed out after {self.command_timeout_seconds} seconds"
-        stdout_tail = stdout[-4000:]
-        stderr_tail = stderr[-4000:]
+        stdout_tail = _safe_text(stdout[-4000:])
+        stderr_tail = _safe_text(stderr[-4000:])
         tool_call_id = self.store.record_tool_call(
             session_id=session.session_id,
             started_at=started_at,
             completed_at=utc_now(),
-            command_json=json.dumps(command),
+            command_json=json.dumps(_json_safe(command), ensure_ascii=False),
             cwd=cwd,
             exit_code=exit_code,
             stdout_tail=stdout_tail,
@@ -151,8 +152,8 @@ class AgentOSRuntime:
         after_file: Path,
         artifact_name: str = "code-change.diff",
     ) -> Path:
-        before = before_file.read_text(encoding="utf-8").splitlines(keepends=True)
-        after = after_file.read_text(encoding="utf-8").splitlines(keepends=True)
+        before = before_file.read_text(encoding="utf-8", errors="replace").splitlines(keepends=True)
+        after = after_file.read_text(encoding="utf-8", errors="replace").splitlines(keepends=True)
         diff = difflib.unified_diff(
             before,
             after,
@@ -165,7 +166,7 @@ class AgentOSRuntime:
         session_artifacts = self.artifacts_dir / session.session_id
         session_artifacts.mkdir(parents=True, exist_ok=True)
         artifact_path = session_artifacts / name
-        artifact_path.write_text(content, encoding="utf-8")
+        artifact_path.write_text(_safe_text(content), encoding="utf-8")
         self.store.record_artifact(
             session_id=session.session_id,
             created_at=utc_now(),
@@ -180,7 +181,7 @@ class AgentOSRuntime:
         return self.write_artifact(
             session=session,
             name=name,
-            content=json.dumps(content, ensure_ascii=False, indent=2) + "\n",
+            content=json.dumps(_json_safe(content), ensure_ascii=False, indent=2) + "\n",
             media_type="application/json",
         )
 
@@ -296,11 +297,30 @@ def _safe_relative_source(root: Path, relative_path: str) -> Path:
     return source
 
 
-def _timeout_output_to_text(value: str | bytes | None) -> str:
+def _output_to_text(value: str | bytes | None) -> str:
     if value is None:
         return ""
     if isinstance(value, bytes):
-        return value.decode("utf-8", errors="replace")
+        for encoding in ("utf-8", locale.getpreferredencoding(False)):
+            try:
+                return _safe_text(value.decode(encoding))
+            except UnicodeDecodeError:
+                continue
+        return _safe_text(value.decode("utf-8", errors="replace"))
+    return _safe_text(value)
+
+
+def _safe_text(value: str) -> str:
+    return value.encode("utf-8", errors="replace").decode("utf-8")
+
+
+def _json_safe(value: Any) -> Any:
+    if isinstance(value, str):
+        return _safe_text(value)
+    if isinstance(value, dict):
+        return {_safe_text(str(key)): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(item) for item in value]
     return value
 
 

@@ -7,6 +7,24 @@ The plugin rule is simple: Codex should work inside an AgentOS session
 workspace, produce a review package, and wait for explicit approval before any
 sync back to the host project.
 
+## Approval UX
+
+The default policy is **normal**: Codex may run `doctor`, create/reuse copied
+sessions, run commands, test, and produce/verify review packages without asking
+for extra approval, because those steps do not mutate the original project.
+
+The approval boundary is sync back to the original project. `approve_scope` and
+non-dry-run `sync_approved` require explicit human approval.
+
+Two optional modes are useful for hosts or advanced users:
+
+- **strict**: ask before session creation or command execution too.
+- **fast/auto-sync**: allow sync without a per-review approval only when the user
+  explicitly opts in or the host has a trusted policy for it.
+
+Do not make fast/auto-sync the default. AgentOS's main promise is that original
+projects are protected until the user approves the reviewed result.
+
 When testing the plugin, the first visible AgentOS action should be a call to
 `doctor`. If a Codex conversation cannot see AgentOS MCP tools, it should stop
 instead of editing files through normal Codex file tools.
@@ -22,6 +40,11 @@ agentos prepare --json
 
 If Docker Desktop or the Docker daemon is not running, `doctor`/`prepare` returns
 a setup error instead of letting Codex silently edit the original workspace.
+
+Command output and review artifacts are sanitized before they are stored or sent
+over MCP. UTF-8 output, including Korean text, is preserved; invalid bytes or
+unpaired Unicode surrogates are replaced instead of crashing `run_command` or
+`review_session`.
 
 ## Install From Git
 

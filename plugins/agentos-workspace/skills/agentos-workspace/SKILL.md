@@ -26,6 +26,23 @@ Do not edit the user's original project directly when an AgentOS workflow is
 requested. Create or reuse an AgentOS session and treat the returned
 `workspace_path` as the active project root.
 
+## Approval Policy
+
+Use the normal sync-only approval policy unless the user explicitly requests a
+stricter or faster mode.
+
+- Normal default: run `doctor`, create or reuse sessions, run commands, test,
+  and build/verify review packages without asking for extra approval. These
+  steps only affect copied session workspaces and AgentOS artifacts, not the
+  original project.
+- Strict mode: if the user or host policy asks for it, request approval before
+  session creation or command execution too.
+- Fast/auto-sync mode: only use when the user explicitly asks for automatic sync
+  or the host has a trusted policy for it. Never infer auto-sync from ordinary
+  coding requests.
+- Approval boundary: `approve_scope` and non-dry-run `sync_approved` require
+  explicit human approval because they authorize or mutate the original project.
+
 Docker is optional for MCP startup and ordinary host-session work. If Docker is
 unavailable, do not fall back to direct host edits. Report the exact doctor
 failure and the setup step needed. If the Docker image is missing, prepare it
@@ -36,7 +53,9 @@ through AgentOS before Docker sandbox work.
 1. Use AgentOS MCP tools before any file edit. Start with `doctor`. If
    Docker checks warn or fail and the task needs Docker sandbox work, call
    `prepare_environment`. Then use `create_session`, `run_command`,
-   `review_session`, `verify_review`, `approve_scope`, and `sync_approved`.
+   `review_session`, and `verify_review` without extra user prompts under the
+   normal policy. Use `approve_scope` and `sync_approved` only after explicit
+   human approval.
 
 2. If MCP tools are unavailable immediately after installing or updating this
    plugin, first assume the current Codex conversation started before the MCP
@@ -106,7 +125,8 @@ agentos verify-review --latest --json
 
 11. Report changed files, validation status, and approval scopes to the user.
 
-12. Do not sync until the user explicitly approves a scope. After approval:
+12. Do not record approval or sync until the user explicitly approves a scope.
+    After approval:
 
 ```bash
 agentos approve --latest --scope <scope-id> --json
