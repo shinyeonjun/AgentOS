@@ -1,7 +1,7 @@
 {
   "name": "agentos-workspace",
-  "version": "0.3.1",
-  "description": "Use AgentOS as a safe workspace runtime for AI coding tasks.",
+  "version": "0.3.2",
+  "description": "Route AI coding tasks through AgentOS copied sessions, review packages, and approval-gated sync.",
   "author": {
     "name": "AgentOS"
   },
@@ -12,15 +12,15 @@
   "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "AgentOS Workspace",
-    "shortDescription": "Work through safe AgentOS sessions.",
-    "longDescription": "AgentOS Workspace helps Codex use copied project workspaces, review packages, approval gates, and approved sync instead of editing host projects directly. It bundles the AgentOS Python runtime for MCP use, so a separate AgentOS CLI install is optional.",
+    "shortDescription": "Route coding work through AgentOS sessions.",
+    "longDescription": "AgentOS Workspace routes Codex coding work through copied AgentOS session workspaces, review packages, approval gates, and approved sync instead of editing host projects directly. When selected, Codex should create or reuse an AgentOS session before changing files.",
     "developerName": "AgentOS",
     "category": "Productivity",
     "capabilities": ["Write", "Code"],
     "defaultPrompt": [
-      "Use AgentOS to safely edit this project.",
-      "Create an AgentOS session and review changes.",
-      "Work in AgentOS and wait before syncing."
+      "Use AgentOS for this task. Create or reuse an AgentOS session before editing files, work only inside the session workspace, produce a review package, and do not sync until I approve.",
+      "Route this coding task through AgentOS instead of editing the current workspace directly.",
+      "Start with AgentOS doctor/session setup, then make the requested changes inside the AgentOS workspace and show the review package."
     ],
     "brandColor": "#2563EB"
   }

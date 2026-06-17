@@ -1,12 +1,17 @@
 ---
 name: agentos-workspace
-description: Use AgentOS sessions as safe copied workspaces for coding tasks before approved sync.
+description: Use when AgentOS Workspace is selected, mentioned, or requested. Route coding tasks through AgentOS copied sessions, review packages, and approval-gated sync instead of editing the current workspace directly.
 ---
 
 # AgentOS Workspace
 
-Use this skill when the user wants Codex to edit, test, or inspect a project
-through AgentOS instead of directly mutating the host project.
+Use this skill when the user selects or mentions AgentOS Workspace, asks to use
+AgentOS, or wants Codex to edit, test, or inspect a project through AgentOS
+instead of directly mutating the host project.
+
+If this skill is active, do not satisfy the coding task with normal Codex file
+edits in the current workspace. Start by checking AgentOS availability and
+creating or reusing an AgentOS session.
 
 ## Core Rule
 
