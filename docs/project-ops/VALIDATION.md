@@ -985,3 +985,24 @@ Observed result:
 - `agentos sync --require-signed-approval` accepts a signed approval when `AGENTOS_APPROVAL_KEY` is set.
 - Sync JSON and text output now include `approval_verification_status`.
 - Default WSL smoke path passed with rehearsal `fcd72f6c96b6`.
+
+## 2026-06-17 CLI Argument Refactor Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest prototype.tests.test_cli -v
+/home/ubuntu/.openclaw/workspace/scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests
+```
+
+Observed result:
+
+- CLI focused tests passed: 17 tests.
+- Full unit suite passed: 63 tests.
+- Ruff passed.
+- Compileall passed.
+- Repeated CLI argument registration was moved from `cli.py` to `cli_args.py`.
+- `cli.py` was reduced from 832 lines to 630 lines without changing command behavior.
+- Generated `__pycache__` folders were removed from the working tree after validation.

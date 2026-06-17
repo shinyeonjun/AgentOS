@@ -7,6 +7,13 @@ from dataclasses import asdict, is_dataclass
 from pathlib import Path
 from typing import Any
 
+from .cli_args import (
+    add_json_arg,
+    add_keep_session_arg,
+    add_output_dir_arg,
+    add_review_package_selector,
+    add_state_dir_arg,
+)
 from .core.inspector import inspect_state, render_inspection
 from .core.integrity import render_verification, verify_review_package
 from .core.platform_checks import render_doctor, run_doctor
@@ -43,64 +50,18 @@ def _main_impl(argv: list[str]) -> int:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     demo = subparsers.add_parser("run-demo", help="Run the deterministic code-fix demo loop")
-    demo.add_argument(
-        "--state-dir",
-        type=Path,
-        default=DEFAULT_STATE_DIR,
-        help="Persistent control-plane state directory",
-    )
-    demo.add_argument(
-        "--output-dir",
-        type=Path,
-        default=DEFAULT_OUTPUT_DIR,
-        help="Safe approved-sync output directory",
-    )
-    demo.add_argument(
-        "--keep-session",
-        action="store_true",
-        help="Keep the disposable workspace for inspection instead of destroying it",
-    )
-    demo.add_argument(
-        "--json",
-        action="store_true",
-        help="Render result output as JSON",
-    )
+    add_state_dir_arg(demo, default=DEFAULT_STATE_DIR)
+    add_output_dir_arg(demo, default=DEFAULT_OUTPUT_DIR)
+    add_keep_session_arg(demo)
+    add_json_arg(demo, noun="result output")
     doc_demo = subparsers.add_parser("run-doc-demo", help="Run the deterministic Markdown document demo loop")
-    doc_demo.add_argument(
-        "--state-dir",
-        type=Path,
-        default=DEFAULT_STATE_DIR,
-        help="Persistent control-plane state directory",
-    )
-    doc_demo.add_argument(
-        "--output-dir",
-        type=Path,
-        default=DEFAULT_OUTPUT_DIR,
-        help="Safe approved-sync output directory",
-    )
-    doc_demo.add_argument(
-        "--keep-session",
-        action="store_true",
-        help="Keep the disposable workspace for inspection instead of destroying it",
-    )
-    doc_demo.add_argument(
-        "--json",
-        action="store_true",
-        help="Render result output as JSON",
-    )
+    add_state_dir_arg(doc_demo, default=DEFAULT_STATE_DIR)
+    add_output_dir_arg(doc_demo, default=DEFAULT_OUTPUT_DIR)
+    add_keep_session_arg(doc_demo)
+    add_json_arg(doc_demo, noun="result output")
     rehearse = subparsers.add_parser("rehearse", help="Run the AgentOS end-to-end rehearsal suite")
-    rehearse.add_argument(
-        "--state-dir",
-        type=Path,
-        default=DEFAULT_STATE_DIR,
-        help="Persistent control-plane state directory",
-    )
-    rehearse.add_argument(
-        "--output-dir",
-        type=Path,
-        default=DEFAULT_OUTPUT_DIR,
-        help="Safe approved-sync output directory",
-    )
+    add_state_dir_arg(rehearse, default=DEFAULT_STATE_DIR)
+    add_output_dir_arg(rehearse, default=DEFAULT_OUTPUT_DIR)
     rehearse.add_argument(
         "--docker-bin",
         default="docker",
@@ -131,11 +92,7 @@ def _main_impl(argv: list[str]) -> int:
         default="codex",
         help="Codex executable name or path for --include-real-worker",
     )
-    rehearse.add_argument(
-        "--json",
-        action="store_true",
-        help="Render rehearsal output as JSON",
-    )
+    add_json_arg(rehearse, noun="rehearsal output")
     doctor = subparsers.add_parser("doctor", help="Check whether the local runtime environment can run AgentOS")
     doctor.add_argument(
         "--workspace",
@@ -143,145 +100,53 @@ def _main_impl(argv: list[str]) -> int:
         default=Path.cwd(),
         help="Workspace path to inspect for WSL/Windows mount warnings",
     )
-    doctor.add_argument(
-        "--json",
-        action="store_true",
-        help="Render doctor output as JSON",
-    )
+    add_json_arg(doctor, noun="doctor output")
     inspect = subparsers.add_parser("inspect", help="Inspect AgentOS sessions and artifacts")
-    inspect.add_argument(
-        "--state-dir",
-        type=Path,
-        default=DEFAULT_STATE_DIR,
-        help="Persistent control-plane state directory",
-    )
+    add_state_dir_arg(inspect, default=DEFAULT_STATE_DIR)
     inspect.add_argument(
         "--session",
         help="Session ID to inspect. If omitted, list sessions.",
     )
-    inspect.add_argument(
-        "--json",
-        action="store_true",
-        help="Render inspection output as JSON",
-    )
+    add_json_arg(inspect, noun="inspection output")
     sessions = subparsers.add_parser("sessions", help="List AgentOS sessions")
-    sessions.add_argument(
-        "--state-dir",
-        type=Path,
-        default=DEFAULT_STATE_DIR,
-        help="Persistent control-plane state directory",
-    )
-    sessions.add_argument(
-        "--json",
-        action="store_true",
-        help="Render sessions as JSON",
-    )
+    add_state_dir_arg(sessions, default=DEFAULT_STATE_DIR)
+    add_json_arg(sessions, noun="sessions")
     reviews = subparsers.add_parser("reviews", help="List review packages")
-    reviews.add_argument(
-        "--state-dir",
-        type=Path,
-        default=DEFAULT_STATE_DIR,
-        help="Persistent control-plane state directory",
-    )
+    add_state_dir_arg(reviews, default=DEFAULT_STATE_DIR)
     reviews.add_argument(
         "--limit",
         type=int,
         default=10,
         help="Maximum number of review packages to list",
     )
-    reviews.add_argument(
-        "--json",
-        action="store_true",
-        help="Render review packages as JSON",
-    )
+    add_json_arg(reviews, noun="review packages")
     verify_review = subparsers.add_parser("verify-review", help="Verify review package artifact integrity")
-    verify_review.add_argument(
-        "review_package",
-        nargs="?",
-        type=Path,
-        help="Path to a review_package.json artifact. Omit with --latest.",
+    add_review_package_selector(
+        verify_review,
+        state_dir_default=DEFAULT_STATE_DIR,
+        latest_help="Verify the latest review_package.json recorded in --state-dir",
     )
-    verify_review.add_argument(
-        "--state-dir",
-        type=Path,
-        default=DEFAULT_STATE_DIR,
-        help="Persistent control-plane state directory for --latest",
-    )
-    verify_review.add_argument(
-        "--latest",
-        action="store_true",
-        help="Verify the latest review_package.json recorded in --state-dir",
-    )
-    verify_review.add_argument(
-        "--json",
-        action="store_true",
-        help="Render verification output as JSON",
-    )
+    add_json_arg(verify_review, noun="verification output")
     review = subparsers.add_parser("review", help="Render a human-friendly review package summary")
-    review.add_argument(
-        "review_package",
-        nargs="?",
-        type=Path,
-        help="Path to a review_package.json artifact. Omit with --latest.",
+    add_review_package_selector(
+        review,
+        state_dir_default=DEFAULT_STATE_DIR,
+        latest_help="Render the latest review_package.json recorded in --state-dir",
     )
-    review.add_argument(
-        "--state-dir",
-        type=Path,
-        default=DEFAULT_STATE_DIR,
-        help="Persistent control-plane state directory for --latest",
-    )
-    review.add_argument(
-        "--latest",
-        action="store_true",
-        help="Render the latest review_package.json recorded in --state-dir",
-    )
-    review.add_argument(
-        "--json",
-        action="store_true",
-        help="Render review summary as JSON",
-    )
+    add_json_arg(review, noun="review summary")
     diff = subparsers.add_parser("diff", help="Render diff artifacts from a review package")
-    diff.add_argument(
-        "review_package",
-        nargs="?",
-        type=Path,
-        help="Path to a review_package.json artifact. Omit with --latest.",
-    )
-    diff.add_argument(
-        "--state-dir",
-        type=Path,
-        default=DEFAULT_STATE_DIR,
-        help="Persistent control-plane state directory for --latest",
-    )
-    diff.add_argument(
-        "--latest",
-        action="store_true",
-        help="Render diffs from the latest review_package.json recorded in --state-dir",
+    add_review_package_selector(
+        diff,
+        state_dir_default=DEFAULT_STATE_DIR,
+        latest_help="Render diffs from the latest review_package.json recorded in --state-dir",
     )
     approve = subparsers.add_parser("approve", help="Approve a review package scope for sync")
-    approve.add_argument(
-        "review_package",
-        nargs="?",
-        type=Path,
-        help="Path to a review_package.json artifact. Omit with --latest.",
+    add_review_package_selector(
+        approve,
+        state_dir_default=DEFAULT_STATE_DIR,
+        latest_help="Approve the latest review_package.json recorded in --state-dir",
     )
-    approve.add_argument(
-        "--state-dir",
-        type=Path,
-        default=DEFAULT_STATE_DIR,
-        help="Persistent control-plane state directory for --latest",
-    )
-    approve.add_argument(
-        "--output-dir",
-        type=Path,
-        default=DEFAULT_OUTPUT_DIR,
-        help="Safe approved-sync output directory",
-    )
-    approve.add_argument(
-        "--latest",
-        action="store_true",
-        help="Approve the latest review_package.json recorded in --state-dir",
-    )
+    add_output_dir_arg(approve, default=DEFAULT_OUTPUT_DIR)
     approve.add_argument(
         "--scope",
         help="Approval scope id. Defaults to the first scope in the review package.",
@@ -291,35 +156,14 @@ def _main_impl(argv: list[str]) -> int:
         default="human",
         help="Approver name to record in approval-record.json",
     )
-    approve.add_argument(
-        "--json",
-        action="store_true",
-        help="Render approval output as JSON",
-    )
+    add_json_arg(approve, noun="approval output")
     sync = subparsers.add_parser("sync", help="Sync approved review package files to a target directory")
-    sync.add_argument(
-        "review_package",
-        nargs="?",
-        type=Path,
-        help="Path to a review_package.json artifact. Omit with --latest.",
+    add_review_package_selector(
+        sync,
+        state_dir_default=DEFAULT_STATE_DIR,
+        latest_help="Sync the latest review_package.json recorded in --state-dir",
     )
-    sync.add_argument(
-        "--state-dir",
-        type=Path,
-        default=DEFAULT_STATE_DIR,
-        help="Persistent control-plane state directory for --latest",
-    )
-    sync.add_argument(
-        "--output-dir",
-        type=Path,
-        default=DEFAULT_OUTPUT_DIR,
-        help="Safe approved-sync output directory",
-    )
-    sync.add_argument(
-        "--latest",
-        action="store_true",
-        help="Sync the latest review_package.json recorded in --state-dir",
-    )
+    add_output_dir_arg(sync, default=DEFAULT_OUTPUT_DIR)
     sync.add_argument(
         "--target",
         required=True,
@@ -341,24 +185,10 @@ def _main_impl(argv: list[str]) -> int:
         action="store_true",
         help="Fail unless approval-record.json has a valid HMAC signature",
     )
-    sync.add_argument(
-        "--json",
-        action="store_true",
-        help="Render sync output as JSON",
-    )
+    add_json_arg(sync, noun="sync output")
     codex = subparsers.add_parser("codex", help="Prepare or execute a Codex task inside AgentOS")
-    codex.add_argument(
-        "--state-dir",
-        type=Path,
-        default=DEFAULT_STATE_DIR,
-        help="Persistent control-plane state directory",
-    )
-    codex.add_argument(
-        "--output-dir",
-        type=Path,
-        default=DEFAULT_OUTPUT_DIR,
-        help="Safe approved-sync output directory",
-    )
+    add_state_dir_arg(codex, default=DEFAULT_STATE_DIR)
+    add_output_dir_arg(codex, default=DEFAULT_OUTPUT_DIR)
     codex.add_argument(
         "--input",
         required=True,
@@ -410,24 +240,10 @@ def _main_impl(argv: list[str]) -> int:
         action="store_true",
         help="Destroy the copied workspace after preparing/executing the task",
     )
-    codex.add_argument(
-        "--json",
-        action="store_true",
-        help="Render Codex task output as JSON",
-    )
+    add_json_arg(codex, noun="Codex task output")
     codex_smoke = subparsers.add_parser("codex-smoke", help="Run an on-demand Codex adapter smoke test")
-    codex_smoke.add_argument(
-        "--state-dir",
-        type=Path,
-        default=DEFAULT_STATE_DIR,
-        help="Persistent control-plane state directory",
-    )
-    codex_smoke.add_argument(
-        "--output-dir",
-        type=Path,
-        default=DEFAULT_OUTPUT_DIR,
-        help="Safe approved-sync output directory",
-    )
+    add_state_dir_arg(codex_smoke, default=DEFAULT_STATE_DIR)
+    add_output_dir_arg(codex_smoke, default=DEFAULT_OUTPUT_DIR)
     codex_smoke.add_argument(
         "--codex-bin",
         default="codex",
@@ -453,24 +269,10 @@ def _main_impl(argv: list[str]) -> int:
         default="none",
         help="Target AgentOS runtime network policy metadata for --docker. Default is none.",
     )
-    codex_smoke.add_argument(
-        "--json",
-        action="store_true",
-        help="Render smoke output as JSON",
-    )
+    add_json_arg(codex_smoke, noun="smoke output")
     docker_run = subparsers.add_parser("docker-run", help="Run a command inside an AgentOS Docker sandbox")
-    docker_run.add_argument(
-        "--state-dir",
-        type=Path,
-        default=DEFAULT_STATE_DIR,
-        help="Persistent control-plane state directory",
-    )
-    docker_run.add_argument(
-        "--output-dir",
-        type=Path,
-        default=DEFAULT_OUTPUT_DIR,
-        help="Safe approved-sync output directory",
-    )
+    add_state_dir_arg(docker_run, default=DEFAULT_STATE_DIR)
+    add_output_dir_arg(docker_run, default=DEFAULT_OUTPUT_DIR)
     docker_run.add_argument(
         "--input",
         required=True,
@@ -497,11 +299,7 @@ def _main_impl(argv: list[str]) -> int:
         nargs=argparse.REMAINDER,
         help="Command to run after --, for example: -- sh -c 'cat README.md'",
     )
-    docker_run.add_argument(
-        "--json",
-        action="store_true",
-        help="Render Docker run output as JSON",
-    )
+    add_json_arg(docker_run, noun="Docker run output")
 
     args = parser.parse_args(argv)
 
