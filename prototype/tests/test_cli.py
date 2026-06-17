@@ -163,7 +163,7 @@ class AgentOSCliTests(unittest.TestCase):
             root = Path(tmp)
             input_project = root / "input-project"
             input_project.mkdir()
-            (input_project / "README.md").write_text("# Demo\n", encoding="utf-8")
+            (input_project / "README.md").write_text("# Demo\n\n", encoding="utf-8")
             target_project = root / "target-project"
             target_project.mkdir()
             (target_project / "README.md").write_text("# Demo\n", encoding="utf-8")
@@ -255,6 +255,63 @@ class AgentOSCliTests(unittest.TestCase):
             self.assertEqual(sync_exit_code, 0)
             self.assertEqual(json.loads(sync_output)["copied_paths"], ["README.md"])
             self.assertIn("updated", (target_project / "README.md").read_text(encoding="utf-8"))
+
+    def test_persistent_session_codex_execute_uses_existing_workspace(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            input_project = root / "input-project"
+            input_project.mkdir()
+            (input_project / "README.md").write_text("# Demo\n\n", encoding="utf-8")
+            fake_codex = _write_fake_codex(root / "fake-codex", edit_readme=True)
+
+            create_exit_code, create_output = _run_cli(
+                [
+                    "session",
+                    "create",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--input",
+                    str(input_project),
+                    "--name",
+                    "codex-work",
+                    "--json",
+                ]
+            )
+            self.assertEqual(create_exit_code, 0)
+            session_id = json.loads(create_output)["session_id"]
+
+            codex_exit_code, codex_output = _run_cli(
+                [
+                    "session",
+                    "codex",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "codex-work",
+                    "--task",
+                    "Update README.",
+                    "--codex-bin",
+                    str(fake_codex),
+                    "--execute",
+                    "--json",
+                ]
+            )
+            self.assertEqual(codex_exit_code, 0)
+            codex_data = json.loads(codex_output)
+            self.assertEqual(codex_data["session_id"], session_id)
+            self.assertEqual(codex_data["changed_files"], ["README.md"])
+            self.assertFalse(codex_data["destroyed"])
+
+            review_exit_code, review_output = _run_cli(
+                ["review", "--latest", "--state-dir", str(root / "state"), "--json"]
+            )
+            self.assertEqual(review_exit_code, 0)
+            review_data = json.loads(review_output)
+            self.assertEqual(review_data["session_id"], session_id)
+            self.assertEqual(review_data["changed_files"][0]["path"], "README.md")
 
     def test_persistent_session_docker_exec_uses_existing_workspace(self) -> None:
         with TemporaryDirectory() as tmp:

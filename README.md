@@ -159,6 +159,11 @@ agentos session docker-exec work1 \
   --json \
   -- sh -c 'cat README.md'
 
+agentos session codex work1 \
+  --task "Update the README with setup notes." \
+  --execute \
+  --json
+
 agentos session review work1 --json
 agentos review --latest
 agentos diff --latest

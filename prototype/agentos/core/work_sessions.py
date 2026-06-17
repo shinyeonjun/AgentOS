@@ -138,6 +138,13 @@ class WorkSessionDestroyResult:
         }
 
 
+@dataclass(frozen=True)
+class WorkSessionPaths:
+    session: Session
+    workspace_path: Path
+    original_path: Path
+
+
 def create_work_session(
     *,
     state_dir: Path,
@@ -390,6 +397,15 @@ def status_work_session(*, state_dir: Path, session_ref: str | None = None) -> d
         return inspect_state(state_dir)
     session = resolve_session(state_dir=state_dir, session_ref=session_ref)
     return inspect_state(state_dir, session_id=session.session_id)
+
+
+def load_work_session_paths(*, state_dir: Path, session_ref: str) -> WorkSessionPaths:
+    session = resolve_session(state_dir=state_dir, session_ref=session_ref)
+    workspace_path = _require_live_workspace(session)
+    original_path = _original_root_for_workspace(session)
+    if not original_path.exists():
+        raise FileNotFoundError(f"session original snapshot is unavailable: {original_path}")
+    return WorkSessionPaths(session=session, workspace_path=workspace_path, original_path=original_path)
 
 
 def resolve_session(*, state_dir: Path, session_ref: str) -> Session:

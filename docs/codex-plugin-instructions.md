@@ -25,9 +25,9 @@ AgentOS.
 
 ```bash
 agentos session create --input <project-dir> --name <work-name> --json
-agentos session exec <work-name> --json -- <test-or-edit-command>
+agentos session codex <work-name> --task "<task>" --execute --json
+agentos session exec <work-name> --json -- <test-command>
 agentos session docker-exec <work-name> --image agentos-base:0.1 --json -- <sandbox-command>
-agentos session review <work-name> --json
 agentos review --latest
 agentos diff --latest
 agentos verify-review --latest --json
@@ -50,7 +50,7 @@ You are working through AgentOS.
 Do not edit the host project directly.
 Use the AgentOS session workspace as the project root.
 Run tests and checks inside the session.
-When finished, run agentos session review.
+When finished, make sure a review package exists for the session.
 Report the review package, changed files, validation status, and recommended
 approval scope.
 Do not sync changes unless the user explicitly approves the scope.

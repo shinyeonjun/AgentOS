@@ -4,8 +4,9 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from .worker_runtime import WorkerRunResult, WorkerSpec, run_worker_task
-from ..core.runtime import ToolResult
+from .worker_runtime import WorkerRunResult, WorkerSpec, run_worker_in_workspace, run_worker_task
+from ..core.runtime import AgentOSRuntime, ToolResult
+from ..core.work_sessions import load_work_session_paths
 from ..sandbox.docker_sandbox import DEFAULT_IMAGE
 
 
@@ -58,6 +59,42 @@ def run_codex_task(
         ),
         execute=execute,
         destroy_session=destroy_session,
+    )
+    return _to_codex_result(worker_result, sandbox_image=sandbox_image)
+
+
+def run_codex_session_task(
+    *,
+    state_dir: Path,
+    output_dir: Path,
+    session_ref: str,
+    task: str,
+    execute: bool = False,
+    codex_bin: str = "codex",
+    use_docker: bool = False,
+    docker_image: str = DEFAULT_IMAGE,
+    docker_network: str = "none",
+) -> CodexRunResult:
+    sandbox_image = docker_image if use_docker else None
+    sandbox_network = docker_network if use_docker else None
+    runtime = AgentOSRuntime(state_dir=state_dir, output_dir=output_dir)
+    paths = load_work_session_paths(state_dir=state_dir, session_ref=session_ref)
+    worker_result = run_worker_in_workspace(
+        runtime=runtime,
+        session=paths.session,
+        workspace_path=paths.workspace_path,
+        original_path=paths.original_path,
+        task_input_path=paths.workspace_path,
+        worker=WorkerSpec(
+            name="codex-cli",
+            title="Codex persistent session task",
+            task=task,
+            command=_codex_command(codex_bin=codex_bin, task=task),
+            env=_codex_env(),
+            sandbox_image=sandbox_image,
+            sandbox_network=sandbox_network,
+        ),
+        execute=execute,
     )
     return _to_codex_result(worker_result, sandbox_image=sandbox_image)
 

@@ -6,8 +6,9 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
+from agentos.core.work_sessions import create_work_session
 from agentos.core.inspector import inspect_state
-from agentos.workers.codex_adapter import run_codex_task
+from agentos.workers.codex_adapter import run_codex_session_task, run_codex_task
 
 
 class CodexAdapterTests(unittest.TestCase):
@@ -116,6 +117,49 @@ class CodexAdapterTests(unittest.TestCase):
             artifact_names = {artifact["name"] for artifact in session["artifacts"]}
             self.assertIn("final-report.md", artifact_names)
             self.assertIn("diff-README.md.diff", artifact_names)
+
+    def test_codex_execute_inside_existing_persistent_session(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            input_project = root / "input-project"
+            input_project.mkdir()
+            (input_project / "README.md").write_text("# Demo\n", encoding="utf-8")
+            fake_codex = root / "fake-codex"
+            fake_codex.write_text(
+                "#!/bin/sh\n"
+                "printf '# Demo\\n\\nUpdated inside persistent session.\\n' > README.md\n"
+                "exit 0\n",
+                encoding="utf-8",
+            )
+            fake_codex.chmod(0o755)
+            session = create_work_session(
+                state_dir=root / "state",
+                output_dir=root / "output",
+                input_path=input_project,
+                name="persistent-codex",
+            )
+
+            result = run_codex_session_task(
+                state_dir=root / "state",
+                output_dir=root / "output",
+                session_ref="persistent-codex",
+                task="Update README.",
+                execute=True,
+                codex_bin=str(fake_codex),
+            )
+
+            self.assertEqual(result.session_id, session.session_id)
+            self.assertEqual(result.workspace_path, session.workspace_path)
+            self.assertTrue(result.executed)
+            self.assertEqual(result.codex_result.exit_code, 0)
+            self.assertEqual(result.changed_files, ("README.md",))
+
+            review_package = json.loads(result.review_package_artifact.read_text())
+            self.assertEqual(review_package["task"]["title"], "Codex persistent session task")
+            self.assertEqual(review_package["changes"]["changed_files"][0]["path"], "README.md")
+
+            session_detail = inspect_state(root / "state", session_id=result.session_id)
+            self.assertEqual(session_detail["session"]["state"], "review_ready")
 
     def test_codex_worker_env_does_not_inherit_blocked_host_keys(self) -> None:
         with TemporaryDirectory() as tmp:

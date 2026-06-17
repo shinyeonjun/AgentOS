@@ -54,16 +54,54 @@ def run_worker_task(
 ) -> WorkerRunResult:
     runtime = AgentOSRuntime(state_dir=state_dir, output_dir=output_dir)
     session = runtime.create_session()
+    workspace_path = runtime.import_input(session, input_path)
+    original_path = session.original_dir / input_path.resolve().name
+    result = run_worker_in_workspace(
+        runtime=runtime,
+        session=session,
+        workspace_path=workspace_path,
+        original_path=original_path,
+        task_input_path=input_path,
+        worker=worker,
+        execute=execute,
+    )
+
+    if destroy_session:
+        runtime.destroy_session(session)
+
+    return WorkerRunResult(
+        session_id=result.session_id,
+        workspace_path=result.workspace_path,
+        task_manifest_artifact=result.task_manifest_artifact,
+        command_artifact=result.command_artifact,
+        env_policy_artifact=result.env_policy_artifact,
+        worker_result_artifact=result.worker_result_artifact,
+        review_package_artifact=result.review_package_artifact,
+        executed=result.executed,
+        worker_result=result.worker_result,
+        changed_files=result.changed_files,
+        destroyed=destroy_session and not session.session_dir.exists(),
+    )
+
+
+def run_worker_in_workspace(
+    *,
+    runtime: AgentOSRuntime,
+    session: Session,
+    workspace_path: Path,
+    original_path: Path,
+    task_input_path: Path,
+    worker: WorkerSpec,
+    execute: bool = False,
+) -> WorkerRunResult:
     task_manifest = TaskManifest(
         title=worker.title,
         description=worker.task,
         host_agent=worker.name,
-        inputs=[TaskInput.from_path(input_path)],
+        inputs=[TaskInput.from_path(task_input_path)],
         capabilities=task_manifest_capabilities(worker),
     )
     task_manifest_artifact = runtime.write_json_artifact(session, "task.json", task_manifest.to_dict())
-    workspace_path = runtime.import_input(session, input_path)
-    original_path = session.original_dir / input_path.resolve().name
     worker_env, env_policy = build_worker_env(worker.env)
     env_policy_artifact = runtime.write_json_artifact(
         session,
@@ -125,9 +163,6 @@ def run_worker_task(
     review_package_artifact = runtime.write_json_artifact(session, "review_package.json", review_package)
     runtime.mark_review_ready(session)
 
-    if destroy_session:
-        runtime.destroy_session(session)
-
     return WorkerRunResult(
         session_id=session.session_id,
         workspace_path=workspace_path,
@@ -139,7 +174,7 @@ def run_worker_task(
         executed=execute,
         worker_result=worker_result,
         changed_files=tuple(change.path for change in changes),
-        destroyed=destroy_session and not session.session_dir.exists(),
+        destroyed=False,
     )
 
 

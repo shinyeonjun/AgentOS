@@ -39,7 +39,7 @@ from .demos.demo import run_code_fix_demo
 from .demos.document_demo import run_markdown_document_demo
 from .demos.rehearsal import run_rehearsal
 from .sandbox.docker_sandbox import DEFAULT_IMAGE, run_docker_task
-from .workers.codex_adapter import run_codex_task
+from .workers.codex_adapter import run_codex_session_task, run_codex_task
 from .workers.codex_smoke import run_codex_smoke
 
 DEFAULT_STATE_DIR = Path(".agentos-state")
@@ -154,6 +154,32 @@ def _main_impl(argv: list[str]) -> int:
     )
     session_docker_exec.add_argument("sandbox_command", nargs=argparse.REMAINDER, help="Command to run after --")
     add_json_arg(session_docker_exec, noun="session Docker exec output")
+    session_codex = session_subparsers.add_parser(
+        "codex",
+        help="Run or prepare Codex inside an existing persistent workspace session",
+    )
+    add_state_dir_arg(session_codex, default=DEFAULT_STATE_DIR)
+    add_output_dir_arg(session_codex, default=DEFAULT_OUTPUT_DIR)
+    session_codex.add_argument("session_ref", help="Session id, id prefix, or name")
+    session_codex.add_argument("--task", required=True, help="Task prompt to pass to Codex")
+    session_codex.add_argument("--codex-bin", default="codex", help="Codex executable name or path")
+    session_codex.add_argument(
+        "--execute",
+        action="store_true",
+        help="Actually run Codex. Without this flag, only prepare artifacts in the session.",
+    )
+    session_codex.add_argument(
+        "--docker",
+        action="store_true",
+        help="Record the target AgentOS Docker runtime image for this host-side Codex worker session",
+    )
+    session_codex.add_argument("--docker-image", default=DEFAULT_IMAGE, help="Docker image to use with --docker")
+    session_codex.add_argument(
+        "--docker-network",
+        default="none",
+        help="Target AgentOS runtime network policy metadata for --docker. Default is none.",
+    )
+    add_json_arg(session_codex, noun="session Codex output")
     session_status = session_subparsers.add_parser("status", help="Inspect one persistent session or list sessions")
     add_state_dir_arg(session_status, default=DEFAULT_STATE_DIR)
     session_status.add_argument("session_ref", nargs="?", help="Session id, id prefix, or name")
@@ -480,6 +506,23 @@ def _main_impl(argv: list[str]) -> int:
             print(f"pinned_image_ref: {result.pinned_image_ref}")
             print(f"command_artifact: {result.command_artifact}")
             return result.exit_code
+        if args.session_command == "codex":
+            result = run_codex_session_task(
+                state_dir=args.state_dir,
+                output_dir=args.output_dir,
+                session_ref=args.session_ref,
+                task=args.task,
+                execute=args.execute,
+                codex_bin=args.codex_bin,
+                use_docker=args.docker,
+                docker_image=args.docker_image,
+                docker_network=args.docker_network,
+            )
+            if args.json:
+                _print_json(_result_to_dict(result))
+                return result.codex_result.exit_code if result.codex_result is not None else 0
+            _print_codex_task_result(result)
+            return result.codex_result.exit_code if result.codex_result is not None else 0
         if args.session_command == "status":
             data = status_work_session(state_dir=args.state_dir, session_ref=args.session_ref)
             print(render_inspection(data, as_json=args.json))
