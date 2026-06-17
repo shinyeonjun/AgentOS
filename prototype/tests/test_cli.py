@@ -824,6 +824,17 @@ class AgentOSCliTests(unittest.TestCase):
             self.assertEqual(reviews_exit_code, 0)
             self.assertTrue(json.loads(reviews_output)["reviews"])
 
+    def test_plugin_spec_json_outputs_agent_tool_contract(self) -> None:
+        exit_code, output = _run_cli(["plugin-spec", "--json"])
+
+        self.assertEqual(exit_code, 0)
+        data = json.loads(output)
+        tools = {tool["name"]: tool for tool in data["tools"]}
+        self.assertEqual(data["name"], "agentos")
+        self.assertIn("create_session", tools)
+        self.assertIn("sync_approved", tools)
+        self.assertTrue(tools["sync_approved"]["human_approval_required"])
+
     def test_verify_review_latest_json_uses_state_dir(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)

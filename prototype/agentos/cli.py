@@ -18,6 +18,7 @@ from .cli_args import (
 from .core.inspector import inspect_state, render_inspection
 from .core.integrity import render_verification, verify_review_package
 from .core.platform_checks import render_doctor, run_doctor
+from .core.plugin_spec import build_plugin_spec
 from .core.review import (
     latest_review_package_path,
     list_review_packages,
@@ -120,6 +121,8 @@ def _main_impl(argv: list[str]) -> int:
     sessions = subparsers.add_parser("sessions", help="List AgentOS sessions")
     add_state_dir_arg(sessions, default=DEFAULT_STATE_DIR)
     add_json_arg(sessions, noun="sessions")
+    plugin_spec = subparsers.add_parser("plugin-spec", help="Render the AgentOS external-agent tool contract")
+    add_json_arg(plugin_spec, noun="plugin tool spec")
     session = subparsers.add_parser("session", help="Create and operate persistent AgentOS workspace sessions")
     session_subparsers = session.add_subparsers(dest="session_command", required=True)
     session_list = session_subparsers.add_parser("list", help="List persistent AgentOS workspace sessions")
@@ -425,6 +428,24 @@ def _main_impl(argv: list[str]) -> int:
     if args.command == "sessions":
         data = inspect_state(args.state_dir)
         print(render_inspection(data, as_json=args.json))
+        return 0
+
+    if args.command == "plugin-spec":
+        spec = build_plugin_spec()
+        if args.json:
+            _print_json(spec)
+        else:
+            print("AgentOS Plugin Tool Contract")
+            print("============================")
+            print(f"schema_version: {spec['schema_version']}")
+            print(f"name: {spec['name']}")
+            print(f"description: {spec['description']}")
+            print("")
+            print("Tools")
+            print("-----")
+            for tool in spec["tools"]:
+                approval = " approval=required" if tool["human_approval_required"] else ""
+                print(f"- {tool['name']}: {tool['command']}{approval}")
         return 0
 
     if args.command == "session":

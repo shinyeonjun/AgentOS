@@ -26,6 +26,12 @@ sync boundary.
 The current v0 contract is CLI-first. A plugin, MCP server, or SDK can wrap
 these commands later without changing the lifecycle.
 
+The machine-readable tool contract is available through:
+
+```bash
+agentos plugin-spec --json
+```
+
 ```bash
 agentos session create --input <project-dir> --name <work-name> --json
 agentos session list --json
