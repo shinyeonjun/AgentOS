@@ -207,7 +207,9 @@ Host-side workers run with an allowlisted environment instead of inheriting the
 full host environment.
 
 Approval records can be HMAC-signed by setting `AGENTOS_APPROVAL_KEY`; without a
-key, the record is explicitly marked `not_signed`.
+key, the record is explicitly marked `not_signed`. Use
+`agentos sync --require-signed-approval` to reject unsigned or unverifiable
+approval records before copying files.
 
 ## Docker Sandbox
 

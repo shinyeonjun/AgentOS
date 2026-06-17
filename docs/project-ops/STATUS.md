@@ -72,6 +72,7 @@ core loop:
 - `agentos sync --dry-run` previews approved paths without copying
 - `agentos sync --require-clean-git` blocks dirty git targets
 - `agentos sync` verifies review package integrity before copying
+- `agentos sync --require-signed-approval` verifies signed approval records before copying
 - Codex prepare wrapper with optional `--execute`
 - Codex execute result collection with changed-file detection and diff artifacts
 - Docker-backed sandbox command runner using `agentos-base:0.1`

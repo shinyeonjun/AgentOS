@@ -337,6 +337,11 @@ def _main_impl(argv: list[str]) -> int:
         help="Fail unless --target is a clean git worktree",
     )
     sync.add_argument(
+        "--require-signed-approval",
+        action="store_true",
+        help="Fail unless approval-record.json has a valid HMAC signature",
+    )
+    sync.add_argument(
         "--json",
         action="store_true",
         help="Render sync output as JSON",
@@ -641,6 +646,7 @@ def _main_impl(argv: list[str]) -> int:
             target_dir=args.target,
             dry_run=args.dry_run,
             require_clean_git=args.require_clean_git,
+            require_signed_approval=args.require_signed_approval,
         )
         if args.json:
             _print_json(result.to_dict())
@@ -650,6 +656,7 @@ def _main_impl(argv: list[str]) -> int:
             print(f"dry_run: {result.dry_run}")
             print(f"git_status: {result.git_status}")
             print(f"review_verification_status: {result.review_verification_status}")
+            print(f"approval_verification_status: {result.approval_verification_status}")
             print(f"copied_paths: {len(result.copied_paths)}")
             for path in result.copied_paths:
                 print(f"- {path}")

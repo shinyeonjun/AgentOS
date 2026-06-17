@@ -49,6 +49,7 @@ The first contract slice now exists:
 - session/review listing: `agentos sessions`, `agentos reviews`
 - diff preview: `agentos diff --latest`
 - sync-time review package integrity verification
+- sync-time signed approval verification with `--require-signed-approval`
 
 Next, test the setup on an actual Windows laptop through WSL2 and only then
 decide whether a fuller TUI is worth it.
@@ -58,7 +59,7 @@ decide whether a fuller TUI is worth it.
 1. Polish the exhibition demo path and presenter script with one clean command sequence.
 2. Test `scripts/wsl-smoke.sh` on the Windows laptop through WSL2 and Docker Desktop.
 3. Run a real sample repo task through `codex -> review -> approve -> sync`.
-4. Add signed approval verification before sync.
+4. Add one integrated `agentos run` command after the manual lifecycle is stable.
 5. Keep approval scope enforcement covered by regression tests.
 6. Add release packaging only after the local install path is stable.
 7. Keep UI/dashboard work behind the CLI and review contract.

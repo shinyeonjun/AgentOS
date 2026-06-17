@@ -376,9 +376,10 @@ class AgentOSCliTests(unittest.TestCase):
             self.assertTrue(dry_run_data["dry_run"])
             self.assertEqual(dry_run_data["copied_paths"], ["README.md"])
             self.assertEqual(dry_run_data["review_verification_status"], "warning")
+            self.assertEqual(dry_run_data["approval_verification_status"], "warning")
             self.assertNotIn(SMOKE_LINE, (target_project / "README.md").read_text(encoding="utf-8"))
 
-            sync_exit_code, sync_output = _run_cli(
+            unsigned_exit_code, unsigned_output = _run_cli(
                 [
                     "sync",
                     "--latest",
@@ -388,14 +389,54 @@ class AgentOSCliTests(unittest.TestCase):
                     str(root / "output"),
                     "--target",
                     str(target_project),
+                    "--dry-run",
+                    "--require-signed-approval",
                     "--json",
                 ]
             )
+            self.assertEqual(unsigned_exit_code, 1)
+            self.assertIn("approval record verification failed", json.loads(unsigned_output)["error"]["message"])
+
+            with patch.dict(
+                "os.environ",
+                {"AGENTOS_APPROVAL_KEY": "approval-secret", "AGENTOS_APPROVAL_KEY_ID": "approval-test"},
+            ):
+                signed_approve_exit_code, _signed_approve_output = _run_cli(
+                    [
+                        "approve",
+                        "--latest",
+                        "--state-dir",
+                        str(root / "state"),
+                        "--output-dir",
+                        str(root / "output"),
+                        "--scope",
+                        "sync_selected:README.md",
+                        "--json",
+                    ]
+                )
+                self.assertEqual(signed_approve_exit_code, 0)
+
+            with patch.dict("os.environ", {"AGENTOS_APPROVAL_KEY": "approval-secret"}):
+                sync_exit_code, sync_output = _run_cli(
+                    [
+                        "sync",
+                        "--latest",
+                        "--state-dir",
+                        str(root / "state"),
+                        "--output-dir",
+                        str(root / "output"),
+                        "--target",
+                        str(target_project),
+                        "--require-signed-approval",
+                        "--json",
+                    ]
+                )
 
             self.assertEqual(sync_exit_code, 0)
             data = json.loads(sync_output)
             self.assertEqual(data["copied_paths"], ["README.md"])
             self.assertEqual(data["review_verification_status"], "warning")
+            self.assertEqual(data["approval_verification_status"], "passed")
             self.assertIn(SMOKE_LINE, (target_project / "README.md").read_text(encoding="utf-8"))
             self.assertTrue((target_project / "KEEP.md").exists())
 

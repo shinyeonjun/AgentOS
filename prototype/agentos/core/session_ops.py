@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .approvals import verify_approval_record
 from .integrity import verify_review_package
 from .review import latest_review_package_path, summarize_review_package
 from .runtime import AgentOSRuntime, Session
@@ -34,6 +35,7 @@ class SyncCliResult:
     dry_run: bool = False
     git_status: str = "not_checked"
     review_verification_status: str = "not_checked"
+    approval_verification_status: str = "not_checked"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -43,6 +45,7 @@ class SyncCliResult:
             "dry_run": self.dry_run,
             "git_status": self.git_status,
             "review_verification_status": self.review_verification_status,
+            "approval_verification_status": self.approval_verification_status,
         }
 
 
@@ -85,6 +88,7 @@ def sync_approved_review(
     latest: bool = False,
     dry_run: bool = False,
     require_clean_git: bool = False,
+    require_signed_approval: bool = False,
 ) -> SyncCliResult:
     review_path = _review_path(state_dir=state_dir, review_package_path=review_package_path, latest=latest)
     verification = verify_review_package(review_path)
@@ -92,7 +96,15 @@ def sync_approved_review(
         raise RuntimeError(f"review package verification failed: {review_path}")
     summary = summarize_review_package(review_path)
     session = load_session(state_dir=state_dir, session_id=summary.session_id)
-    scope = latest_approval_scope(state_dir=state_dir, session_id=summary.session_id)
+    approval_path = latest_approval_record_path(state_dir=state_dir, session_id=summary.session_id)
+    approval_verification = verify_approval_record(
+        approval_path,
+        review_package_path=review_path,
+        require_signature=require_signed_approval,
+    )
+    if not approval_verification.passed:
+        raise RuntimeError(f"approval record verification failed: {approval_path}")
+    scope = approval_scope_from_path(approval_path)
     paths = _sync_paths(scope=scope, review_package=summary.package)
     git_status = check_clean_git(target_dir) if require_clean_git else "not_checked"
     if dry_run:
@@ -103,6 +115,7 @@ def sync_approved_review(
             dry_run=True,
             git_status=git_status,
             review_verification_status=verification.status,
+            approval_verification_status=approval_verification.status,
         )
     runtime = AgentOSRuntime(state_dir=state_dir, output_dir=output_dir)
     result = runtime.sync_approved_selected(
@@ -118,6 +131,7 @@ def sync_approved_review(
         dry_run=False,
         git_status=git_status,
         review_verification_status=verification.status,
+        approval_verification_status=approval_verification.status,
     )
 
 
@@ -143,7 +157,15 @@ def load_session(*, state_dir: Path, session_id: str) -> Session:
 
 
 def latest_approval_scope(*, state_dir: Path, session_id: str) -> dict[str, Any]:
-    approval_path = _latest_artifact_path(state_dir=state_dir, session_id=session_id, artifact_name="approval-record.json")
+    approval_path = latest_approval_record_path(state_dir=state_dir, session_id=session_id)
+    return approval_scope_from_path(approval_path)
+
+
+def latest_approval_record_path(*, state_dir: Path, session_id: str) -> Path:
+    return _latest_artifact_path(state_dir=state_dir, session_id=session_id, artifact_name="approval-record.json")
+
+
+def approval_scope_from_path(approval_path: Path) -> dict[str, Any]:
     approval = json.loads(approval_path.read_text(encoding="utf-8"))
     return dict(approval["scope"])
 

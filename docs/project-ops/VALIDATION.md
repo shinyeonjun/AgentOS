@@ -959,3 +959,29 @@ Observed result:
 - `agentos sync` verifies review package integrity before copying approved paths.
 - Sync JSON and text output now include `review_verification_status`.
 - Default WSL smoke path passed with rehearsal `44a244dc1959`.
+
+## 2026-06-17 Signed Approval Sync Verification Validation
+
+Commands run:
+
+```bash
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest prototype.tests.test_approvals prototype.tests.test_cli -v
+/home/ubuntu/.openclaw/workspace/scripts/ruff-local.sh check /mnt/usb/projects/agentos/prototype
+PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover -s /mnt/usb/projects/agentos/prototype/tests
+python3 -m compileall -q /mnt/usb/projects/agentos/prototype/agentos /mnt/usb/projects/agentos/prototype/tests
+cd /mnt/usb/projects/agentos
+scripts/wsl-smoke.sh
+```
+
+Observed result:
+
+- Focused approval and CLI tests passed: 20 tests.
+- Full unit suite passed: 63 tests.
+- Ruff passed.
+- Compileall passed.
+- `verify_approval_record` accepts signed approval records with the configured key.
+- `verify_approval_record` rejects unsigned approvals when signature verification is required.
+- `agentos sync --require-signed-approval` blocks unsigned approvals.
+- `agentos sync --require-signed-approval` accepts a signed approval when `AGENTOS_APPROVAL_KEY` is set.
+- Sync JSON and text output now include `approval_verification_status`.
+- Default WSL smoke path passed with rehearsal `fcd72f6c96b6`.
