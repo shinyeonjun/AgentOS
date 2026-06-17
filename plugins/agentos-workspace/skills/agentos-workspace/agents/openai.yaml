@@ -4,6 +4,9 @@ interface:
   brand_color: "#2563EB"
   default_prompt: "Use $agentos-workspace for this task. Create or reuse an AgentOS session before editing files, work only inside the session workspace, produce a review package, and do not sync until I approve."
 
+policy:
+  allow_implicit_invocation: true
+
 dependencies:
   tools:
     - type: "mcp"

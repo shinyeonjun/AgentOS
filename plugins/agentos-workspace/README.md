@@ -24,6 +24,11 @@ The plugin packages the AgentOS Python runtime and starts its MCP server with:
 node ./agentos_mcp_launcher.cjs
 ```
 
+OpenAI's Codex plugin model lets a plugin bundle skills and MCP servers. In
+this plugin, the skill defines the workflow and `agents/openai.yaml` declares
+that the skill depends on the bundled `agentos` MCP server. You do not need to
+register a separate MCP server in Codex for normal plugin use.
+
 So a separate `agentos` CLI install is optional for normal Codex plugin use. If
 you want to debug from a terminal, install the CLI and check it with:
 

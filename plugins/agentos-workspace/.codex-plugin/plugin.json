@@ -1,6 +1,6 @@
 {
   "name": "agentos-workspace",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Route AI coding tasks through AgentOS copied sessions, review packages, and approval-gated sync.",
   "author": {
     "name": "AgentOS"
@@ -13,7 +13,7 @@
   "interface": {
     "displayName": "AgentOS Workspace",
     "shortDescription": "Route coding work through AgentOS sessions.",
-    "longDescription": "AgentOS Workspace routes Codex coding work through copied AgentOS session workspaces, review packages, approval gates, and approved sync instead of editing host projects directly. When selected, Codex should create or reuse an AgentOS session before changing files.",
+    "longDescription": "AgentOS Workspace routes Codex coding work through copied AgentOS session workspaces, review packages, approval gates, and approved sync instead of editing host projects directly. When selected, Codex must use the bundled AgentOS skill and MCP server to create or reuse an AgentOS session before changing files.",
     "developerName": "AgentOS",
     "category": "Productivity",
     "capabilities": ["Write", "Code"],

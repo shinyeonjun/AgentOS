@@ -93,9 +93,10 @@ def _initialize_result(params: dict[str, Any]) -> dict[str, Any]:
             "description": "Safe workspace runtime for approval-gated AI coding sessions.",
         },
         "instructions": (
-            "Use AgentOS tools to create copied project sessions, work only inside returned "
-            "workspace paths, build review packages, verify them, and wait for explicit human "
-            "approval before syncing approved changes back to the original project."
+            "When AgentOS is selected or requested, do not edit the original project directly. "
+            "First call doctor, then create or reuse a copied session. Work only inside the "
+            "returned workspace_path, build and verify a review package, and wait for explicit "
+            "human approval before syncing approved changes back to the original project."
         ),
     }
 
