@@ -7,6 +7,7 @@ from tempfile import TemporaryDirectory
 from agentos.core.changes import detect_file_changes
 from agentos.core.path_policy import PathPolicy
 from agentos.core.review import render_review_summary, summarize_review_package
+from agentos.core.work_sessions import create_work_session, exec_work_session, review_work_session, status_work_session
 from agentos.demos.demo import run_code_fix_demo
 
 
@@ -127,6 +128,71 @@ class ReviewSummaryTests(unittest.TestCase):
             changes = detect_file_changes(original, workspace)
 
             self.assertEqual([change.path for change in changes], ["app.py"])
+
+    def test_review_validation_ignores_failed_exploration_commands(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "project"
+            project.mkdir()
+            (project / "README.md").write_text("hello\n", encoding="utf-8")
+            state_dir = root / "state"
+            output_dir = root / "output"
+
+            session = create_work_session(
+                state_dir=state_dir,
+                output_dir=output_dir,
+                input_path=project,
+                name="role-filter",
+            )
+            failed_explore = exec_work_session(
+                state_dir=state_dir,
+                output_dir=output_dir,
+                session_ref="role-filter",
+                command=["python3", "-c", "raise SystemExit(7)"],
+            )
+            passed_validation = exec_work_session(
+                state_dir=state_dir,
+                output_dir=output_dir,
+                session_ref="role-filter",
+                command=["python3", "-c", "print('ok')"],
+                role="validation",
+            )
+
+            self.assertEqual(failed_explore.role, "explore")
+            self.assertEqual(failed_explore.exit_code, 7)
+            self.assertEqual(passed_validation.role, "validation")
+            review = review_work_session(state_dir=state_dir, output_dir=output_dir, session_ref=session.session_id)
+
+            self.assertEqual(review.validation_status, "passed")
+            summary = summarize_review_package(review.review_package_artifact)
+            self.assertEqual(len(summary.validation_checks), 1)
+            self.assertEqual(summary.validation_checks[0]["role"], "validation")
+
+    def test_create_session_cleans_failed_import_workspace(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "project"
+            project.mkdir()
+            (project / "README.md").write_text("hello\n", encoding="utf-8")
+            blocked = project / "blocked"
+            blocked.mkdir()
+            (blocked / "file.txt").write_text("nope\n", encoding="utf-8")
+            blocked.chmod(0)
+            state_dir = root / "state"
+
+            try:
+                with self.assertRaises(Exception):
+                    create_work_session(
+                        state_dir=state_dir,
+                        output_dir=root / "output",
+                        input_path=project,
+                        name="failed-import",
+                    )
+                sessions = status_work_session(state_dir=state_dir)["sessions"]
+                self.assertEqual(sessions[0]["state"], "failed")
+                self.assertEqual(list((state_dir / "sessions").glob("*")), [])
+            finally:
+                blocked.chmod(0o755)
 
 
 if __name__ == "__main__":

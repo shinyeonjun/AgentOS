@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import difflib
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -58,11 +59,15 @@ def detect_file_changes(original_root: Path, workspace_root: Path) -> list[FileC
 
 def _file_map(root: Path) -> dict[str, Path]:
     policy = PathPolicy.from_root(root)
-    return {
-        safe_text(path.relative_to(root).as_posix()): path
-        for path in root.rglob("*")
-        if path.is_file() and policy.is_managed_path(path)
-    }
+    files: dict[str, Path] = {}
+    for directory, dirnames, filenames in os.walk(root):
+        directory_path = Path(directory)
+        dirnames[:] = [name for name in dirnames if policy.is_managed_path(directory_path / name)]
+        for filename in filenames:
+            path = directory_path / filename
+            if policy.is_managed_path(path):
+                files[safe_text(path.relative_to(root).as_posix())] = path
+    return files
 
 
 def _build_text_diff(path: str, before_file: Path | None, after_file: Path | None) -> str | None:

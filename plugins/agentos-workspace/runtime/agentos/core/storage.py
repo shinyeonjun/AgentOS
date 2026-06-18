@@ -49,6 +49,7 @@ class StateStore:
                     stderr_tail text not null,
                     timed_out integer not null default 0,
                     status text not null default 'unknown',
+                    role text not null default 'explore',
                     error_type text,
                     error_message text
                 );
@@ -82,6 +83,7 @@ class StateStore:
             _ensure_column(conn, table="sessions", column="name", definition="text")
             _ensure_column(conn, table="tool_calls", column="timed_out", definition="integer not null default 0")
             _ensure_column(conn, table="tool_calls", column="status", definition="text not null default 'unknown'")
+            _ensure_column(conn, table="tool_calls", column="role", definition="text not null default 'explore'")
             _ensure_column(conn, table="tool_calls", column="error_type", definition="text")
             _ensure_column(conn, table="tool_calls", column="error_message", definition="text")
 
@@ -112,6 +114,7 @@ class StateStore:
         stderr_tail: str,
         timed_out: bool = False,
         status: str = "unknown",
+        role: str = "explore",
         error_type: str | None = None,
         error_message: str | None = None,
     ) -> int:
@@ -121,9 +124,9 @@ class StateStore:
                 insert into tool_calls(
                     session_id, started_at, completed_at, command_json, cwd,
                     exit_code, stdout_tail, stderr_tail, timed_out,
-                    status, error_type, error_message
+                    status, role, error_type, error_message
                 )
-                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     session_id,
@@ -136,6 +139,7 @@ class StateStore:
                     stderr_tail,
                     1 if timed_out else 0,
                     status,
+                    role,
                     error_type,
                     error_message,
                 ),
@@ -192,6 +196,9 @@ class StateStore:
                 "update sessions set state = ?, destroyed_at = ? where session_id = ?",
                 ("destroyed", destroyed_at, session_id),
             )
+
+    def mark_failed(self, *, session_id: str) -> None:
+        self._set_session_state(session_id=session_id, state="failed")
 
     def delete_session_records(self, *, session_id: str) -> None:
         with self.connect() as conn:

@@ -174,6 +174,12 @@ def _main_impl(argv: list[str]) -> int:
     add_output_dir_arg(session_exec, default=DEFAULT_OUTPUT_DIR)
     session_exec.add_argument("session_ref", help="Session id, id prefix, or name")
     session_exec.add_argument("--cwd", help="Workspace-relative working directory")
+    session_exec.add_argument(
+        "--role",
+        choices=("explore", "edit", "test", "validation"),
+        default="explore",
+        help="Command purpose. Only test/validation commands affect review validation.",
+    )
     session_exec.add_argument("workspace_command", nargs=argparse.REMAINDER, help="Command to run after --")
     add_json_arg(session_exec, noun="session exec output")
     session_docker_exec = session_subparsers.add_parser(
@@ -602,7 +608,7 @@ def _main_impl(argv: list[str]) -> int:
             return 0
         if args.session_command == "exec":
             workspace_command = _command_after_double_dash(
-                _extract_remainder_options(args.workspace_command, args, value_options={"--cwd": "cwd"}),
+                _extract_remainder_options(args.workspace_command, args, value_options={"--cwd": "cwd", "--role": "role"}),
                 parser,
                 "session exec",
             )
@@ -612,6 +618,7 @@ def _main_impl(argv: list[str]) -> int:
                 session_ref=args.session_ref,
                 command=workspace_command,
                 cwd=args.cwd,
+                role=args.role,
             )
             if args.json:
                 _print_json(result.to_dict())
@@ -620,6 +627,7 @@ def _main_impl(argv: list[str]) -> int:
             print(f"tool_call: {result.tool_call_id}")
             print(f"cwd: {result.cwd}")
             print(f"exit_code: {result.exit_code}")
+            print(f"role: {result.role}")
             if result.stdout_tail:
                 print("stdout:")
                 print(result.stdout_tail, end="" if result.stdout_tail.endswith("\n") else "\n")

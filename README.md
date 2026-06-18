@@ -152,7 +152,7 @@ agentos session create \
   --name work1 \
   --json
 
-agentos session exec work1 --json -- python3 -m pytest
+agentos session exec work1 --role test --json -- python3 -m pytest
 
 agentos session docker-exec work1 \
   --image agentos-base:0.1 \
@@ -177,6 +177,10 @@ The real project is still not modified during `session exec`,
 `session docker-exec`, `session review`, or `sync-preflight`. Only
 `agentos sync` copies approved changed files back to the explicit target
 directory.
+
+`session exec` defaults to `--role explore` so failed discovery commands do not
+poison review validation. Use `--role test` or `--role validation` for the final
+checks that should gate approval and sync.
 
 For Codex or another external coding agent, use
 `docs/codex-plugin-instructions.md` as the operating contract: the agent works

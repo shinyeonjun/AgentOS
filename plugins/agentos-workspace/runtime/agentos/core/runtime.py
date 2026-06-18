@@ -138,6 +138,7 @@ class AgentOSRuntime:
         cwd: Path,
         env: dict[str, str] | None = None,
         inherit_env: bool = True,
+        role: str = "explore",
     ) -> ToolResult:
         started_at = utc_now()
         timed_out = False
@@ -181,6 +182,7 @@ class AgentOSRuntime:
             stderr_tail=stderr_tail,
             timed_out=timed_out,
             status=status,
+            role=safe_text(role),
             error_type="TimeoutExpired" if timed_out else None,
             error_message=f"command timed out after {self.command_timeout_seconds} seconds" if timed_out else None,
         )

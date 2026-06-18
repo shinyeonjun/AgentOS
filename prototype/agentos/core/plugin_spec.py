@@ -68,10 +68,10 @@ def build_plugin_spec() -> dict[str, Any]:
             ),
             _tool(
                 name="run_command",
-                command="agentos session exec <work-name> --json -- <command>",
-                purpose="Run a host command inside the session workspace.",
+                command="agentos session exec <work-name> --role <role> --json -- <command>",
+                purpose="Run a host command inside the session workspace; only test/validation roles gate review approval.",
                 required=["work_name", "command"],
-                outputs=["exit_code", "stdout_tail", "stderr_tail", "tool_call_id"],
+                outputs=["exit_code", "stdout_tail", "stderr_tail", "tool_call_id", "role"],
             ),
             _tool(
                 name="run_docker_command",

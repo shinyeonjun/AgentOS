@@ -109,6 +109,7 @@ def _initialize_result(params: dict[str, Any]) -> dict[str, Any]:
             [
                 AGENTOS_WORKFLOW_RULE,
                 "If Docker is unavailable or the AgentOS image is missing, call prepare_environment before Docker sandbox work.",
+                "Use run_command role=explore or role=edit for discovery/edit helpers, and role=test or role=validation for final checks that gate review approval.",
                 "Wait for explicit human approval before syncing approved changes back to the original project.",
             ]
         ),
@@ -209,6 +210,7 @@ def _tool_run_command(arguments: dict[str, Any]) -> dict[str, Any]:
         cwd=cwd,
         timeout_seconds=_int_arg(arguments, "timeout_seconds", DEFAULT_MCP_COMMAND_TIMEOUT_SECONDS),
         inherit_env=_bool_arg(arguments, "inherit_env", True),
+        role=_str_arg(arguments, "role", "explore"),
     ).to_dict()
 
 
@@ -494,6 +496,12 @@ def _tool_definitions() -> list[dict[str, Any]]:
                     "type": "boolean",
                     "default": True,
                     "description": "Inherit a safe allowlist of host environment variables. Explicit env values are not yet exposed through MCP.",
+                },
+                "role": {
+                    "type": "string",
+                    "enum": ["explore", "edit", "test", "validation"],
+                    "default": "explore",
+                    "description": "Command purpose. Only test and validation commands affect review validation status.",
                 },
             },
             required=["work_name", "command"],

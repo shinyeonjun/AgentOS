@@ -33,6 +33,8 @@ from .session_ops import load_session
 from .storage import StateStore
 from .text_safety import safe_json_dumps, safe_text
 
+VALIDATION_COMMAND_ROLES = frozenset({"test", "validation"})
+
 
 @dataclass(frozen=True)
 class WorkSessionCreateResult:
@@ -63,6 +65,7 @@ class WorkSessionExecResult:
     stdout_tail: str
     stderr_tail: str
     timed_out: bool
+    role: str
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -73,6 +76,7 @@ class WorkSessionExecResult:
             "stdout_tail": safe_text(self.stdout_tail),
             "stderr_tail": safe_text(self.stderr_tail),
             "timed_out": self.timed_out,
+            "role": self.role,
         }
 
 
@@ -265,8 +269,14 @@ def create_work_session(
         inputs=[TaskInput.from_path(source)],
         capabilities=["base", "code"],
     )
-    task_manifest_artifact = runtime.write_json_artifact(session, "task.json", task_manifest.to_dict())
-    workspace_path = runtime.import_input(session, source)
+    try:
+        task_manifest_artifact = runtime.write_json_artifact(session, "task.json", task_manifest.to_dict())
+        workspace_path = runtime.import_input(session, source)
+    except Exception:
+        runtime.store.mark_failed(session_id=session.session_id)
+        if session.session_dir.exists():
+            shutil.rmtree(session.session_dir, ignore_errors=True)
+        raise
     original_path = session.original_dir / source.name
     return WorkSessionCreateResult(
         session_id=session.session_id,
@@ -287,6 +297,7 @@ def exec_work_session(
     cwd: str | None = None,
     timeout_seconds: int | None = None,
     inherit_env: bool = True,
+    role: str = "explore",
 ) -> WorkSessionExecResult:
     runtime = AgentOSRuntime(
         state_dir=state_dir.resolve(),
@@ -296,7 +307,8 @@ def exec_work_session(
     session = resolve_session(state_dir=state_dir, session_ref=session_ref)
     workspace_root = _require_live_workspace(session)
     run_cwd = _resolve_workspace_cwd(workspace_root, cwd)
-    result = runtime.run_command(session, command, run_cwd, inherit_env=inherit_env)
+    command_role = _normalize_command_role(role)
+    result = runtime.run_command(session, command, run_cwd, inherit_env=inherit_env, role=command_role)
     return WorkSessionExecResult(
         session_id=session.session_id,
         tool_call_id=result.tool_call_id,
@@ -305,6 +317,7 @@ def exec_work_session(
         stdout_tail=result.stdout_tail,
         stderr_tail=result.stderr_tail,
         timed_out=result.timed_out,
+        role=command_role,
     )
 
 
@@ -385,7 +398,7 @@ def docker_exec_work_session(
             "command": docker_command,
         },
     )
-    result = runtime.run_command(session, docker_command, workspace_root)
+    result = runtime.run_command(session, docker_command, workspace_root, role="validation")
     return WorkSessionDockerExecResult(
         session_id=session.session_id,
         tool_call_id=result.tool_call_id,
@@ -751,17 +764,18 @@ def _safe_artifact_stem(path: str) -> str:
 
 
 def _validation_checks(tool_calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    if not tool_calls:
+    validation_calls = [item for item in tool_calls if item.get("role") in VALIDATION_COMMAND_ROLES]
+    if not validation_calls:
         return [
             {
-                "name": "session commands",
+                "name": "validation commands",
                 "status": "not_run",
                 "exit_code": None,
-                "role": "workspace_run",
+                "role": "validation",
             }
         ]
     checks = []
-    for item in tool_calls:
+    for item in validation_calls:
         exit_code = int(item["exit_code"])
         status = item.get("status")
         if status in {"passed", "failed", "timed_out", "error"}:
@@ -773,7 +787,7 @@ def _validation_checks(tool_calls: list[dict[str, Any]]) -> list[dict[str, Any]]
                 "name": f"tool call {item['id']}",
                 "status": check_status,
                 "exit_code": exit_code,
-                "role": "workspace_run",
+                "role": item.get("role") or "validation",
                 "command": item.get("command"),
                 "timed_out": bool(item.get("timed_out")),
                 "tool_status": status or "unknown",
@@ -782,7 +796,17 @@ def _validation_checks(tool_calls: list[dict[str, Any]]) -> list[dict[str, Any]]
     return checks
 
 
+def _normalize_command_role(role: str) -> str:
+    normalized = safe_text(role).strip().lower().replace("-", "_")
+    allowed = {"explore", "edit", "test", "validation"}
+    if normalized not in allowed:
+        raise ValueError(f"command role must be one of {', '.join(sorted(allowed))}")
+    return normalized
+
+
 def _validation_status(checks: list[dict[str, Any]]) -> str:
+    if all(check.get("status") == "not_run" for check in checks):
+        return "not_run"
     if any(check.get("status") == "failed" for check in checks):
         return "failed"
     if any(check.get("status") != "passed" for check in checks):

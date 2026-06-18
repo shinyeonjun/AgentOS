@@ -116,7 +116,7 @@ def _get_session(conn: sqlite3.Connection, session_id: str) -> dict[str, Any] | 
             """
             select
                 id, started_at, completed_at, command_json, cwd, exit_code,
-                stdout_tail, stderr_tail, timed_out, status, error_type, error_message
+                stdout_tail, stderr_tail, timed_out, status, role, error_type, error_message
             from tool_calls
             where session_id = ?
             order by id

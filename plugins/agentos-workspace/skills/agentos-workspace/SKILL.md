@@ -113,8 +113,12 @@ agentos session create --input <project-dir> --name <work-name> --json
 8. Run checks inside the session:
 
 ```bash
-agentos session exec <work-name> --json -- <test-command>
+agentos session exec <work-name> --role test --json -- <test-command>
 ```
+
+Use normal `run_command` / `session exec` calls with `role=explore` for
+discovery and `role=edit` for edit helpers. Before review, run at least one
+`role=test` or `role=validation` command; only those roles gate approval/sync.
 
 9. Use Docker only through the session when needed:
 

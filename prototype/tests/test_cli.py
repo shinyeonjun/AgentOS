@@ -197,6 +197,8 @@ class AgentOSCliTests(unittest.TestCase):
                     str(root / "state"),
                     "--output-dir",
                     str(root / "output"),
+                    "--role",
+                    "edit",
                     "work1",
                     "--json",
                     "--",
@@ -207,6 +209,26 @@ class AgentOSCliTests(unittest.TestCase):
             )
             self.assertEqual(exec_exit_code, 0)
             self.assertEqual(json.loads(exec_output)["exit_code"], 0)
+            validate_exit_code, validate_output = _run_cli(
+                [
+                    "session",
+                    "exec",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--role",
+                    "validation",
+                    "work1",
+                    "--json",
+                    "--",
+                    sys.executable,
+                    "-c",
+                    "from pathlib import Path; raise SystemExit(0 if 'updated' in Path('README.md').read_text(encoding='utf-8') else 1)",
+                ]
+            )
+            self.assertEqual(validate_exit_code, 0)
+            self.assertEqual(json.loads(validate_output)["role"], "validation")
 
             review_exit_code, review_output = _run_cli(
                 [

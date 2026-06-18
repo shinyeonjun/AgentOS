@@ -37,6 +37,9 @@ class McpServerTests(unittest.TestCase):
         self.assertIn("MUST CALL FIRST", tools_by_name["doctor"]["description"])
         self.assertIn("before editing", tools_by_name["create_session"]["description"])
         self.assertIn("max_bytes", tools_by_name["render_diff"]["inputSchema"]["properties"])
+        run_command_schema = tools_by_name["run_command"]["inputSchema"]["properties"]
+        self.assertEqual(run_command_schema["role"]["default"], "explore")
+        self.assertEqual(run_command_schema["role"]["enum"], ["explore", "edit", "test", "validation"])
         self.assertIn("keeping metadata", tools_by_name["destroy_session"]["description"])
         self.assertFalse(tools_by_name["create_session"]["annotations"]["destructiveHint"])
         self.assertFalse(tools_by_name["run_command"]["annotations"]["destructiveHint"])
@@ -184,6 +187,7 @@ class McpServerTests(unittest.TestCase):
                         "work_name": "한글-transport",
                         "command": [sys.executable, "-c", "import time; time.sleep(2)"],
                         "timeout_seconds": 1,
+                        "role": "validation",
                         "state_dir": str(state_dir),
                         "output_dir": str(output_dir),
                     },
@@ -282,6 +286,7 @@ class McpServerTests(unittest.TestCase):
                         "arguments": {
                             "work_name": "preflight-test",
                             "command": [sys.executable, "-c", "print('validation ok')"],
+                            "role": "validation",
                             "state_dir": str(state_dir),
                             "output_dir": str(output_dir),
                         },
@@ -492,6 +497,7 @@ class McpServerTests(unittest.TestCase):
                         "arguments": {
                             "work_name": "failed-validation",
                             "command": [sys.executable, "-c", "raise SystemExit(9)"],
+                            "role": "validation",
                             "state_dir": str(state_dir),
                             "output_dir": str(output_dir),
                         },
