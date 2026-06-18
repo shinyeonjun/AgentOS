@@ -30,6 +30,7 @@ from .platform_checks import ensure_docker_environment
 from .runtime import AgentOSRuntime, Session
 from .session_ops import load_session
 from .storage import StateStore
+from .text_safety import safe_text
 
 
 @dataclass(frozen=True)
@@ -44,11 +45,11 @@ class WorkSessionCreateResult:
     def to_dict(self) -> dict[str, Any]:
         return {
             "session_id": self.session_id,
-            "name": self.name,
-            "input_path": str(self.input_path),
-            "workspace_path": str(self.workspace_path),
-            "original_path": str(self.original_path),
-            "task_manifest_artifact": str(self.task_manifest_artifact),
+            "name": safe_text(self.name) if self.name is not None else None,
+            "input_path": safe_text(str(self.input_path)),
+            "workspace_path": safe_text(str(self.workspace_path)),
+            "original_path": safe_text(str(self.original_path)),
+            "task_manifest_artifact": safe_text(str(self.task_manifest_artifact)),
         }
 
 
@@ -66,10 +67,10 @@ class WorkSessionExecResult:
         return {
             "session_id": self.session_id,
             "tool_call_id": self.tool_call_id,
-            "cwd": str(self.cwd),
+            "cwd": safe_text(str(self.cwd)),
             "exit_code": self.exit_code,
-            "stdout_tail": self.stdout_tail,
-            "stderr_tail": self.stderr_tail,
+            "stdout_tail": safe_text(self.stdout_tail),
+            "stderr_tail": safe_text(self.stderr_tail),
             "timed_out": self.timed_out,
         }
 
@@ -93,13 +94,13 @@ class WorkSessionDockerExecResult:
         return {
             "session_id": self.session_id,
             "tool_call_id": self.tool_call_id,
-            "command_artifact": str(self.command_artifact),
-            "policy_artifact": str(self.policy_artifact),
-            "capability_artifact": str(self.capability_artifact),
-            "provenance_artifact": str(self.provenance_artifact),
+            "command_artifact": safe_text(str(self.command_artifact)),
+            "policy_artifact": safe_text(str(self.policy_artifact)),
+            "capability_artifact": safe_text(str(self.capability_artifact)),
+            "provenance_artifact": safe_text(str(self.provenance_artifact)),
             "exit_code": self.exit_code,
-            "stdout_tail": self.stdout_tail,
-            "stderr_tail": self.stderr_tail,
+            "stdout_tail": safe_text(self.stdout_tail),
+            "stderr_tail": safe_text(self.stderr_tail),
             "policy_status": self.policy_status,
             "image_provenance_status": self.image_provenance_status,
             "pinned_image_ref": self.pinned_image_ref,
@@ -119,8 +120,8 @@ class WorkSessionReviewResult:
             "session_id": self.session_id,
             "changed_files": list(self.changed_files),
             "validation_status": self.validation_status,
-            "report_artifact": str(self.report_artifact),
-            "review_package_artifact": str(self.review_package_artifact),
+            "report_artifact": safe_text(str(self.report_artifact)),
+            "review_package_artifact": safe_text(str(self.review_package_artifact)),
         }
 
 
@@ -134,8 +135,8 @@ class WorkSessionDestroyResult:
     def to_dict(self) -> dict[str, Any]:
         return {
             "session_id": self.session_id,
-            "session_dir": str(self.session_dir),
-            "workspace_path": str(self.workspace_path),
+            "session_dir": safe_text(str(self.session_dir)),
+            "workspace_path": safe_text(str(self.workspace_path)),
             "destroyed": self.destroyed,
         }
 
@@ -150,8 +151,8 @@ class WorkSessionPurgeResult:
     def to_dict(self) -> dict[str, Any]:
         return {
             "session_id": self.session_id,
-            "session_dir": str(self.session_dir),
-            "artifact_dir": str(self.artifact_dir),
+            "session_dir": safe_text(str(self.session_dir)),
+            "artifact_dir": safe_text(str(self.artifact_dir)),
             "purged": self.purged,
         }
 
@@ -519,7 +520,7 @@ def _original_root_for_workspace(session: Session) -> Path:
 
 
 def _safe_artifact_stem(path: str) -> str:
-    stem = re.sub(r"[^A-Za-z0-9_.-]+", "-", path).strip("-")
+    stem = re.sub(r"[^A-Za-z0-9_.-]+", "-", safe_text(path)).strip("-")
     return stem or "change"
 
 
@@ -562,7 +563,7 @@ def _review_report(
     changed_files: list[dict[str, Any]],
     validation_checks: list[dict[str, Any]],
 ) -> str:
-    changed = "\n".join(f"- {item['path']} ({item['change_type']})" for item in changed_files) or "- none"
+    changed = "\n".join(f"- {safe_text(str(item['path']))} ({item['change_type']})" for item in changed_files) or "- none"
     checks = "\n".join(
         f"- {item['status']}: {item['name']} exit_code={item.get('exit_code')}"
         for item in validation_checks

@@ -16,6 +16,7 @@ from typing import Any
 from .approvals import assert_scope_allows, build_approval_record, default_approval_scope
 from .storage import StateStore
 from .sync import PatchApplyResult, apply_patch_to_target
+from .text_safety import json_safe, safe_json_dumps, safe_text
 
 DEFAULT_COMMAND_TIMEOUT_SECONDS = 120
 COMMAND_TIMEOUT_EXIT_CODE = 124
@@ -148,13 +149,13 @@ class AgentOSRuntime:
             stderr = (
                 f"{stderr}\n" if stderr else ""
             ) + f"command timed out after {self.command_timeout_seconds} seconds"
-        stdout_tail = _safe_text(stdout[-4000:])
-        stderr_tail = _safe_text(stderr[-4000:])
+        stdout_tail = safe_text(stdout[-4000:])
+        stderr_tail = safe_text(stderr[-4000:])
         tool_call_id = self.store.record_tool_call(
             session_id=session.session_id,
             started_at=started_at,
             completed_at=utc_now(),
-            command_json=json.dumps(_json_safe(run_command), ensure_ascii=False),
+            command_json=safe_json_dumps(run_command),
             cwd=cwd,
             exit_code=exit_code,
             stdout_tail=stdout_tail,
@@ -174,8 +175,8 @@ class AgentOSRuntime:
         diff = difflib.unified_diff(
             before,
             after,
-            fromfile=str(before_file.relative_to(session.original_dir)),
-            tofile=str(after_file.relative_to(session.workspace_dir)),
+            fromfile=safe_text(str(before_file.relative_to(session.original_dir))),
+            tofile=safe_text(str(after_file.relative_to(session.workspace_dir))),
         )
         return self.write_artifact(session, artifact_name, "".join(diff), "text/x-diff")
 
@@ -183,7 +184,7 @@ class AgentOSRuntime:
         session_artifacts = self.artifacts_dir / session.session_id
         session_artifacts.mkdir(parents=True, exist_ok=True)
         artifact_path = session_artifacts / name
-        artifact_path.write_text(_safe_text(content), encoding="utf-8")
+        artifact_path.write_text(safe_text(content), encoding="utf-8")
         self.store.record_artifact(
             session_id=session.session_id,
             created_at=utc_now(),
@@ -198,7 +199,7 @@ class AgentOSRuntime:
         return self.write_artifact(
             session=session,
             name=name,
-            content=json.dumps(_json_safe(content), ensure_ascii=False, indent=2) + "\n",
+            content=safe_json_dumps(content, indent=2) + "\n",
             media_type="application/json",
         )
 
@@ -236,7 +237,7 @@ class AgentOSRuntime:
         self.store.record_sync(
             session_id=session.session_id,
             synced_at=utc_now(),
-            source_path=str(workspace_path),
+            source_path=safe_text(str(workspace_path)),
             target_path=sync_dir,
         )
         return sync_dir
@@ -248,7 +249,7 @@ class AgentOSRuntime:
         self.store.record_sync(
             session_id=session.session_id,
             synced_at=utc_now(),
-            source_path=str(patch_path),
+            source_path=safe_text(str(patch_path)),
             target_path=target_dir,
         )
         return result
@@ -279,7 +280,7 @@ class AgentOSRuntime:
         self.store.record_sync(
             session_id=session.session_id,
             synced_at=utc_now(),
-            source_path=json.dumps({"kind": "selected_files", "paths": copied_paths}),
+            source_path=safe_json_dumps({"kind": "selected_files", "paths": copied_paths}),
             target_path=target_dir,
         )
         return SelectedSyncResult(target_dir=target_dir, copied_paths=tuple(copied_paths))
@@ -363,28 +364,20 @@ def _output_to_text(value: str | bytes | None) -> str:
     if isinstance(value, bytes):
         for encoding in ("utf-8", locale.getpreferredencoding(False)):
             try:
-                return _safe_text(value.decode(encoding))
+                return safe_text(value.decode(encoding))
             except UnicodeDecodeError:
                 continue
-        return _safe_text(value.decode("utf-8", errors="replace"))
-    return _safe_text(value)
-
-
-def _safe_text(value: str) -> str:
-    return value.encode("utf-8", errors="replace").decode("utf-8")
-
-
-def _json_safe(value: Any) -> Any:
-    if isinstance(value, str):
-        return _safe_text(value)
-    if isinstance(value, dict):
-        return {_safe_text(str(key)): _json_safe(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_json_safe(item) for item in value]
-    return value
+        return safe_text(value.decode("utf-8", errors="replace"))
+    return safe_text(value)
 
 
 def _command_env(*, env: dict[str, str] | None, inherit_env: bool) -> dict[str, str] | None:
+    defaults = {"PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"}
     if inherit_env:
-        return {**os.environ, **env} if env else None
-    return env or {}
+        command_env = {**os.environ}
+    else:
+        command_env = {}
+    command_env.update({key: value for key, value in defaults.items() if key not in command_env})
+    if env:
+        command_env.update({safe_text(str(key)): safe_text(str(value)) for key, value in env.items()})
+    return json_safe(command_env)

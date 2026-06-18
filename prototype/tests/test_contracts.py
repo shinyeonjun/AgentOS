@@ -58,6 +58,10 @@ class ContractIntegrityTests(unittest.TestCase):
             self.assertEqual(verification.status, "warning")
             self.assertTrue(verification.passed)
             self.assertIn("manifest signature", {check.name for check in verification.checks})
+            self.assertIn(
+                "expected for local unsigned reviews",
+                next(check.detail for check in verification.checks if check.name == "manifest signature"),
+            )
 
     def test_verify_signed_review_package_passes_with_key(self) -> None:
         with TemporaryDirectory() as tmp:

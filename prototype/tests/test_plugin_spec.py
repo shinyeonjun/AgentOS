@@ -37,7 +37,7 @@ class PluginSpecTests(unittest.TestCase):
         mcp_config = json.loads((plugin_root / ".mcp.json").read_text(encoding="utf-8"))
         marketplace = json.loads((repo_root / ".agents" / "plugins" / "marketplace.json").read_text(encoding="utf-8"))
 
-        self.assertEqual(manifest["version"], "0.4.4")
+        self.assertEqual(manifest["version"], "0.4.5")
         self.assertEqual(manifest["mcpServers"], "./.mcp.json")
         self.assertEqual(manifest["skills"], "./skills/")
         self.assertIn("Before any file edit", manifest["interface"]["defaultPrompt"][0])
@@ -137,6 +137,8 @@ class PluginSpecTests(unittest.TestCase):
         self.assertIn('process.platform === "win32"', launcher)
         self.assertLess(launcher.index('command: "py"'), launcher.index('const posixCandidates'))
         self.assertIn("exited with code", launcher)
+        self.assertIn("PYTHONUTF8", launcher)
+        self.assertIn("PYTHONIOENCODING", launcher)
         self.assertIn("tryNext();", launcher)
 
 

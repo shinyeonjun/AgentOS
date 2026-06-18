@@ -4,11 +4,19 @@ import difflib
 from dataclasses import dataclass
 from pathlib import Path
 
+from .text_safety import safe_text
+
 IGNORED_PATH_PARTS = {
+    ".agentos-output",
+    ".agentos-state",
+    ".cache",
+    ".coverage",
     ".git",
+    ".mypy_cache",
     ".pytest_cache",
     ".ruff_cache",
     "__pycache__",
+    "htmlcov",
 }
 
 IGNORED_SUFFIXES = {
@@ -67,7 +75,7 @@ def detect_file_changes(original_root: Path, workspace_root: Path) -> list[FileC
 
 def _file_map(root: Path) -> dict[str, Path]:
     return {
-        path.relative_to(root).as_posix(): path
+        safe_text(path.relative_to(root).as_posix()): path
         for path in root.rglob("*")
         if path.is_file() and not _is_ignored(path.relative_to(root))
     }
@@ -85,8 +93,8 @@ def _build_text_diff(path: str, before_file: Path | None, after_file: Path | Non
     diff = difflib.unified_diff(
         before,
         after,
-        fromfile=path,
-        tofile=path,
+        fromfile=safe_text(path),
+        tofile=safe_text(path),
     )
     return "".join(diff)
 

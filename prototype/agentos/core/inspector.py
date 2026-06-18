@@ -5,12 +5,14 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
+from .text_safety import json_safe, safe_json_dumps, safe_text
+
 
 def inspect_state(state_dir: Path, session_id: str | None = None) -> dict[str, Any]:
     db_path = state_dir / "agentos.sqlite3"
     if not db_path.exists():
         return {
-            "state_dir": str(state_dir),
+            "state_dir": safe_text(str(state_dir)),
             "database_exists": False,
             "sessions": [],
         }
@@ -19,12 +21,12 @@ def inspect_state(state_dir: Path, session_id: str | None = None) -> dict[str, A
         conn.row_factory = sqlite3.Row
         if session_id is None:
             return {
-                "state_dir": str(state_dir),
+                "state_dir": safe_text(str(state_dir)),
                 "database_exists": True,
                 "sessions": _list_sessions(conn),
             }
         return {
-            "state_dir": str(state_dir),
+            "state_dir": safe_text(str(state_dir)),
             "database_exists": True,
             "session": _get_session(conn, session_id),
         }
@@ -32,10 +34,10 @@ def inspect_state(state_dir: Path, session_id: str | None = None) -> dict[str, A
 
 def render_inspection(data: dict[str, Any], as_json: bool = False) -> str:
     if as_json:
-        return json.dumps(data, ensure_ascii=False, indent=2)
+        return safe_json_dumps(data, indent=2)
 
     if not data.get("database_exists"):
-        return f"No AgentOS database found at {data['state_dir']}"
+        return f"No AgentOS database found at {safe_text(str(data['state_dir']))}"
 
     if "sessions" in data:
         sessions = data["sessions"]
@@ -43,9 +45,9 @@ def render_inspection(data: dict[str, Any], as_json: bool = False) -> str:
             return "No sessions recorded."
         lines = ["AgentOS sessions:"]
         for item in sessions:
-            name = f" name={item['name']}" if item.get("name") else ""
+            name = f" name={safe_text(str(item['name']))}" if item.get("name") else ""
             lines.append(
-                f"- {item['session_id']} [{item['state']}]{name} "
+                f"- {safe_text(str(item['session_id']))} [{safe_text(str(item['state']))}]{name} "
                 f"tools={item['tool_call_count']} artifacts={item['artifact_count']}"
             )
         return "\n".join(lines)
@@ -55,13 +57,13 @@ def render_inspection(data: dict[str, Any], as_json: bool = False) -> str:
         return "Session not found."
 
     lines = [
-        f"session: {session['session_id']}",
-        f"name: {session['name']}",
-        f"state: {session['state']}",
-        f"created_at: {session['created_at']}",
-        f"destroyed_at: {session['destroyed_at']}",
-        f"input_path: {session['input_path']}",
-        f"workspace_path: {session['workspace_path']}",
+        f"session: {safe_text(str(session['session_id']))}",
+        f"name: {safe_text(str(session['name']))}",
+        f"state: {safe_text(str(session['state']))}",
+        f"created_at: {safe_text(str(session['created_at']))}",
+        f"destroyed_at: {safe_text(str(session['destroyed_at']))}",
+        f"input_path: {safe_text(str(session['input_path']))}",
+        f"workspace_path: {safe_text(str(session['workspace_path']))}",
         f"tool_calls: {len(session['tool_calls'])}",
         f"artifacts: {len(session['artifacts'])}",
         f"approvals: {len(session['approvals'])}",
@@ -157,5 +159,9 @@ def _rows(conn: sqlite3.Connection, query: str, session_id: str) -> list[dict[st
 def _row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
     data = dict(row)
     if "command_json" in data:
-        data["command"] = json.loads(data.pop("command_json"))
-    return data
+        raw_command = data.pop("command_json")
+        try:
+            data["command"] = json.loads(raw_command)
+        except (TypeError, json.JSONDecodeError, UnicodeError):
+            data["command"] = [safe_text(str(raw_command))]
+    return json_safe(data)

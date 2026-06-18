@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
@@ -28,6 +27,7 @@ from .core.review import (
     summarize_review_package,
 )
 from .core.session_ops import approve_review_package, sync_approved_review
+from .core.text_safety import safe_json_dumps
 from .core.work_sessions import (
     create_work_session,
     destroy_work_session,
@@ -818,7 +818,7 @@ def _main_impl(argv: list[str]) -> int:
 
 
 def _print_json(data: dict[str, Any]) -> None:
-    print(json.dumps(data, ensure_ascii=False, indent=2) + "\n", end="")
+    print(safe_json_dumps(data, indent=2) + "\n", end="")
 
 
 def _run_codex_from_args(args: argparse.Namespace) -> Any:

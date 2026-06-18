@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import platform
 import shutil
 import subprocess
@@ -8,6 +7,8 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from .text_safety import safe_json_dumps
 
 DEFAULT_AGENTOS_IMAGE = "agentos-base:0.1"
 DEFAULT_DOCKER_TIMEOUT_SECONDS = 30
@@ -66,7 +67,7 @@ class DoctorResult:
         }
 
     def to_json(self) -> str:
-        return json.dumps(self.to_dict(), ensure_ascii=False, indent=2)
+        return safe_json_dumps(self.to_dict(), indent=2)
 
 
 @dataclass(frozen=True)

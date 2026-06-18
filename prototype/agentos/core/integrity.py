@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .contracts import SCHEMA_VERSION, artifact_ref, artifact_sha256
+from .text_safety import safe_json_dumps, safe_text
 
 MANIFEST_NAME = "artifact-manifest.json"
 MANIFEST_SIGNING_KEY_ENV = "AGENTOS_MANIFEST_KEY"
@@ -41,9 +42,9 @@ class ReviewVerificationResult:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "review_package_path": str(self.review_package_path),
+            "review_package_path": safe_text(str(self.review_package_path)),
             "status": self.status,
-            "manifest_path": str(self.manifest_path) if self.manifest_path else None,
+            "manifest_path": safe_text(str(self.manifest_path)) if self.manifest_path else None,
             "checks": [check.to_dict() for check in self.checks],
         }
 
@@ -193,7 +194,13 @@ def _verify_manifest_signature(
 ) -> None:
     signature = manifest.get("signature") or {}
     if signature.get("status") == "not_signed":
-        checks.append(IntegrityCheck("manifest signature", "warning", "manifest is explicitly not signed"))
+        checks.append(
+            IntegrityCheck(
+                "manifest signature",
+                "warning",
+                f"manifest is unsigned because {MANIFEST_SIGNING_KEY_ENV} is not set; this is expected for local unsigned reviews",
+            )
+        )
         return
     if signature.get("algorithm") != "hmac-sha256" or signature.get("status") != "signed":
         checks.append(IntegrityCheck("manifest signature", "failed", "unsupported or malformed signature"))
@@ -258,4 +265,4 @@ def _sign_payload(payload: dict[str, Any], signing_key: str) -> str:
 
 
 def _canonical_json(content: dict[str, Any]) -> bytes:
-    return json.dumps(content, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return safe_json_dumps(content, sort_keys=True, separators=(",", ":")).encode("utf-8")

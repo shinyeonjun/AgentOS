@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .contracts import SCHEMA_VERSION, artifact_ref, artifact_sha256
+from .text_safety import safe_json_dumps, safe_text
 
 APPROVAL_SIGNING_KEY_ENV = "AGENTOS_APPROVAL_KEY"
 APPROVAL_SIGNING_KEY_ID_ENV = "AGENTOS_APPROVAL_KEY_ID"
@@ -151,7 +152,7 @@ def _review_package_entry(session_id: str, review_package_artifact: Path | None)
     if review_package_artifact is None:
         return None
     return {
-        "name": review_package_artifact.name,
+        "name": safe_text(review_package_artifact.name),
         "ref": artifact_ref(session_id, review_package_artifact),
         "digest": {
             "algorithm": "sha256",
@@ -161,7 +162,7 @@ def _review_package_entry(session_id: str, review_package_artifact: Path | None)
 
 
 def _canonical_json(content: dict[str, Any]) -> bytes:
-    return json.dumps(content, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return safe_json_dumps(content, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
 
 def _verify_review_digest(

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .capabilities import capability_manifest
+from .text_safety import json_safe, safe_text
 
 
 SCHEMA_VERSION = "0.2"
@@ -20,7 +21,7 @@ class TaskInput:
     @classmethod
     def from_path(cls, path: Path, role: str = "primary_project") -> TaskInput:
         kind = "directory" if path.is_dir() else "file"
-        return cls(path=str(path), kind=kind, role=role)
+        return cls(path=safe_text(str(path)), kind=kind, role=safe_text(role))
 
     def to_dict(self) -> dict[str, str]:
         return {
@@ -60,12 +61,12 @@ class TaskManifest:
 
 
 def artifact_ref(session_id: str, artifact_path: Path) -> str:
-    return f"artifact://{session_id}/{artifact_path.name}"
+    return f"artifact://{safe_text(session_id)}/{safe_text(artifact_path.name)}"
 
 
 def artifact_entry(session_id: str, artifact_path: Path, media_type: str) -> dict[str, Any]:
     return {
-        "name": artifact_path.name,
+        "name": safe_text(artifact_path.name),
         "type": media_type,
         "ref": artifact_ref(session_id, artifact_path),
         "size_bytes": artifact_path.stat().st_size,
@@ -160,7 +161,8 @@ def build_approval_scopes(changed_files: list[dict[str, Any]]) -> list[dict[str,
     if not changed_files:
         return []
 
-    paths = [item["path"] for item in changed_files]
+    safe_changed_files = [json_safe(item) for item in changed_files]
+    paths = [safe_text(str(item["path"])) for item in safe_changed_files]
     scopes: list[dict[str, Any]] = [
         {
             "id": "sync_all_changed_files",
@@ -172,13 +174,13 @@ def build_approval_scopes(changed_files: list[dict[str, Any]]) -> list[dict[str,
     ]
     scopes.extend(
         {
-            "id": f"sync_selected:{item['path']}",
+            "id": f"sync_selected:{safe_text(str(item['path']))}",
             "action": "sync_selected",
-            "paths": [item["path"]],
+            "paths": [safe_text(str(item["path"]))],
             "change_type": item.get("change_type", "unknown"),
             "diff_ref": item.get("diff_ref"),
-            "description": f"Approve only {item['path']}.",
+            "description": f"Approve only {safe_text(str(item['path']))}.",
         }
-        for item in changed_files
+        for item in safe_changed_files
     )
     return scopes

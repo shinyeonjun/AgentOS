@@ -22,6 +22,11 @@ function spawnCandidate(candidate) {
   let exited = false;
   const child = childProcess.spawn(candidate.command, candidate.args, {
     cwd: pluginRoot,
+    env: {
+      ...process.env,
+      PYTHONUTF8: process.env.PYTHONUTF8 || "1",
+      PYTHONIOENCODING: process.env.PYTHONIOENCODING || "utf-8",
+    },
     stdio: ["inherit", "inherit", "inherit"],
   });
   child.on("error", (error) => {

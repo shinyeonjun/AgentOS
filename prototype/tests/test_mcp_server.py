@@ -196,6 +196,130 @@ class McpServerTests(unittest.TestCase):
             self.assertTrue((workspace_path / "README.md").exists())
             self.assertFalse((workspace_path / ".agentos-state").exists())
 
+    def test_korean_command_output_survives_run_and_status(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "project"
+            project.mkdir()
+            (project / "README.md").write_text("hello\n", encoding="utf-8")
+            state_dir = root / "state"
+            output_dir = root / "output"
+
+            create = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "create_session",
+                        "arguments": {
+                            "project_dir": str(project),
+                            "work_name": "한글-session",
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                        },
+                    },
+                }
+            )
+            self.assertIsNotNone(create)
+
+            run = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 2,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "run_command",
+                        "arguments": {
+                            "work_name": "한글-session",
+                            "command": [sys.executable, "-c", "import sys; print(sys.argv[1])", "계산기 출력"],
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                        },
+                    },
+                }
+            )
+            self.assertIsNotNone(run)
+            self.assertEqual(run["result"]["structuredContent"]["exit_code"], 0)
+            self.assertIn("계산기 출력", run["result"]["structuredContent"]["stdout_tail"])
+            self.assertIn("\\uacc4", json.dumps(run, ensure_ascii=True))
+
+            status = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 3,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "session_status",
+                        "arguments": {
+                            "work_name": "한글-session",
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                        },
+                    },
+                }
+            )
+            self.assertIsNotNone(status)
+            encoded_status = json.dumps(status, ensure_ascii=True)
+            self.assertIn("\\uacc4", encoded_status)
+            self.assertNotIn("\udcff", encoded_status)
+
+    def test_review_session_handles_korean_paths_and_ignores_test_caches(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "project"
+            project.mkdir()
+            (project / "README.md").write_text("hello\n", encoding="utf-8")
+            state_dir = root / "state"
+            output_dir = root / "output"
+
+            create = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "create_session",
+                        "arguments": {
+                            "project_dir": str(project),
+                            "work_name": "review-korean",
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                        },
+                    },
+                }
+            )
+            self.assertIsNotNone(create)
+            workspace_path = Path(create["result"]["structuredContent"]["workspace_path"])
+            (workspace_path / "계산기.py").write_text("print('안녕')\n", encoding="utf-8")
+            (workspace_path / ".pytest_cache").mkdir()
+            (workspace_path / ".pytest_cache" / "README.md").write_text("cache\n", encoding="utf-8")
+            pycache = workspace_path / "__pycache__"
+            pycache.mkdir()
+            (pycache / "계산기.cpython-311.pyc").write_bytes(b"cache")
+
+            review = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 2,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "review_session",
+                        "arguments": {
+                            "work_name": "review-korean",
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                        },
+                    },
+                }
+            )
+
+            self.assertIsNotNone(review)
+            changed_files = review["result"]["structuredContent"]["changed_files"]
+            self.assertEqual(changed_files, ["계산기.py"])
+            self.assertIn("\\uacc4", json.dumps(review, ensure_ascii=True))
+            self.assertNotIn(".pytest_cache", json.dumps(review, ensure_ascii=True))
+
     def test_render_diff_truncates_large_mcp_response(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

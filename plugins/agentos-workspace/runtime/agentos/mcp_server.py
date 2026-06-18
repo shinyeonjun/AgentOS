@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import sys
-from dataclasses import asdict, is_dataclass
 from pathlib import Path
 from typing import Any, Callable
 
@@ -18,6 +17,7 @@ from .core.work_sessions import (
     review_work_session,
     status_work_session,
 )
+from .core.text_safety import json_safe, safe_json_dumps, safe_text
 
 SERVER_NAME = "agentos"
 SERVER_VERSION = "0.2.0"
@@ -31,6 +31,7 @@ AGENTOS_WORKFLOW_RULE = (
 
 
 def run_stdio() -> int:
+    _configure_stdio()
     for line in sys.stdin:
         line = line.strip()
         if not line:
@@ -549,7 +550,7 @@ def _tool_result(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def _tool_error(message: str) -> dict[str, Any]:
-    payload = {"ok": False, "error": _safe_text(message)}
+    payload = {"ok": False, "error": safe_text(message)}
     return {
         "content": [{"type": "text", "text": _safe_json_dumps(payload)}],
         "structuredContent": payload,
@@ -558,25 +559,11 @@ def _tool_error(message: str) -> dict[str, Any]:
 
 
 def _jsonable(value: Any) -> Any:
-    if is_dataclass(value):
-        return _jsonable(asdict(value))
-    if isinstance(value, Path):
-        return _safe_text(str(value))
-    if isinstance(value, str):
-        return _safe_text(value)
-    if isinstance(value, dict):
-        return {_safe_text(str(key)): _jsonable(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_jsonable(item) for item in value]
-    return value
+    return json_safe(value)
 
 
 def _safe_json_dumps(value: Any, *, indent: int | None = None) -> str:
-    return json.dumps(_jsonable(value), ensure_ascii=True, indent=indent)
-
-
-def _safe_text(value: str) -> str:
-    return value.encode("utf-8", errors="replace").decode("utf-8")
+    return safe_json_dumps(value, indent=indent)
 
 
 def _rpc_response(message_id: Any, result: dict[str, Any]) -> dict[str, Any]:
@@ -584,8 +571,15 @@ def _rpc_response(message_id: Any, result: dict[str, Any]) -> dict[str, Any]:
 
 
 def _rpc_error(message_id: Any, code: int, message: str) -> dict[str, Any]:
-    return {"jsonrpc": "2.0", "id": message_id, "error": {"code": code, "message": _safe_text(message)}}
+    return {"jsonrpc": "2.0", "id": message_id, "error": {"code": code, "message": safe_text(message)}}
 
 
 def _write_rpc(message: Any) -> None:
     print(_safe_json_dumps(message), flush=True)
+
+
+def _configure_stdio() -> None:
+    for stream, errors in ((sys.stdin, "replace"), (sys.stdout, "backslashreplace"), (sys.stderr, "backslashreplace")):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            reconfigure(encoding="utf-8", errors=errors)

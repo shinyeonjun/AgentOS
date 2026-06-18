@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import sqlite3
 import sys
 import unittest
 from pathlib import Path
@@ -40,12 +42,16 @@ class RuntimeHardeningTests(unittest.TestCase):
 
             result = runtime.run_command(
                 session=session,
-                command=[sys.executable, "-c", "print('계산기')"],
+                command=[sys.executable, "-c", "import sys; print(sys.argv[1])", "계산기 인자"],
                 cwd=session.workspace_dir,
             )
 
             self.assertEqual(result.exit_code, 0)
-            self.assertIn("계산기", result.stdout_tail)
+            self.assertIn("계산기 인자", result.stdout_tail)
+            with sqlite3.connect(runtime.db_path) as conn:
+                command_json = conn.execute("select command_json from tool_calls").fetchone()[0]
+            self.assertNotIn("계산기", command_json)
+            self.assertEqual(json.loads(command_json)[-1], "계산기 인자")
 
     def test_windows_powershell_shim_is_wrapped_for_subprocess(self) -> None:
         with (
