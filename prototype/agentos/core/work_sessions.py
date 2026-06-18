@@ -4,6 +4,7 @@ import re
 import shutil
 import sqlite3
 import uuid
+import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -30,7 +31,7 @@ from .platform_checks import ensure_docker_environment
 from .runtime import AgentOSRuntime, Session
 from .session_ops import load_session
 from .storage import StateStore
-from .text_safety import safe_text
+from .text_safety import safe_json_dumps, safe_text
 
 
 @dataclass(frozen=True)
@@ -154,6 +155,84 @@ class WorkSessionPurgeResult:
             "session_dir": safe_text(str(self.session_dir)),
             "artifact_dir": safe_text(str(self.artifact_dir)),
             "purged": self.purged,
+        }
+
+
+@dataclass(frozen=True)
+class WorkSessionSummaryResult:
+    session_id: str
+    name: str | None
+    state: str
+    workspace_path: Path | None
+    changed_files: tuple[str, ...]
+    tool_call_count: int
+    latest_exit_code: int | None
+    validation_status: str
+    review_package_artifact: Path | None
+    approved: bool
+    synced: bool
+    next_action: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "session_id": self.session_id,
+            "name": safe_text(self.name) if self.name is not None else None,
+            "state": self.state,
+            "workspace_path": safe_text(str(self.workspace_path)) if self.workspace_path is not None else None,
+            "changed_files": list(self.changed_files),
+            "tool_call_count": self.tool_call_count,
+            "latest_exit_code": self.latest_exit_code,
+            "validation_status": self.validation_status,
+            "review_package_artifact": safe_text(str(self.review_package_artifact)) if self.review_package_artifact else None,
+            "approved": self.approved,
+            "synced": self.synced,
+            "next_action": self.next_action,
+        }
+
+
+@dataclass(frozen=True)
+class WorkSessionCleanupResult:
+    keep_latest: int
+    dry_run: bool
+    candidates: tuple[str, ...]
+    removed_sessions: tuple[str, ...]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "keep_latest": self.keep_latest,
+            "dry_run": self.dry_run,
+            "candidates": list(self.candidates),
+            "removed_sessions": list(self.removed_sessions),
+        }
+
+
+@dataclass(frozen=True)
+class WorkSessionRepairResult:
+    session_id: str
+    fixed: bool
+    issues: tuple[str, ...]
+    actions: tuple[str, ...]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "session_id": self.session_id,
+            "fixed": self.fixed,
+            "issues": list(self.issues),
+            "actions": list(self.actions),
+        }
+
+
+@dataclass(frozen=True)
+class WorkSessionDebugBundleResult:
+    session_id: str
+    bundle_path: Path
+    included_files: tuple[str, ...]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "session_id": self.session_id,
+            "bundle_path": safe_text(str(self.bundle_path)),
+            "included_files": list(self.included_files),
         }
 
 
@@ -435,6 +514,147 @@ def purge_work_session(
     )
 
 
+def summarize_work_session(*, state_dir: Path, session_ref: str) -> WorkSessionSummaryResult:
+    session = resolve_session(state_dir=state_dir, session_ref=session_ref)
+    inspection = inspect_state(state_dir, session_id=session.session_id)["session"] or {}
+    tool_calls = list(inspection.get("tool_calls") or [])
+    review_path = _latest_artifact_path(state_dir=state_dir, session_id=session.session_id, artifact_name="review_package.json")
+    changed_files: tuple[str, ...] = ()
+    validation_status = "not_reviewed"
+    if review_path is not None and review_path.exists():
+        import json
+
+        package = json.loads(review_path.read_text(encoding="utf-8"))
+        changed_files = tuple(str(item.get("path")) for item in (package.get("changes") or {}).get("changed_files") or [])
+        validation_status = str((package.get("validation") or {}).get("status", "unknown"))
+    latest_exit_code = int(tool_calls[-1]["exit_code"]) if tool_calls else None
+    approved = bool(inspection.get("approvals"))
+    synced = bool(inspection.get("syncs"))
+    next_action = _summary_next_action(
+        reviewed=review_path is not None,
+        approved=approved,
+        synced=synced,
+        validation_status=validation_status,
+        changed_files=changed_files,
+    )
+    workspace = inspection.get("workspace_path")
+    return WorkSessionSummaryResult(
+        session_id=session.session_id,
+        name=inspection.get("name"),
+        state=str(inspection.get("state", "unknown")),
+        workspace_path=Path(workspace) if workspace else None,
+        changed_files=changed_files,
+        tool_call_count=len(tool_calls),
+        latest_exit_code=latest_exit_code,
+        validation_status=validation_status,
+        review_package_artifact=review_path,
+        approved=approved,
+        synced=synced,
+        next_action=next_action,
+    )
+
+
+def cleanup_work_sessions(
+    *,
+    state_dir: Path,
+    output_dir: Path,
+    keep_latest: int,
+    dry_run: bool = True,
+) -> WorkSessionCleanupResult:
+    if keep_latest < 0:
+        raise ValueError("keep_latest must be >= 0")
+    db_path = state_dir / "agentos.sqlite3"
+    if not db_path.exists():
+        return WorkSessionCleanupResult(keep_latest=keep_latest, dry_run=dry_run, candidates=(), removed_sessions=())
+    StateStore(db_path).init_db()
+    with sqlite3.connect(db_path) as conn:
+        rows = conn.execute(
+            "select session_id, session_dir from sessions order by created_at desc, session_id desc"
+        ).fetchall()
+    candidates = [(str(row[0]), Path(row[1])) for row in rows[keep_latest:]]
+    removed: list[str] = []
+    runtime = AgentOSRuntime(state_dir=state_dir.resolve(), output_dir=output_dir.resolve())
+    if not dry_run:
+        for session_id, session_dir in candidates:
+            artifact_dir = runtime.artifacts_dir / session_id
+            if session_dir.exists():
+                shutil.rmtree(session_dir)
+            if artifact_dir.exists():
+                shutil.rmtree(artifact_dir)
+            runtime.store.delete_session_records(session_id=session_id)
+            removed.append(session_id)
+    return WorkSessionCleanupResult(
+        keep_latest=keep_latest,
+        dry_run=dry_run,
+        candidates=tuple(session_id for session_id, _ in candidates),
+        removed_sessions=tuple(removed),
+    )
+
+
+def repair_work_session(
+    *,
+    state_dir: Path,
+    output_dir: Path,
+    session_ref: str,
+    fix: bool = False,
+) -> WorkSessionRepairResult:
+    runtime = AgentOSRuntime(state_dir=state_dir.resolve(), output_dir=output_dir.resolve())
+    session = resolve_session(state_dir=state_dir, session_ref=session_ref)
+    issues: list[str] = []
+    actions: list[str] = []
+    if not Path(session.session_dir).exists():
+        issues.append("session directory is missing")
+    if not Path(session.workspace_dir).exists():
+        issues.append("workspace directory is missing")
+    artifact_dir = runtime.artifacts_dir / session.session_id
+    if not artifact_dir.exists():
+        issues.append("artifact directory is missing")
+        if fix:
+            artifact_dir.mkdir(parents=True, exist_ok=True)
+            actions.append("created artifact directory")
+    if fix and issues and not Path(session.session_dir).exists():
+        runtime.store.mark_destroyed(session_id=session.session_id, destroyed_at=runtime_module_utc_now())
+        actions.append("marked missing session as destroyed")
+    return WorkSessionRepairResult(
+        session_id=session.session_id,
+        fixed=bool(actions),
+        issues=tuple(issues),
+        actions=tuple(actions),
+    )
+
+
+def export_debug_bundle(
+    *,
+    state_dir: Path,
+    output_dir: Path,
+    session_ref: str,
+) -> WorkSessionDebugBundleResult:
+    session = resolve_session(state_dir=state_dir, session_ref=session_ref)
+    bundle_dir = output_dir / "debug-bundles"
+    bundle_dir.mkdir(parents=True, exist_ok=True)
+    bundle_path = bundle_dir / f"{session.session_id}-debug.zip"
+    included: list[str] = []
+    summary = summarize_work_session(state_dir=state_dir, session_ref=session.session_id).to_dict()
+    with zipfile.ZipFile(bundle_path, "w", compression=zipfile.ZIP_DEFLATED) as bundle:
+        bundle.writestr("session-summary.json", safe_json_dumps(summary, indent=2) + "\n")
+        included.append("session-summary.json")
+        db_path = state_dir / "agentos.sqlite3"
+        if db_path.exists():
+            bundle.write(db_path, "agentos.sqlite3")
+            included.append("agentos.sqlite3")
+        artifact_dir = state_dir / "artifacts" / session.session_id
+        if artifact_dir.exists():
+            for path in sorted(item for item in artifact_dir.rglob("*") if item.is_file()):
+                arcname = f"artifacts/{path.relative_to(artifact_dir)}"
+                bundle.write(path, arcname)
+                included.append(arcname)
+    return WorkSessionDebugBundleResult(
+        session_id=session.session_id,
+        bundle_path=bundle_path,
+        included_files=tuple(included),
+    )
+
+
 def status_work_session(*, state_dir: Path, session_ref: str | None = None) -> dict[str, Any]:
     if session_ref is None:
         return inspect_state(state_dir)
@@ -594,3 +814,30 @@ def _latest_artifact_path(*, state_dir: Path, session_id: str, artifact_name: st
     if row is None:
         return None
     return Path(row[0])
+
+
+def _summary_next_action(
+    *,
+    reviewed: bool,
+    approved: bool,
+    synced: bool,
+    validation_status: str,
+    changed_files: tuple[str, ...],
+) -> str:
+    if synced:
+        return "done"
+    if not changed_files and reviewed:
+        return "no changes to sync"
+    if not reviewed:
+        return "run review_session"
+    if validation_status == "failed":
+        return "fix failing validation, then review again"
+    if not approved:
+        return "run sync_preflight, request approval, then approve_scope"
+    return "run sync_preflight dry-run, then sync_approved"
+
+
+def runtime_module_utc_now() -> str:
+    from .runtime import utc_now
+
+    return utc_now()

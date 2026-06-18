@@ -1,6 +1,6 @@
 {
   "name": "agentos-workspace",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "description": "Force selected coding tasks through AgentOS MCP sessions before any file edits.",
   "author": {
     "name": "AgentOS"
@@ -21,7 +21,7 @@
       "Use AgentOS MCP for this task. Before any file edit, call agentos doctor. If tools are unavailable, offer to run AgentOS setup.",
       "Use the normal approval policy by default: create/reuse sessions, run commands, test, and review without asking because the original workspace is not changed.",
       "Do not edit the current/original workspace directly. Work only inside the returned workspace_path. If Docker or the AgentOS image is not ready, call prepare_environment before Docker sandbox work.",
-      "Produce and verify a review package, then wait for explicit human approval before approve_scope or sync_approved changes the original project."
+      "Produce and verify a review package, run sync_preflight to show planned paths and blockers, then wait for explicit human approval before approve_scope or sync_approved changes the original project."
     ],
     "brandColor": "#2563EB"
   }

@@ -8,14 +8,18 @@ from typing import Any, Callable
 from .core.integrity import verify_review_package
 from .core.platform_checks import prepare_docker_environment, run_doctor
 from .core.review import latest_review_package_path, render_review_diffs, summarize_review_package
-from .core.session_ops import approve_review_package, sync_approved_review
+from .core.session_ops import approve_review_package, preflight_sync_review, sync_approved_review
 from .core.work_sessions import (
     create_work_session,
+    cleanup_work_sessions,
     destroy_work_session,
     docker_exec_work_session,
     exec_work_session,
+    export_debug_bundle,
     review_work_session,
+    repair_work_session,
     status_work_session,
+    summarize_work_session,
 )
 from .core.text_safety import json_safe, safe_json_dumps, safe_text
 
@@ -121,14 +125,19 @@ def _handle_tool_call(params: dict[str, Any]) -> dict[str, Any]:
         "create_session": _tool_create_session,
         "list_sessions": _tool_list_sessions,
         "session_status": _tool_session_status,
+        "session_summary": _tool_session_summary,
         "run_command": _tool_run_command,
         "run_docker_command": _tool_run_docker_command,
         "review_session": _tool_review_session,
         "render_review": _tool_render_review,
         "render_diff": _tool_render_diff,
         "verify_review": _tool_verify_review,
+        "sync_preflight": _tool_sync_preflight,
         "approve_scope": _tool_approve_scope,
         "sync_approved": _tool_sync_approved,
+        "cleanup_sessions": _tool_cleanup_sessions,
+        "repair_session": _tool_repair_session,
+        "export_debug_bundle": _tool_export_debug_bundle,
         "destroy_session": _tool_destroy_session,
         "purge_session": _tool_purge_session,
     }
@@ -176,6 +185,10 @@ def _tool_list_sessions(arguments: dict[str, Any]) -> dict[str, Any]:
 
 def _tool_session_status(arguments: dict[str, Any]) -> dict[str, Any]:
     return status_work_session(state_dir=_state_dir(arguments), session_ref=_required_str(arguments, "work_name"))
+
+
+def _tool_session_summary(arguments: dict[str, Any]) -> dict[str, Any]:
+    return summarize_work_session(state_dir=_state_dir(arguments), session_ref=_required_str(arguments, "work_name")).to_dict()
 
 
 def _tool_run_command(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -240,6 +253,18 @@ def _tool_verify_review(arguments: dict[str, Any]) -> dict[str, Any]:
     return verify_review_package(_review_path(arguments)).to_dict()
 
 
+def _tool_sync_preflight(arguments: dict[str, Any]) -> dict[str, Any]:
+    return preflight_sync_review(
+        state_dir=_state_dir(arguments),
+        target_dir=_required_path(arguments, "project_dir"),
+        review_package_path=_optional_path(arguments, "review_package"),
+        latest=_bool_arg(arguments, "latest", True),
+        scope_id=arguments.get("scope_id") if arguments.get("scope_id") is not None else None,
+        require_clean_git=_bool_arg(arguments, "require_clean_git", False),
+        require_signed_approval=_bool_arg(arguments, "require_signed_approval", False),
+    ).to_dict()
+
+
 def _tool_approve_scope(arguments: dict[str, Any]) -> dict[str, Any]:
     return approve_review_package(
         state_dir=_state_dir(arguments),
@@ -261,6 +286,32 @@ def _tool_sync_approved(arguments: dict[str, Any]) -> dict[str, Any]:
         dry_run=_bool_arg(arguments, "dry_run", True),
         require_clean_git=_bool_arg(arguments, "require_clean_git", False),
         require_signed_approval=_bool_arg(arguments, "require_signed_approval", False),
+    ).to_dict()
+
+
+def _tool_cleanup_sessions(arguments: dict[str, Any]) -> dict[str, Any]:
+    return cleanup_work_sessions(
+        state_dir=_state_dir(arguments),
+        output_dir=_output_dir(arguments),
+        keep_latest=_int_arg(arguments, "keep_latest", 10),
+        dry_run=_bool_arg(arguments, "dry_run", True),
+    ).to_dict()
+
+
+def _tool_repair_session(arguments: dict[str, Any]) -> dict[str, Any]:
+    return repair_work_session(
+        state_dir=_state_dir(arguments),
+        output_dir=_output_dir(arguments),
+        session_ref=_required_str(arguments, "work_name"),
+        fix=_bool_arg(arguments, "fix", False),
+    ).to_dict()
+
+
+def _tool_export_debug_bundle(arguments: dict[str, Any]) -> dict[str, Any]:
+    return export_debug_bundle(
+        state_dir=_state_dir(arguments),
+        output_dir=_output_dir(arguments),
+        session_ref=_required_str(arguments, "work_name"),
     ).to_dict()
 
 
@@ -417,6 +468,13 @@ def _tool_definitions() -> list[dict[str, Any]]:
             annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True},
         ),
         _tool_definition(
+            "session_summary",
+            "Summarize changed files, commands, tests, review path, approval state, sync state, and the next action.",
+            {**common_paths, "work_name": _string_schema("Session id, id prefix, or name.")},
+            required=["work_name"],
+            annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True},
+        ),
+        _tool_definition(
             "run_command",
             "Run a host command inside an AgentOS session workspace, never in the original project. No sync approval is needed for session-only work.",
             {
@@ -475,6 +533,19 @@ def _tool_definitions() -> list[dict[str, Any]]:
             annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True},
         ),
         _tool_definition(
+            "sync_preflight",
+            "Show what sync would copy, whether approval is still required, blockers, and the exact next action. Use this before requesting human approval.",
+            {
+                **review_selector,
+                "project_dir": _string_schema("Target project directory to receive approved files."),
+                "scope_id": _string_schema("Approval scope id to preview. Defaults to the review recommendation."),
+                "require_clean_git": {"type": "boolean", "default": False},
+                "require_signed_approval": {"type": "boolean", "default": False},
+            },
+            required=["project_dir"],
+            annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True},
+        ),
+        _tool_definition(
             "approve_scope",
             "Record explicit human approval for one review scope. Do not call without user approval.",
             {
@@ -496,6 +567,34 @@ def _tool_definitions() -> list[dict[str, Any]]:
             },
             required=["project_dir"],
             annotations={"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False},
+        ),
+        _tool_definition(
+            "cleanup_sessions",
+            "Preview or remove older AgentOS sessions, metadata, and artifacts while keeping the newest N sessions.",
+            {
+                **common_paths,
+                "keep_latest": {"type": "integer", "default": 10},
+                "dry_run": {"type": "boolean", "default": True},
+            },
+            annotations={"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False},
+        ),
+        _tool_definition(
+            "repair_session",
+            "Inspect lightweight session state issues and optionally apply safe metadata/artifact-directory repairs.",
+            {
+                **common_paths,
+                "work_name": _string_schema("Session id, id prefix, or name."),
+                "fix": {"type": "boolean", "default": False},
+            },
+            required=["work_name"],
+            annotations={"readOnlyHint": False, "destructiveHint": False, "idempotentHint": True},
+        ),
+        _tool_definition(
+            "export_debug_bundle",
+            "Export session summary, database, and artifacts into a zip bundle for debugging.",
+            {**common_paths, "work_name": _string_schema("Session id, id prefix, or name.")},
+            required=["work_name"],
+            annotations={"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False},
         ),
         _tool_definition(
             "destroy_session",

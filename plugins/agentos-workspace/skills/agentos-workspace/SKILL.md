@@ -40,6 +40,9 @@ stricter or faster mode.
 - Fast/auto-sync mode: only use when the user explicitly asks for automatic sync
   or the host has a trusted policy for it. Never infer auto-sync from ordinary
   coding requests.
+- Preflight before approval: call `sync_preflight` after review verification
+  and before asking the human to approve sync. Show the planned paths, blockers,
+  and recommended scope so approval is tied to a concrete review package.
 - Approval boundary: `approve_scope` and non-dry-run `sync_approved` require
   explicit human approval because they authorize or mutate the original project.
 
@@ -53,9 +56,9 @@ through AgentOS before Docker sandbox work.
 1. Use AgentOS MCP tools before any file edit. Start with `doctor`. If
    Docker checks warn or fail and the task needs Docker sandbox work, call
    `prepare_environment`. Then use `create_session`, `run_command`,
-   `review_session`, and `verify_review` without extra user prompts under the
-   normal policy. Use `approve_scope` and `sync_approved` only after explicit
-   human approval.
+   `review_session`, `verify_review`, and `sync_preflight` without extra user
+   prompts under the normal policy. Use `approve_scope` and `sync_approved`
+   only after explicit human approval.
 
 2. If MCP tools are unavailable immediately after installing or updating this
    plugin, first assume the current Codex conversation started before the MCP
@@ -121,9 +124,11 @@ agentos session review <work-name> --json
 agentos review --latest --json
 agentos diff --latest
 agentos verify-review --latest --json
+agentos sync-preflight --latest --target <project-dir> --json
 ```
 
-11. Report changed files, validation status, and approval scopes to the user.
+11. Report changed files, validation status, approval scopes, preflight
+    blockers, and the exact scope that needs approval to the user.
 
 12. Do not record approval or sync until the user explicitly approves a scope.
     After approval:

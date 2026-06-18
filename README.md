@@ -167,14 +167,16 @@ agentos session codex work1 \
 agentos session review work1 --json
 agentos review --latest
 agentos diff --latest
+agentos sync-preflight --latest --target ../some-project --json
 agentos approve --latest --scope sync_selected:README.md
 agentos sync --latest --target ../some-project --dry-run
 agentos sync --latest --target ../some-project
 ```
 
 The real project is still not modified during `session exec`,
-`session docker-exec`, or `session review`. Only `agentos sync` copies approved
-changed files back to the explicit target directory.
+`session docker-exec`, `session review`, or `sync-preflight`. Only
+`agentos sync` copies approved changed files back to the explicit target
+directory.
 
 For Codex or another external coding agent, use
 `docs/codex-plugin-instructions.md` as the operating contract: the agent works

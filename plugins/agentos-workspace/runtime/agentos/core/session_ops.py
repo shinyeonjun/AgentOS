@@ -49,6 +49,42 @@ class SyncCliResult:
         }
 
 
+@dataclass(frozen=True)
+class SyncPreflightResult:
+    session_id: str
+    target_dir: Path
+    approved: bool
+    approval_required: bool
+    recommended_scope_id: str | None
+    approval_scopes: tuple[dict[str, Any], ...]
+    planned_paths: tuple[str, ...]
+    changed_files: tuple[str, ...]
+    git_status: str
+    review_verification_status: str
+    approval_verification_status: str
+    safe_to_sync: bool
+    blockers: tuple[str, ...]
+    next_action: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "session_id": self.session_id,
+            "target_dir": str(self.target_dir),
+            "approved": self.approved,
+            "approval_required": self.approval_required,
+            "recommended_scope_id": self.recommended_scope_id,
+            "approval_scopes": list(self.approval_scopes),
+            "planned_paths": list(self.planned_paths),
+            "changed_files": list(self.changed_files),
+            "git_status": self.git_status,
+            "review_verification_status": self.review_verification_status,
+            "approval_verification_status": self.approval_verification_status,
+            "safe_to_sync": self.safe_to_sync,
+            "blockers": list(self.blockers),
+            "next_action": self.next_action,
+        }
+
+
 def approve_review_package(
     *,
     state_dir: Path,
@@ -76,6 +112,87 @@ def approve_review_package(
         session_id=summary.session_id,
         scope=scope,
         approval_record_artifact=approval_artifact,
+    )
+
+
+def preflight_sync_review(
+    *,
+    state_dir: Path,
+    target_dir: Path,
+    review_package_path: Path | None = None,
+    latest: bool = False,
+    scope_id: str | None = None,
+    require_clean_git: bool = False,
+    require_signed_approval: bool = False,
+) -> SyncPreflightResult:
+    review_path = _review_path(state_dir=state_dir, review_package_path=review_package_path, latest=latest)
+    verification = verify_review_package(review_path)
+    summary = summarize_review_package(review_path)
+    scopes = tuple(dict(item) for item in summary.approval_scopes)
+    selected_scope = _select_approval_scope(summary.package, scope_id=scope_id) if scopes else {}
+    planned_paths = tuple(_sync_paths(scope=selected_scope, review_package=summary.package)) if selected_scope else ()
+    changed_files = tuple(str(item.get("path")) for item in summary.changed_files)
+
+    blockers: list[str] = []
+    if not verification.passed:
+        blockers.append("review package verification failed")
+
+    session = load_session(state_dir=state_dir, session_id=summary.session_id)
+    try:
+        _validate_sync_sources(workspace_root=Path(session.workspace_dir), relative_paths=list(planned_paths))
+    except (FileNotFoundError, RuntimeError, ValueError) as exc:
+        blockers.append(str(exc))
+
+    git_status = "not_checked"
+    if require_clean_git:
+        try:
+            git_status = check_clean_git(target_dir)
+        except RuntimeError as exc:
+            git_status = "dirty_or_unreadable"
+            blockers.append(str(exc))
+        except FileNotFoundError as exc:
+            git_status = "missing"
+            blockers.append(str(exc))
+
+    approved = False
+    approval_status = "missing"
+    try:
+        approval_path = latest_approval_record_path(state_dir=state_dir, session_id=summary.session_id)
+        approval_verification = verify_approval_record(
+            approval_path,
+            review_package_path=review_path,
+            require_signature=require_signed_approval,
+        )
+        approval_status = approval_verification.status
+        approved = approval_verification.passed
+        if not approval_verification.passed:
+            blockers.append(f"approval record verification failed: {approval_path}")
+    except FileNotFoundError:
+        blockers.append("approval required before sync")
+
+    safe_to_sync = not blockers
+    if safe_to_sync:
+        next_action = "sync_approved"
+    elif approved:
+        next_action = "fix blockers, then sync_approved"
+    else:
+        next_action = "request human approval, then call approve_scope and sync_approved"
+
+    return SyncPreflightResult(
+        session_id=summary.session_id,
+        target_dir=target_dir,
+        approved=approved,
+        approval_required=not approved,
+        recommended_scope_id=summary.recommended_approval if summary.recommended_approval != "<none>" else None,
+        approval_scopes=scopes,
+        planned_paths=planned_paths,
+        changed_files=changed_files,
+        git_status=git_status,
+        review_verification_status=verification.status,
+        approval_verification_status=approval_status,
+        safe_to_sync=safe_to_sync,
+        blockers=tuple(blockers),
+        next_action=next_action,
     )
 
 

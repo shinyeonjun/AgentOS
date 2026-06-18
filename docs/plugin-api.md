@@ -142,6 +142,20 @@ agentos diff --latest
 agentos verify-review --latest --json
 ```
 
+### sync_preflight
+
+Shows the exact paths that would sync, the recommended approval scope, target
+git status when requested, and blockers such as missing approval.
+
+CLI:
+
+```bash
+agentos sync-preflight --latest --target <project-dir> --json
+```
+
+Agents should run this before asking the human to approve sync. Approval should
+refer to a concrete scope from the preflight result.
+
 ### approve_scope
 
 Records human approval for a concrete review scope.
@@ -183,11 +197,12 @@ External agents must follow these rules:
 1. Never edit the original host project while operating through AgentOS.
 2. Use `workspace_path` as the active root.
 3. Keep review artifacts as the source of truth for user approval.
-4. Never claim sync happened until `agentos sync` reports success.
-5. If review verification fails, stop.
-6. If the sync target is a dirty git worktree, stop unless the user accepts the
+4. Run `sync-preflight` before requesting sync approval.
+5. Never claim sync happened until `agentos sync` reports success.
+6. If review verification fails, stop.
+7. If the sync target is a dirty git worktree, stop unless the user accepts the
    risk.
-7. If a session workspace is missing, create a new session instead of syncing
+8. If a session workspace is missing, create a new session instead of syncing
    from stale artifacts.
 
 ## Legacy Notes

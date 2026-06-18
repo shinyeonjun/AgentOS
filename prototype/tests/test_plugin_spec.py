@@ -23,11 +23,17 @@ class PluginSpecTests(unittest.TestCase):
         self.assertIn("run_command", tools)
         self.assertIn("run_docker_command", tools)
         self.assertIn("review_session", tools)
+        self.assertIn("session_summary", tools)
+        self.assertIn("sync_preflight", tools)
         self.assertIn("approve_scope", tools)
         self.assertIn("sync_approved", tools)
+        self.assertIn("cleanup_sessions", tools)
+        self.assertIn("repair_session", tools)
+        self.assertIn("export_debug_bundle", tools)
         self.assertIn("purge_session", tools)
         self.assertTrue(tools["approve_scope"]["human_approval_required"])
         self.assertTrue(tools["sync_approved"]["human_approval_required"])
+        self.assertFalse(tools["sync_preflight"]["human_approval_required"])
         self.assertIn("workspace_path", tools["create_session"]["outputs"])
 
     def test_codex_plugin_declares_agentos_mcp_server(self) -> None:
@@ -37,7 +43,7 @@ class PluginSpecTests(unittest.TestCase):
         mcp_config = json.loads((plugin_root / ".mcp.json").read_text(encoding="utf-8"))
         marketplace = json.loads((repo_root / ".agents" / "plugins" / "marketplace.json").read_text(encoding="utf-8"))
 
-        self.assertEqual(manifest["version"], "0.4.5")
+        self.assertEqual(manifest["version"], "0.4.6")
         self.assertEqual(manifest["mcpServers"], "./.mcp.json")
         self.assertEqual(manifest["skills"], "./skills/")
         self.assertIn("Before any file edit", manifest["interface"]["defaultPrompt"][0])

@@ -26,16 +26,20 @@ from .core.review import (
     render_review_summary,
     summarize_review_package,
 )
-from .core.session_ops import approve_review_package, sync_approved_review
+from .core.session_ops import approve_review_package, preflight_sync_review, sync_approved_review
 from .core.text_safety import safe_json_dumps
 from .core.work_sessions import (
     create_work_session,
+    cleanup_work_sessions,
     destroy_work_session,
     docker_exec_work_session,
     exec_work_session,
+    export_debug_bundle,
     purge_work_session,
+    repair_work_session,
     review_work_session,
     status_work_session,
+    summarize_work_session,
 )
 from .demos.demo import run_code_fix_demo
 from .demos.document_demo import run_markdown_document_demo
@@ -218,11 +222,33 @@ def _main_impl(argv: list[str]) -> int:
     add_state_dir_arg(session_status, default=DEFAULT_STATE_DIR)
     session_status.add_argument("session_ref", nargs="?", help="Session id, id prefix, or name")
     add_json_arg(session_status, noun="session status output")
+    session_summary = session_subparsers.add_parser("summary", help="Summarize changed files, checks, review, approval, and sync state")
+    add_state_dir_arg(session_summary, default=DEFAULT_STATE_DIR)
+    session_summary.add_argument("session_ref", help="Session id, id prefix, or name")
+    add_json_arg(session_summary, noun="session summary output")
     session_review = session_subparsers.add_parser("review", help="Build a review package for a persistent session")
     add_state_dir_arg(session_review, default=DEFAULT_STATE_DIR)
     add_output_dir_arg(session_review, default=DEFAULT_OUTPUT_DIR)
     session_review.add_argument("session_ref", help="Session id, id prefix, or name")
     add_json_arg(session_review, noun="session review output")
+    session_cleanup = session_subparsers.add_parser("cleanup", help="Remove older AgentOS session records and artifacts")
+    add_state_dir_arg(session_cleanup, default=DEFAULT_STATE_DIR)
+    add_output_dir_arg(session_cleanup, default=DEFAULT_OUTPUT_DIR)
+    session_cleanup.add_argument("--keep-latest", type=int, default=10, help="Keep this many newest sessions")
+    session_cleanup.add_argument("--dry-run", action="store_true", default=True, help="Preview cleanup without deleting")
+    session_cleanup.add_argument("--execute", action="store_false", dest="dry_run", help="Actually remove cleanup candidates")
+    add_json_arg(session_cleanup, noun="session cleanup output")
+    session_repair = session_subparsers.add_parser("repair", help="Inspect or repair lightweight session state issues")
+    add_state_dir_arg(session_repair, default=DEFAULT_STATE_DIR)
+    add_output_dir_arg(session_repair, default=DEFAULT_OUTPUT_DIR)
+    session_repair.add_argument("session_ref", help="Session id, id prefix, or name")
+    session_repair.add_argument("--fix", action="store_true", help="Apply safe metadata/artifact-directory repairs")
+    add_json_arg(session_repair, noun="session repair output")
+    session_debug = session_subparsers.add_parser("debug-bundle", help="Export session metadata and artifacts for debugging")
+    add_state_dir_arg(session_debug, default=DEFAULT_STATE_DIR)
+    add_output_dir_arg(session_debug, default=DEFAULT_OUTPUT_DIR)
+    session_debug.add_argument("session_ref", help="Session id, id prefix, or name")
+    add_json_arg(session_debug, noun="debug bundle output")
     session_destroy = session_subparsers.add_parser(
         "destroy",
         help="Destroy a persistent session workspace while keeping metadata and artifacts",
@@ -314,6 +340,33 @@ def _main_impl(argv: list[str]) -> int:
         help="Fail unless approval-record.json has a valid HMAC signature",
     )
     add_json_arg(sync, noun="sync output")
+    sync_preflight = subparsers.add_parser("sync-preflight", help="Show what sync would do and whether approval is still required")
+    add_review_package_selector(
+        sync_preflight,
+        state_dir_default=DEFAULT_STATE_DIR,
+        latest_help="Preflight the latest review_package.json recorded in --state-dir",
+    )
+    sync_preflight.add_argument(
+        "--target",
+        required=True,
+        type=Path,
+        help="Target project directory to receive approved files",
+    )
+    sync_preflight.add_argument(
+        "--scope",
+        help="Approval scope id to preview. Defaults to the review recommendation.",
+    )
+    sync_preflight.add_argument(
+        "--require-clean-git",
+        action="store_true",
+        help="Report target git cleanliness as a sync blocker",
+    )
+    sync_preflight.add_argument(
+        "--require-signed-approval",
+        action="store_true",
+        help="Require a signed approval record in the preflight result",
+    )
+    add_json_arg(sync_preflight, noun="sync preflight output")
     run = subparsers.add_parser("run", help="Create a review-ready Codex task session")
     add_state_dir_arg(run, default=DEFAULT_STATE_DIR)
     add_output_dir_arg(run, default=DEFAULT_OUTPUT_DIR)
@@ -616,6 +669,21 @@ def _main_impl(argv: list[str]) -> int:
             data = status_work_session(state_dir=args.state_dir, session_ref=args.session_ref)
             print(render_inspection(data, as_json=args.json))
             return 0
+        if args.session_command == "summary":
+            result = summarize_work_session(state_dir=args.state_dir, session_ref=args.session_ref)
+            if args.json:
+                _print_json(result.to_dict())
+                return 0
+            print(f"session: {result.session_id}")
+            print(f"state: {result.state}")
+            print(f"validation_status: {result.validation_status}")
+            print(f"changed_files: {len(result.changed_files)}")
+            for path in result.changed_files:
+                print(f"- {path}")
+            print(f"approved: {result.approved}")
+            print(f"synced: {result.synced}")
+            print(f"next_action: {result.next_action}")
+            return 0
         if args.session_command == "review":
             result = review_work_session(
                 state_dir=args.state_dir,
@@ -632,6 +700,53 @@ def _main_impl(argv: list[str]) -> int:
                 print(f"- {path}")
             print(f"report_artifact: {result.report_artifact}")
             print(f"review_package_artifact: {result.review_package_artifact}")
+            return 0
+        if args.session_command == "cleanup":
+            result = cleanup_work_sessions(
+                state_dir=args.state_dir,
+                output_dir=args.output_dir,
+                keep_latest=args.keep_latest,
+                dry_run=args.dry_run,
+            )
+            if args.json:
+                _print_json(result.to_dict())
+                return 0
+            print(f"dry_run: {result.dry_run}")
+            print(f"keep_latest: {result.keep_latest}")
+            print(f"candidates: {len(result.candidates)}")
+            for session_id in result.candidates:
+                print(f"- {session_id}")
+            print(f"removed_sessions: {len(result.removed_sessions)}")
+            return 0
+        if args.session_command == "repair":
+            result = repair_work_session(
+                state_dir=args.state_dir,
+                output_dir=args.output_dir,
+                session_ref=args.session_ref,
+                fix=args.fix,
+            )
+            if args.json:
+                _print_json(result.to_dict())
+                return 0
+            print(f"session: {result.session_id}")
+            print(f"fixed: {result.fixed}")
+            for issue in result.issues:
+                print(f"issue: {issue}")
+            for action in result.actions:
+                print(f"action: {action}")
+            return 0
+        if args.session_command == "debug-bundle":
+            result = export_debug_bundle(
+                state_dir=args.state_dir,
+                output_dir=args.output_dir,
+                session_ref=args.session_ref,
+            )
+            if args.json:
+                _print_json(result.to_dict())
+                return 0
+            print(f"session: {result.session_id}")
+            print(f"bundle_path: {result.bundle_path}")
+            print(f"included_files: {len(result.included_files)}")
             return 0
         if args.session_command == "destroy":
             result = destroy_work_session(
@@ -706,6 +821,34 @@ def _main_impl(argv: list[str]) -> int:
             print(f"session: {result.session_id}")
             print(f"approved_scope: {result.scope['id']}")
             print(f"approval_record_artifact: {result.approval_record_artifact}")
+        return 0
+
+    if args.command == "sync-preflight":
+        result = preflight_sync_review(
+            state_dir=args.state_dir,
+            review_package_path=args.review_package,
+            latest=args.latest,
+            target_dir=args.target,
+            scope_id=args.scope,
+            require_clean_git=args.require_clean_git,
+            require_signed_approval=args.require_signed_approval,
+        )
+        if args.json:
+            _print_json(result.to_dict())
+            return 0
+        print(f"session: {result.session_id}")
+        print(f"target_dir: {result.target_dir}")
+        print(f"safe_to_sync: {result.safe_to_sync}")
+        print(f"approval_required: {result.approval_required}")
+        print(f"recommended_scope_id: {result.recommended_scope_id}")
+        print(f"planned_paths: {len(result.planned_paths)}")
+        for path in result.planned_paths:
+            print(f"- {path}")
+        if result.blockers:
+            print("blockers:")
+            for blocker in result.blockers:
+                print(f"- {blocker}")
+        print(f"next_action: {result.next_action}")
         return 0
 
     if args.command == "sync":

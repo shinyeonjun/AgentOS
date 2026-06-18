@@ -27,6 +27,11 @@ class McpServerTests(unittest.TestCase):
         self.assertIn("prepare_environment", names)
         self.assertIn("create_session", names)
         self.assertIn("run_command", names)
+        self.assertIn("session_summary", names)
+        self.assertIn("sync_preflight", names)
+        self.assertIn("cleanup_sessions", names)
+        self.assertIn("repair_session", names)
+        self.assertIn("export_debug_bundle", names)
         self.assertIn("sync_approved", names)
         self.assertIn("purge_session", names)
         self.assertIn("MUST CALL FIRST", tools_by_name["doctor"]["description"])
@@ -37,8 +42,11 @@ class McpServerTests(unittest.TestCase):
         self.assertFalse(tools_by_name["run_command"]["annotations"]["destructiveHint"])
         self.assertFalse(tools_by_name["review_session"]["annotations"]["destructiveHint"])
         self.assertTrue(tools_by_name["sync_approved"]["annotations"]["destructiveHint"])
+        self.assertFalse(tools_by_name["sync_preflight"]["annotations"]["destructiveHint"])
+        self.assertTrue(tools_by_name["cleanup_sessions"]["annotations"]["destructiveHint"])
         self.assertTrue(tools_by_name["purge_session"]["annotations"]["destructiveHint"])
         self.assertIn("approval boundary", tools_by_name["sync_approved"]["description"])
+        self.assertIn("whether approval is still required", tools_by_name["sync_preflight"]["description"])
 
     def test_tool_result_replaces_unpaired_surrogates(self) -> None:
         from agentos.mcp_server import _tool_result
@@ -100,6 +108,114 @@ class McpServerTests(unittest.TestCase):
             result = run["result"]["structuredContent"]
             self.assertEqual(result["exit_code"], 0)
             self.assertIn("ok", result["stdout_tail"])
+
+    def test_tool_call_summary_preflight_and_debug_bundle(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "project"
+            project.mkdir()
+            (project / "README.md").write_text("hello\n", encoding="utf-8")
+            target = root / "target"
+            target.mkdir()
+            (target / "README.md").write_text("hello\n", encoding="utf-8")
+            state_dir = root / "state"
+            output_dir = root / "output"
+
+            create = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "create_session",
+                        "arguments": {
+                            "project_dir": str(project),
+                            "work_name": "preflight-test",
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                        },
+                    },
+                }
+            )
+            self.assertIsNotNone(create)
+            workspace_path = Path(create["result"]["structuredContent"]["workspace_path"])
+            (workspace_path / "README.md").write_text("hello\nupdated\n", encoding="utf-8")
+
+            review = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 2,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "review_session",
+                        "arguments": {
+                            "work_name": "preflight-test",
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                        },
+                    },
+                }
+            )
+            self.assertIsNotNone(review)
+
+            summary = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 3,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "session_summary",
+                        "arguments": {
+                            "work_name": "preflight-test",
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                        },
+                    },
+                }
+            )
+            self.assertIsNotNone(summary)
+            self.assertEqual(summary["result"]["structuredContent"]["changed_files"], ["README.md"])
+
+            preflight = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 4,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "sync_preflight",
+                        "arguments": {
+                            "project_dir": str(target),
+                            "scope_id": "sync_selected:README.md",
+                            "latest": True,
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                        },
+                    },
+                }
+            )
+            self.assertIsNotNone(preflight)
+            preflight_data = preflight["result"]["structuredContent"]
+            self.assertTrue(preflight_data["approval_required"])
+            self.assertFalse(preflight_data["safe_to_sync"])
+            self.assertEqual(preflight_data["planned_paths"], ["README.md"])
+
+            bundle = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 5,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "export_debug_bundle",
+                        "arguments": {
+                            "work_name": "preflight-test",
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                        },
+                    },
+                }
+            )
+            self.assertIsNotNone(bundle)
+            self.assertTrue(Path(bundle["result"]["structuredContent"]["bundle_path"]).exists())
 
     def test_tool_call_purges_session_metadata_and_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

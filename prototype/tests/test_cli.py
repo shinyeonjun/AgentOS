@@ -225,6 +225,41 @@ class AgentOSCliTests(unittest.TestCase):
             self.assertEqual(review_data["changed_files"], ["README.md"])
             self.assertEqual(review_data["validation_status"], "passed")
 
+            summary_exit_code, summary_output = _run_cli(
+                [
+                    "session",
+                    "summary",
+                    "--state-dir",
+                    str(root / "state"),
+                    "work1",
+                    "--json",
+                ]
+            )
+            self.assertEqual(summary_exit_code, 0)
+            summary_data = json.loads(summary_output)
+            self.assertEqual(summary_data["changed_files"], ["README.md"])
+            self.assertEqual(summary_data["next_action"], "run sync_preflight, request approval, then approve_scope")
+
+            preflight_exit_code, preflight_output = _run_cli(
+                [
+                    "sync-preflight",
+                    "--latest",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--target",
+                    str(target_project),
+                    "--scope",
+                    "sync_selected:README.md",
+                    "--json",
+                ]
+            )
+            self.assertEqual(preflight_exit_code, 0)
+            preflight_data = json.loads(preflight_output)
+            self.assertTrue(preflight_data["approval_required"])
+            self.assertFalse(preflight_data["safe_to_sync"])
+            self.assertEqual(preflight_data["planned_paths"], ["README.md"])
+            self.assertIn("approval required before sync", preflight_data["blockers"])
+
             approve_exit_code, _approve_output = _run_cli(
                 [
                     "approve",
@@ -239,6 +274,25 @@ class AgentOSCliTests(unittest.TestCase):
                 ]
             )
             self.assertEqual(approve_exit_code, 0)
+
+            approved_preflight_exit_code, approved_preflight_output = _run_cli(
+                [
+                    "sync-preflight",
+                    "--latest",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--target",
+                    str(target_project),
+                    "--scope",
+                    "sync_selected:README.md",
+                    "--json",
+                ]
+            )
+            self.assertEqual(approved_preflight_exit_code, 0)
+            approved_preflight_data = json.loads(approved_preflight_output)
+            self.assertFalse(approved_preflight_data["approval_required"])
+            self.assertTrue(approved_preflight_data["safe_to_sync"])
+            self.assertEqual(approved_preflight_data["next_action"], "sync_approved")
 
             sync_exit_code, sync_output = _run_cli(
                 [
@@ -256,6 +310,65 @@ class AgentOSCliTests(unittest.TestCase):
             self.assertEqual(sync_exit_code, 0)
             self.assertEqual(json.loads(sync_output)["copied_paths"], ["README.md"])
             self.assertIn("updated", (target_project / "README.md").read_text(encoding="utf-8"))
+
+            debug_exit_code, debug_output = _run_cli(
+                [
+                    "session",
+                    "debug-bundle",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "work1",
+                    "--json",
+                ]
+            )
+            self.assertEqual(debug_exit_code, 0)
+            self.assertTrue(Path(json.loads(debug_output)["bundle_path"]).exists())
+
+    def test_session_cleanup_dry_run_keeps_latest(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            input_project = root / "input-project"
+            input_project.mkdir()
+            (input_project / "README.md").write_text("# Demo\n", encoding="utf-8")
+            for name in ("one", "two", "three"):
+                exit_code, _output = _run_cli(
+                    [
+                        "session",
+                        "create",
+                        "--state-dir",
+                        str(root / "state"),
+                        "--output-dir",
+                        str(root / "output"),
+                        "--input",
+                        str(input_project),
+                        "--name",
+                        name,
+                        "--json",
+                    ]
+                )
+                self.assertEqual(exit_code, 0)
+
+            cleanup_exit_code, cleanup_output = _run_cli(
+                [
+                    "session",
+                    "cleanup",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--keep-latest",
+                    "1",
+                    "--json",
+                ]
+            )
+
+            self.assertEqual(cleanup_exit_code, 0)
+            cleanup = json.loads(cleanup_output)
+            self.assertTrue(cleanup["dry_run"])
+            self.assertEqual(len(cleanup["candidates"]), 2)
+            self.assertEqual(cleanup["removed_sessions"], [])
 
     def test_persistent_session_codex_execute_uses_existing_workspace(self) -> None:
         with TemporaryDirectory() as tmp:
