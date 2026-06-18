@@ -30,6 +30,7 @@ class McpServerTests(unittest.TestCase):
         self.assertIn("sync_approved", names)
         self.assertIn("MUST CALL FIRST", tools_by_name["doctor"]["description"])
         self.assertIn("before editing", tools_by_name["create_session"]["description"])
+        self.assertIn("max_bytes", tools_by_name["render_diff"]["inputSchema"]["properties"])
         self.assertFalse(tools_by_name["create_session"]["annotations"]["destructiveHint"])
         self.assertFalse(tools_by_name["run_command"]["annotations"]["destructiveHint"])
         self.assertFalse(tools_by_name["review_session"]["annotations"]["destructiveHint"])
@@ -94,6 +95,108 @@ class McpServerTests(unittest.TestCase):
             result = run["result"]["structuredContent"]
             self.assertEqual(result["exit_code"], 0)
             self.assertIn("ok", result["stdout_tail"])
+
+    def test_create_session_ignores_agentos_state_inside_project(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "project"
+            project.mkdir()
+            (project / "README.md").write_text("hello\n", encoding="utf-8")
+            nested_state = project / ".agentos-state" / "sessions" / "old"
+            nested_state.mkdir(parents=True)
+            (nested_state / "artifact.txt").write_text("must not copy\n", encoding="utf-8")
+            state_dir = root / "state"
+            output_dir = root / "output"
+
+            create = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "create_session",
+                        "arguments": {
+                            "project_dir": str(project),
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                        },
+                    },
+                }
+            )
+
+            self.assertIsNotNone(create)
+            workspace_path = Path(create["result"]["structuredContent"]["workspace_path"])
+            self.assertTrue((workspace_path / "README.md").exists())
+            self.assertFalse((workspace_path / ".agentos-state").exists())
+
+    def test_render_diff_truncates_large_mcp_response(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "project"
+            project.mkdir()
+            (project / "README.md").write_text("hello\n", encoding="utf-8")
+            state_dir = root / "state"
+            output_dir = root / "output"
+
+            create = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "create_session",
+                        "arguments": {
+                            "project_dir": str(project),
+                            "work_name": "diff-test",
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                        },
+                    },
+                }
+            )
+            self.assertIsNotNone(create)
+            workspace_path = Path(create["result"]["structuredContent"]["workspace_path"])
+            (workspace_path / "README.md").write_text("hello\n" + ("updated\n" * 100), encoding="utf-8")
+
+            review = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 2,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "review_session",
+                        "arguments": {
+                            "work_name": "diff-test",
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                        },
+                    },
+                }
+            )
+            self.assertIsNotNone(review)
+
+            diff = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 3,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "render_diff",
+                        "arguments": {
+                            "latest": True,
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                            "max_bytes": 120,
+                        },
+                    },
+                }
+            )
+
+            self.assertIsNotNone(diff)
+            data = diff["result"]["structuredContent"]
+            self.assertTrue(data["truncated"])
+            self.assertGreater(data["bytes"], data["max_bytes"])
+            self.assertIn("AgentOS diff truncated", data["diff_text"])
 
     def test_stdio_smoke(self) -> None:
         request = {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}

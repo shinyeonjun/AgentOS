@@ -4,6 +4,18 @@ import difflib
 from dataclasses import dataclass
 from pathlib import Path
 
+IGNORED_PATH_PARTS = {
+    ".git",
+    ".pytest_cache",
+    ".ruff_cache",
+    "__pycache__",
+}
+
+IGNORED_SUFFIXES = {
+    ".pyc",
+    ".pyo",
+}
+
 
 @dataclass(frozen=True)
 class FileChange:
@@ -57,8 +69,12 @@ def _file_map(root: Path) -> dict[str, Path]:
     return {
         path.relative_to(root).as_posix(): path
         for path in root.rglob("*")
-        if path.is_file()
+        if path.is_file() and not _is_ignored(path.relative_to(root))
     }
+
+
+def _is_ignored(relative_path: Path) -> bool:
+    return bool(IGNORED_PATH_PARTS.intersection(relative_path.parts)) or relative_path.suffix in IGNORED_SUFFIXES
 
 
 def _build_text_diff(path: str, before_file: Path | None, after_file: Path | None) -> str | None:

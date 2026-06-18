@@ -18,6 +18,17 @@ from .sync import PatchApplyResult, apply_patch_to_target
 
 DEFAULT_COMMAND_TIMEOUT_SECONDS = 120
 COMMAND_TIMEOUT_EXIT_CODE = 124
+COPY_IGNORE_NAMES = frozenset(
+    {
+        ".agentos-output",
+        ".agentos-state",
+        ".git",
+        ".mypy_cache",
+        ".pytest_cache",
+        ".ruff_cache",
+        "__pycache__",
+    }
+)
 
 
 def utc_now() -> str:
@@ -88,8 +99,8 @@ class AgentOSRuntime:
         target = session.workspace_dir / source.name
         original = session.original_dir / source.name
         if source.is_dir():
-            shutil.copytree(source, target)
-            shutil.copytree(source, original)
+            shutil.copytree(source, target, ignore=_copy_ignore)
+            shutil.copytree(source, original, ignore=_copy_ignore)
         else:
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, target)
@@ -295,6 +306,10 @@ def _safe_relative_source(root: Path, relative_path: str) -> Path:
     if not source.exists():
         raise FileNotFoundError(f"selected sync source does not exist: {relative_path}")
     return source
+
+
+def _copy_ignore(_directory: str, names: list[str]) -> set[str]:
+    return {name for name in names if name in COPY_IGNORE_NAMES}
 
 
 def _output_to_text(value: str | bytes | None) -> str:

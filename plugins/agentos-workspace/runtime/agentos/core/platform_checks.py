@@ -261,7 +261,10 @@ def _check_agentos_cli() -> DoctorCheck:
         return DoctorCheck(
             "agentos_cli",
             "warning",
-            "agentos executable is not on PATH. Codex plugin MCP tools need the installed CLI.",
+            (
+                "agentos executable is not on PATH. Bundled plugin MCP tools can still run; "
+                "install the CLI only for terminal fallback commands."
+            ),
         )
     return DoctorCheck("agentos_cli", "passed", f"agentos executable found at {executable}.")
 

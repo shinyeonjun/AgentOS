@@ -223,7 +223,15 @@ def _tool_render_review(arguments: dict[str, Any]) -> dict[str, Any]:
 def _tool_render_diff(arguments: dict[str, Any]) -> dict[str, Any]:
     review_path = _review_path(arguments)
     summary = summarize_review_package(review_path)
-    return {"diff_text": render_review_diffs(summary)}
+    max_bytes = _int_arg(arguments, "max_bytes", 200_000)
+    diff_text = render_review_diffs(summary)
+    truncated = False
+    encoded = diff_text.encode("utf-8")
+    if max_bytes > 0 and len(encoded) > max_bytes:
+        diff_text = encoded[:max_bytes].decode("utf-8", errors="replace")
+        diff_text = diff_text.rstrip() + "\n\n[AgentOS diff truncated; use CLI `agentos diff` for full output.]"
+        truncated = True
+    return {"diff_text": diff_text, "truncated": truncated, "bytes": len(encoded), "max_bytes": max_bytes}
 
 
 def _tool_verify_review(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -329,6 +337,15 @@ def _bool_arg(arguments: dict[str, Any], name: str, default: bool) -> bool:
     return value
 
 
+def _int_arg(arguments: dict[str, Any], name: str, default: int) -> int:
+    value = arguments.get(name)
+    if value is None:
+        return default
+    if not isinstance(value, int):
+        raise ValueError(f"{name} must be an integer")
+    return value
+
+
 def _tool_definitions() -> list[dict[str, Any]]:
     common_paths = {
         "state_dir": _string_schema("AgentOS state directory. Defaults to .agentos-state in the MCP process cwd."),
@@ -428,8 +445,15 @@ def _tool_definitions() -> list[dict[str, Any]]:
         ),
         _tool_definition(
             "render_diff",
-            "Render review diff text for human inspection before approval.",
-            review_selector,
+            "Render review diff text for human inspection before approval. Large MCP responses are truncated by default.",
+            {
+                **review_selector,
+                "max_bytes": {
+                    "type": "integer",
+                    "default": 200000,
+                    "description": "Maximum UTF-8 bytes to return. Use 0 for no truncation.",
+                },
+            },
             annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True},
         ),
         _tool_definition(
