@@ -62,7 +62,7 @@ Registers the bundled AgentOS MCP server in Codex config.toml.
 Options:
   --codex-home <dir>       Codex home directory. Defaults to CODEX_HOME or ~/.codex.
   --server-name <name>     MCP server name. Defaults to agentos.
-  --launcher <path>        Custom launcher path. Defaults to this plugin's launcher.
+  --launcher <path>        Custom launcher path. Defaults to a stable shim in Codex home.
   --cwd <dir>              Working directory for the MCP server. Defaults to plugin root.
   --startup-timeout <sec>  Startup timeout. Defaults to 20.
   --tool-timeout <sec>     Tool timeout. Defaults to 60.
@@ -88,9 +88,8 @@ function sectionHeader(serverName) {
 }
 
 function managedBlock(options) {
-  const pluginRoot = path.resolve(__dirname, "..");
-  const launcher = path.resolve(options.launcher || path.join(pluginRoot, "agentos_mcp_launcher.cjs"));
-  const cwd = path.resolve(options.cwd || pluginRoot);
+  const launcher = path.resolve(options.launcher || shimPath(options));
+  const cwd = path.resolve(options.cwd || pluginRoot());
   return [
     MARKER_BEGIN,
     sectionHeader(options.serverName),
@@ -108,9 +107,17 @@ function desiredPaths(options) {
   const pluginRoot = path.resolve(__dirname, "..");
   return {
     pluginRoot,
-    launcher: path.resolve(options.launcher || path.join(pluginRoot, "agentos_mcp_launcher.cjs")),
+    launcher: path.resolve(options.launcher || shimPath(options)),
     cwd: path.resolve(options.cwd || pluginRoot),
   };
+}
+
+function pluginRoot() {
+  return path.resolve(__dirname, "..");
+}
+
+function shimPath(options) {
+  return path.join(options.codexHome || defaultCodexHome(), "agentos-workspace-launcher.cjs");
 }
 
 function removeManagedBlock(text) {
@@ -161,13 +168,6 @@ function updateConfig(existing, options) {
 
 function checkConfig(existing, options, configPath) {
   const paths = desiredPaths(options);
-  if (!fs.existsSync(paths.launcher)) {
-    return {
-      ok: false,
-      code: 1,
-      message: `AgentOS launcher is missing: ${paths.launcher}`,
-    };
-  }
   if (!existing.trim()) {
     return {
       ok: false,
@@ -178,10 +178,26 @@ function checkConfig(existing, options, configPath) {
   const hasManagedBlock = existing.includes(MARKER_BEGIN) && existing.includes(MARKER_END);
   const hasServer = findSection(existing, options.serverName) !== null;
   if (hasManagedBlock && hasServer && existing.includes(paths.launcher)) {
+    if (!fs.existsSync(paths.launcher)) {
+      return {
+        ok: false,
+        code: 1,
+        message: `AgentOS launcher is missing: ${paths.launcher}`,
+      };
+    }
     return {
       ok: true,
       code: 0,
       message: `[mcp_servers.${options.serverName}] is managed by AgentOS Workspace.`,
+    };
+  }
+  if (hasManagedBlock && hasServer) {
+    return {
+      ok: false,
+      code: 3,
+      message:
+        `[mcp_servers.${options.serverName}] is managed but points at a stale AgentOS launcher. ` +
+        "Run setup again, then restart Codex.",
     };
   }
   if (hasServer) {
@@ -220,10 +236,83 @@ function main() {
   }
 
   fs.mkdirSync(options.codexHome, { recursive: true });
+  fs.writeFileSync(shimPath(options), launcherShim(pluginRoot()), "utf8");
   fs.writeFileSync(configPath, updated, "utf8");
   console.log(`Updated ${configPath}`);
   console.log(`Registered [mcp_servers.${options.serverName}]`);
+  console.log(`Installed stable launcher shim at ${shimPath(options)}`);
   console.log("Restart Codex and start a new thread before testing AgentOS tools.");
+}
+
+function launcherShim(fallbackPluginRoot) {
+  return `"use strict";
+
+const childProcess = require("node:child_process");
+const fs = require("node:fs");
+const path = require("node:path");
+
+const fallbackPluginRoot = ${JSON.stringify(fallbackPluginRoot)};
+const pluginRoot = resolveLatestPluginRoot(fallbackPluginRoot);
+const launcher = path.join(pluginRoot, "agentos_mcp_launcher.cjs");
+
+const child = childProcess.spawn("node", [launcher], {
+  cwd: pluginRoot,
+  env: process.env,
+  stdio: ["inherit", "inherit", "inherit"],
+});
+
+child.on("exit", (code, signal) => {
+  if (signal) {
+    process.kill(process.pid, signal);
+    return;
+  }
+  process.exit(code === null ? 1 : code);
+});
+
+child.on("error", (error) => {
+  console.error("AgentOS stable launcher failed:", error.message);
+  process.exit(127);
+});
+
+function resolveLatestPluginRoot(currentRoot) {
+  const root = path.resolve(currentRoot);
+  const parent = path.dirname(root);
+  const currentName = path.basename(root);
+  if (!looksLikeVersion(currentName)) {
+    return root;
+  }
+  try {
+    const candidates = fs.readdirSync(parent, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && looksLikeVersion(entry.name))
+      .map((entry) => path.join(parent, entry.name))
+      .filter((candidate) => fs.existsSync(path.join(candidate, ".codex-plugin", "plugin.json")))
+      .sort(comparePluginRoots);
+    return candidates.at(-1) || root;
+  } catch {
+    return root;
+  }
+}
+
+function looksLikeVersion(value) {
+  return /^\\d+\\.\\d+\\.\\d+(?:[-+].*)?$/.test(value);
+}
+
+function comparePluginRoots(left, right) {
+  return compareVersions(path.basename(left), path.basename(right));
+}
+
+function compareVersions(left, right) {
+  const leftParts = left.split(/[.-]/).map((part) => Number.parseInt(part, 10) || 0);
+  const rightParts = right.split(/[.-]/).map((part) => Number.parseInt(part, 10) || 0);
+  for (let index = 0; index < Math.max(leftParts.length, rightParts.length); index += 1) {
+    const delta = (leftParts[index] || 0) - (rightParts[index] || 0);
+    if (delta !== 0) {
+      return delta;
+    }
+  }
+  return 0;
+}
+`;
 }
 
 try {

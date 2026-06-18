@@ -285,8 +285,13 @@ def exec_work_session(
     session_ref: str,
     command: list[str],
     cwd: str | None = None,
+    timeout_seconds: int | None = None,
 ) -> WorkSessionExecResult:
-    runtime = AgentOSRuntime(state_dir=state_dir.resolve(), output_dir=output_dir.resolve())
+    runtime = AgentOSRuntime(
+        state_dir=state_dir.resolve(),
+        output_dir=output_dir.resolve(),
+        command_timeout_seconds=timeout_seconds or 120,
+    )
     session = resolve_session(state_dir=state_dir, session_ref=session_ref)
     workspace_root = _require_live_workspace(session)
     run_cwd = _resolve_workspace_cwd(workspace_root, cwd)
@@ -757,13 +762,20 @@ def _validation_checks(tool_calls: list[dict[str, Any]]) -> list[dict[str, Any]]
     checks = []
     for item in tool_calls:
         exit_code = int(item["exit_code"])
+        status = item.get("status")
+        if status in {"passed", "failed", "timed_out", "error"}:
+            check_status = "failed" if status in {"failed", "timed_out", "error"} else "passed"
+        else:
+            check_status = "passed" if exit_code == 0 else "failed"
         checks.append(
             {
                 "name": f"tool call {item['id']}",
-                "status": "passed" if exit_code == 0 else "failed",
+                "status": check_status,
                 "exit_code": exit_code,
                 "role": "workspace_run",
                 "command": item.get("command"),
+                "timed_out": bool(item.get("timed_out")),
+                "tool_status": status or "unknown",
             }
         )
     return checks

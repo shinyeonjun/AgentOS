@@ -46,7 +46,11 @@ class StateStore:
                     cwd text not null,
                     exit_code integer not null,
                     stdout_tail text not null,
-                    stderr_tail text not null
+                    stderr_tail text not null,
+                    timed_out integer not null default 0,
+                    status text not null default 'unknown',
+                    error_type text,
+                    error_message text
                 );
 
                 create table if not exists artifacts (
@@ -76,6 +80,10 @@ class StateStore:
                 """
             )
             _ensure_column(conn, table="sessions", column="name", definition="text")
+            _ensure_column(conn, table="tool_calls", column="timed_out", definition="integer not null default 0")
+            _ensure_column(conn, table="tool_calls", column="status", definition="text not null default 'unknown'")
+            _ensure_column(conn, table="tool_calls", column="error_type", definition="text")
+            _ensure_column(conn, table="tool_calls", column="error_message", definition="text")
 
     def create_session(self, *, session_id: str, created_at: str, session_dir: Path, name: str | None = None) -> None:
         with self.connect() as conn:
@@ -102,15 +110,20 @@ class StateStore:
         exit_code: int,
         stdout_tail: str,
         stderr_tail: str,
+        timed_out: bool = False,
+        status: str = "unknown",
+        error_type: str | None = None,
+        error_message: str | None = None,
     ) -> int:
         with self.connect() as conn:
             cursor = conn.execute(
                 """
                 insert into tool_calls(
                     session_id, started_at, completed_at, command_json, cwd,
-                    exit_code, stdout_tail, stderr_tail
+                    exit_code, stdout_tail, stderr_tail, timed_out,
+                    status, error_type, error_message
                 )
-                values (?, ?, ?, ?, ?, ?, ?, ?)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     session_id,
@@ -121,6 +134,10 @@ class StateStore:
                     exit_code,
                     stdout_tail,
                     stderr_tail,
+                    1 if timed_out else 0,
+                    status,
+                    error_type,
+                    error_message,
                 ),
             )
             return int(cursor.lastrowid)

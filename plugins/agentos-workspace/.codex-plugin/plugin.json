@@ -1,6 +1,6 @@
 {
   "name": "agentos-workspace",
-  "version": "0.4.6",
+  "version": "0.4.7",
   "description": "Force selected coding tasks through AgentOS MCP sessions before any file edits.",
   "author": {
     "name": "AgentOS"

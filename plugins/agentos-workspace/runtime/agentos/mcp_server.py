@@ -9,6 +9,7 @@ from .core.integrity import verify_review_package
 from .core.platform_checks import prepare_docker_environment, run_doctor
 from .core.review import latest_review_package_path, render_review_diffs, summarize_review_package
 from .core.session_ops import approve_review_package, preflight_sync_review, sync_approved_review
+from .core.version_info import SERVER_VERSION, runtime_identity
 from .core.work_sessions import (
     create_work_session,
     cleanup_work_sessions,
@@ -24,9 +25,9 @@ from .core.work_sessions import (
 from .core.text_safety import json_safe, safe_json_dumps, safe_text
 
 SERVER_NAME = "agentos"
-SERVER_VERSION = "0.2.0"
 DEFAULT_STATE_DIR = Path(".agentos-state")
 DEFAULT_OUTPUT_DIR = Path(".agentos-output")
+DEFAULT_MCP_COMMAND_TIMEOUT_SECONDS = 55
 AGENTOS_WORKFLOW_RULE = (
     "AgentOS selected: call doctor before any file edit. Do not edit the original workspace directly. "
     "If AgentOS tools are unavailable, stop instead of using normal file-edit tools. Create or reuse a "
@@ -102,6 +103,7 @@ def _initialize_result(params: dict[str, Any]) -> dict[str, Any]:
             "version": SERVER_VERSION,
             "description": "Safe workspace runtime for approval-gated AI coding sessions.",
         },
+        "runtime": runtime_identity(Path(__file__)),
         "instructions": " ".join(
             [
                 AGENTOS_WORKFLOW_RULE,
@@ -204,6 +206,7 @@ def _tool_run_command(arguments: dict[str, Any]) -> dict[str, Any]:
         session_ref=_required_str(arguments, "work_name"),
         command=command,
         cwd=cwd,
+        timeout_seconds=_int_arg(arguments, "timeout_seconds", DEFAULT_MCP_COMMAND_TIMEOUT_SECONDS),
     ).to_dict()
 
 
@@ -482,6 +485,7 @@ def _tool_definitions() -> list[dict[str, Any]]:
                 "work_name": _string_schema("Session id, id prefix, or name."),
                 "command": {"type": "array", "items": {"type": "string"}, "minItems": 1},
                 "cwd": _string_schema("Optional workspace-relative cwd."),
+                "timeout_seconds": {"type": "integer", "default": DEFAULT_MCP_COMMAND_TIMEOUT_SECONDS},
             },
             required=["work_name", "command"],
             annotations={"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False},

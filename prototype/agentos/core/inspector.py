@@ -5,6 +5,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
+from .storage import StateStore
 from .text_safety import json_safe, safe_json_dumps, safe_text
 
 
@@ -17,6 +18,7 @@ def inspect_state(state_dir: Path, session_id: str | None = None) -> dict[str, A
             "sessions": [],
         }
 
+    StateStore(db_path).init_db()
     with sqlite3.connect(db_path) as conn:
         conn.row_factory = sqlite3.Row
         if session_id is None:
@@ -112,7 +114,9 @@ def _get_session(conn: sqlite3.Connection, session_id: str) -> dict[str, Any] | 
         "tool_calls": _rows(
             conn,
             """
-            select id, started_at, completed_at, command_json, cwd, exit_code, stdout_tail, stderr_tail
+            select
+                id, started_at, completed_at, command_json, cwd, exit_code,
+                stdout_tail, stderr_tail, timed_out, status, error_type, error_message
             from tool_calls
             where session_id = ?
             order by id

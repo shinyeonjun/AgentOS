@@ -43,7 +43,7 @@ class PluginSpecTests(unittest.TestCase):
         mcp_config = json.loads((plugin_root / ".mcp.json").read_text(encoding="utf-8"))
         marketplace = json.loads((repo_root / ".agents" / "plugins" / "marketplace.json").read_text(encoding="utf-8"))
 
-        self.assertEqual(manifest["version"], "0.4.6")
+        self.assertEqual(manifest["version"], "0.4.7")
         self.assertEqual(manifest["mcpServers"], "./.mcp.json")
         self.assertEqual(manifest["skills"], "./skills/")
         self.assertIn("Before any file edit", manifest["interface"]["defaultPrompt"][0])
@@ -86,17 +86,46 @@ class PluginSpecTests(unittest.TestCase):
                 capture_output=True,
                 check=True,
             )
+            shim = codex_home / "agentos-workspace-launcher.cjs"
+            self.assertTrue(shim.exists())
+            self.assertIn("resolveLatestPluginRoot", shim.read_text(encoding="utf-8"))
 
         self.assertIn("Updated", result.stdout)
         self.assertIn("# BEGIN AgentOS Workspace MCP", config)
         self.assertIn("[mcp_servers.agentos]", config)
         self.assertIn('command = "node"', config)
-        self.assertIn(str(plugin_root / "agentos_mcp_launcher.cjs").replace("\\", "\\\\"), config)
+        self.assertIn(str(shim).replace("\\", "\\\\"), config)
         self.assertIn(str(plugin_root).replace("\\", "\\\\"), config)
         self.assertIn("startup_timeout_sec = 20", config)
         self.assertIn("tool_timeout_sec = 60", config)
 
         self.assertIn("is managed by AgentOS Workspace", check.stdout)
+
+    def test_setup_script_reports_stale_managed_launcher(self) -> None:
+        repo_root = Path(__file__).resolve().parents[2]
+        setup_script = repo_root / "plugins" / "agentos-workspace" / "scripts" / "setup-codex-mcp.cjs"
+
+        with TemporaryDirectory() as tmp:
+            codex_home = Path(tmp) / "codex-home"
+            codex_home.mkdir()
+            (codex_home / "config.toml").write_text(
+                "# BEGIN AgentOS Workspace MCP\n"
+                "[mcp_servers.agentos]\n"
+                'command = "node"\n'
+                'args = ["C:\\\\Users\\\\x\\\\.codex\\\\plugins\\\\cache\\\\agentos\\\\agentos-workspace\\\\0.4.1\\\\agentos_mcp_launcher.cjs"]\n'
+                'cwd = "C:\\\\Users\\\\x\\\\.codex\\\\plugins\\\\cache\\\\agentos\\\\agentos-workspace\\\\0.4.1"\n'
+                "# END AgentOS Workspace MCP\n",
+                encoding="utf-8",
+            )
+            result = subprocess.run(
+                ["node", str(setup_script), "--codex-home", str(codex_home), "--check"],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+        self.assertEqual(result.returncode, 3)
+        self.assertIn("stale AgentOS launcher", result.stdout)
 
     def test_setup_script_refuses_unmanaged_existing_server_without_force(self) -> None:
         repo_root = Path(__file__).resolve().parents[2]
@@ -145,6 +174,7 @@ class PluginSpecTests(unittest.TestCase):
         self.assertIn("exited with code", launcher)
         self.assertIn("PYTHONUTF8", launcher)
         self.assertIn("PYTHONIOENCODING", launcher)
+        self.assertIn("resolveLatestPluginRoot", launcher)
         self.assertIn("tryNext();", launcher)
 
 

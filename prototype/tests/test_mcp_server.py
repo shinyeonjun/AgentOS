@@ -109,6 +109,133 @@ class McpServerTests(unittest.TestCase):
             self.assertEqual(result["exit_code"], 0)
             self.assertIn("ok", result["stdout_tail"])
 
+    def test_node_launcher_round_trips_korean_text_and_timeout_status(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "project"
+            project.mkdir()
+            (project / "README.md").write_text("hello\n", encoding="utf-8")
+            state_dir = root / "state"
+            output_dir = root / "output"
+            target = root / "target"
+            target.mkdir()
+            plugin_root = Path(__file__).resolve().parents[2] / "plugins" / "agentos-workspace"
+            process = subprocess.Popen(
+                ["node", str(plugin_root / "agentos_mcp_launcher.cjs")],
+                cwd=plugin_root,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                encoding="utf-8",
+            )
+            try:
+                create = _mcp_subprocess_call(
+                    process,
+                    1,
+                    "create_session",
+                    {
+                        "project_dir": str(project),
+                        "work_name": "한글-transport",
+                        "state_dir": str(state_dir),
+                        "output_dir": str(output_dir),
+                    },
+                )
+                self.assertEqual(create["result"]["structuredContent"]["name"], "한글-transport")
+                workspace_path = Path(create["result"]["structuredContent"]["workspace_path"])
+
+                run = _mcp_subprocess_call(
+                    process,
+                    2,
+                    "run_command",
+                    {
+                        "work_name": "한글-transport",
+                        "command": [sys.executable, "-c", "print('메시지')"],
+                        "state_dir": str(state_dir),
+                        "output_dir": str(output_dir),
+                    },
+                )
+                self.assertEqual(run["result"]["structuredContent"]["exit_code"], 0)
+                self.assertIn("메시지", run["result"]["structuredContent"]["stdout_tail"])
+
+                status = _mcp_subprocess_call(
+                    process,
+                    3,
+                    "session_status",
+                    {
+                        "work_name": "한글-transport",
+                        "state_dir": str(state_dir),
+                        "output_dir": str(output_dir),
+                    },
+                )
+                latest = status["result"]["structuredContent"]["session"]["tool_calls"][-1]
+                self.assertEqual(latest["status"], "passed")
+                self.assertIn("메시지", latest["stdout_tail"])
+
+                timeout = _mcp_subprocess_call(
+                    process,
+                    4,
+                    "run_command",
+                    {
+                        "work_name": "한글-transport",
+                        "command": [sys.executable, "-c", "import time; time.sleep(2)"],
+                        "timeout_seconds": 1,
+                        "state_dir": str(state_dir),
+                        "output_dir": str(output_dir),
+                    },
+                )
+                timeout_result = timeout["result"]["structuredContent"]
+                self.assertTrue(timeout_result["timed_out"])
+                self.assertEqual(timeout_result["exit_code"], 124)
+
+                edit = _mcp_subprocess_call(
+                    process,
+                    5,
+                    "run_command",
+                    {
+                        "work_name": "한글-transport",
+                        "command": [
+                            sys.executable,
+                            "-c",
+                            "from pathlib import Path; Path('README.md').write_text('hello\\n한글 diff\\n', encoding='utf-8')",
+                        ],
+                        "state_dir": str(state_dir),
+                        "output_dir": str(output_dir),
+                    },
+                )
+                self.assertEqual(edit["result"]["structuredContent"]["exit_code"], 0)
+                (workspace_path / ".pytest_cache").mkdir()
+                (workspace_path / ".pytest_cache" / "README.md").write_text("cache\n", encoding="utf-8")
+                pycache = workspace_path / "__pycache__"
+                pycache.mkdir()
+                (pycache / "README.cpython-312.pyc").write_bytes(b"cache")
+                review = _mcp_subprocess_call(
+                    process,
+                    6,
+                    "review_session",
+                    {
+                        "work_name": "한글-transport",
+                        "state_dir": str(state_dir),
+                        "output_dir": str(output_dir),
+                    },
+                )
+                self.assertEqual(review["result"]["structuredContent"]["validation_status"], "failed")
+                self.assertEqual(review["result"]["structuredContent"]["changed_files"], ["README.md"])
+                diff = _mcp_subprocess_call(
+                    process,
+                    7,
+                    "render_diff",
+                    {
+                        "latest": True,
+                        "state_dir": str(state_dir),
+                        "output_dir": str(output_dir),
+                    },
+                )
+                self.assertIn("한글 diff", diff["result"]["structuredContent"]["diff_text"])
+            finally:
+                process.terminate()
+                process.communicate(timeout=5)
+
     def test_tool_call_summary_preflight_and_debug_bundle(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -552,6 +679,33 @@ class McpServerTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         response = json.loads(result.stdout)
         self.assertIn("tools", response["result"])
+
+def _mcp_subprocess_call(
+    process: subprocess.Popen[str],
+    message_id: int,
+    name: str,
+    arguments: dict[str, object],
+) -> dict[str, object]:
+    assert process.stdin is not None
+    assert process.stdout is not None
+    process.stdin.write(
+        json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": message_id,
+                "method": "tools/call",
+                "params": {"name": name, "arguments": arguments},
+            },
+            ensure_ascii=False,
+        )
+        + "\n"
+    )
+    process.stdin.flush()
+    line = process.stdout.readline()
+    if not line:
+        stderr = process.stderr.read() if process.stderr is not None else ""
+        raise AssertionError(f"MCP subprocess produced no response. stderr={stderr}")
+    return json.loads(line)
 
 
 if __name__ == "__main__":

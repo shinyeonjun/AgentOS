@@ -151,6 +151,7 @@ class AgentOSRuntime:
             ) + f"command timed out after {self.command_timeout_seconds} seconds"
         stdout_tail = safe_text(stdout[-4000:])
         stderr_tail = safe_text(stderr[-4000:])
+        status = "timed_out" if timed_out else ("passed" if exit_code == 0 else "failed")
         tool_call_id = self.store.record_tool_call(
             session_id=session.session_id,
             started_at=started_at,
@@ -160,6 +161,10 @@ class AgentOSRuntime:
             exit_code=exit_code,
             stdout_tail=stdout_tail,
             stderr_tail=stderr_tail,
+            timed_out=timed_out,
+            status=status,
+            error_type="TimeoutExpired" if timed_out else None,
+            error_message=f"command timed out after {self.command_timeout_seconds} seconds" if timed_out else None,
         )
         return ToolResult(tool_call_id, exit_code, stdout_tail, stderr_tail, timed_out=timed_out)
 

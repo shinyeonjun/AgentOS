@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -15,6 +16,8 @@ def main() -> int:
     _configure_stdio()
     plugin_root = Path(__file__).resolve().parent
     runtime_path = plugin_root / "runtime"
+    os.environ.setdefault("AGENTOS_PLUGIN_ROOT", str(plugin_root))
+    os.environ.setdefault("AGENTOS_PYTHON_LAUNCHER", str(Path(__file__).resolve()))
     sys.path.insert(0, str(runtime_path))
 
     from agentos.mcp_server import run_stdio

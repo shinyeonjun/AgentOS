@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from .text_safety import safe_json_dumps
+from .version_info import runtime_identity
 
 DEFAULT_AGENTOS_IMAGE = "agentos-base:0.1"
 DEFAULT_DOCKER_TIMEOUT_SECONDS = 30
@@ -122,6 +123,7 @@ def run_doctor(
     checks = (
         _check_platform(),
         _check_python(),
+        _check_runtime_identity(),
         _check_agentos_cli(),
         docker_cli,
         docker_daemon,
@@ -254,6 +256,20 @@ def _check_python() -> DoctorCheck:
     if sys.version_info >= (3, 11):
         return DoctorCheck("python", "passed", f"Python {version} at {sys.executable}.")
     return DoctorCheck("python", "failed", f"Python {version} is too old; use Python 3.11+.")
+
+
+def _check_runtime_identity() -> DoctorCheck:
+    identity = runtime_identity(Path(__file__))
+    manifest = identity.get("manifest_version") or "unknown"
+    server = identity.get("server_version") or "unknown"
+    plugin_root = identity.get("plugin_root") or "unknown"
+    launcher = identity.get("node_launcher") or identity.get("python_launcher") or "unknown"
+    status = "passed" if manifest == server else "warning"
+    return DoctorCheck(
+        "runtime_identity",
+        status,
+        f"running server {server}, manifest {manifest}, plugin_root={plugin_root}, launcher={launcher}",
+    )
 
 
 def _check_agentos_cli() -> DoctorCheck:

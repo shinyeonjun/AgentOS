@@ -33,6 +33,9 @@ class RuntimeHardeningTests(unittest.TestCase):
             self.assertEqual(result.exit_code, COMMAND_TIMEOUT_EXIT_CODE)
             self.assertTrue(result.timed_out)
             self.assertIn("command timed out after 1 seconds", result.stderr_tail)
+            with sqlite3.connect(runtime.db_path) as conn:
+                row = conn.execute("select timed_out, status, error_type from tool_calls").fetchone()
+            self.assertEqual(row, (1, "timed_out", "TimeoutExpired"))
 
     def test_run_command_preserves_utf8_stdout(self) -> None:
         with TemporaryDirectory() as tmp:

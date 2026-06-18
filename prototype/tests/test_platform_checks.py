@@ -30,6 +30,7 @@ class PlatformChecksTests(unittest.TestCase):
         self.assertEqual(result.status, "warning")
         statuses = {check.name: check.status for check in result.checks}
         self.assertEqual(statuses["platform"], "passed")
+        self.assertEqual(statuses["runtime_identity"], "passed")
         self.assertEqual(statuses["docker_cli"], "warning")
         self.assertEqual(statuses["docker_daemon"], "warning")
         self.assertEqual(statuses["docker_image"], "warning")
@@ -63,6 +64,7 @@ class PlatformChecksTests(unittest.TestCase):
         statuses = {check.name: check.status for check in result.checks}
         messages = {check.name: check.message for check in result.checks}
         self.assertEqual(statuses["agentos_cli"], "passed")
+        self.assertIn("runtime_identity", statuses)
         self.assertIn("Bundled plugin MCP tools can still run", messages["agentos_cli"])
 
     def test_doctor_warns_when_shell_does_not_expand_pwd(self) -> None:
