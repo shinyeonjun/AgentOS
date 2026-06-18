@@ -115,6 +115,30 @@ testing AgentOS. Codex conversations may keep the MCP tool registry they had at
 startup, so an old conversation can read the updated plugin files while still
 missing `mcp__agentos.*` tools.
 
+## Updating Or Repairing A Stale MCP Runtime
+
+Codex may keep an already-started MCP server alive for the lifetime of a
+conversation. After installing or updating AgentOS, the current conversation can
+therefore show a mixed state: shell reads see the new plugin files, while
+`mcp__agentos.*` tools still talk to the old server process.
+
+The fastest check is `doctor`. In a healthy new conversation, the
+`runtime_identity` check should report the same server and manifest version, and
+`mcp_storage` should show state/output paths under `AGENTOS_HOME`,
+`CODEX_HOME/agentos`, or `~/.codex/agentos`, not inside the plugin cache.
+
+If `runtime_identity` says the running server does not match the installed
+manifest, do not debug project behavior yet. Restart Codex or open a new
+conversation, then call `doctor` again. If the new conversation still cannot see
+AgentOS tools, run the manual setup helper below from the installed plugin root.
+
+Local development approvals are intentionally unsigned unless
+`AGENTOS_MANIFEST_KEY` is configured. Review verification may show a warning for
+unsigned local artifacts. Sync defaults should still require signed approvals in
+production-like use; only pass the unsigned development escape hatch when the
+human explicitly approved the current review package and you understand the
+trust boundary.
+
 ## Manual MCP Setup
 
 If the plugin is installed but a new conversation still cannot see

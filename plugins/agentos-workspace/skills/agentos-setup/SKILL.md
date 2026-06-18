@@ -7,7 +7,9 @@ description: Register or repair the AgentOS MCP server when bundled tools are no
 
 Use this skill when the AgentOS Workspace plugin is installed but
 `mcp__agentos__doctor` or other AgentOS MCP tools are not visible in the current
-Codex conversation.
+Codex conversation. Also use it when AgentOS MCP tools are visible but `doctor`
+reports that the running server version does not match the installed plugin
+manifest version.
 
 Do not start coding edits through AgentOS until MCP tools are visible. Treat
 this as a first-use setup wizard: explain the missing MCP tools, ask before
@@ -17,7 +19,8 @@ available, then ask the user to restart Codex and start a new thread.
 ## Setup Flow
 
 1. Explain that the plugin is installed, but Codex has not attached the local
-   MCP server to the current thread.
+   MCP server to the current thread, or that the current thread is still using a
+   stale MCP server process from before the update.
 2. If shell access is available, check whether the managed config block already
    exists:
 
@@ -58,7 +61,9 @@ node scripts/smoke-mcp.cjs
 ```
 
 7. Tell the user to restart Codex and open a new thread. Existing threads may
-   keep their old tool registry even after config changes.
+   keep their old tool registry or old MCP process even after config changes.
+   In the new thread, call `doctor` first and confirm `runtime_identity` reports
+   matching server and manifest versions.
 
 ## Safety
 

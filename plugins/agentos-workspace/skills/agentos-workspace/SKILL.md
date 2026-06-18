@@ -67,6 +67,12 @@ through AgentOS before Docker sandbox work.
    Existing conversations may see updated skill files through shell reads but
    still keep their old MCP tool registry.
 
+   If MCP tools are visible but `doctor` reports a `runtime_identity` version
+   mismatch, treat it as the same stale-process class of issue. Do not debug the
+   target project yet. Ask the user to restart Codex or open a new conversation,
+   then call `doctor` again and confirm the server version matches the plugin
+   manifest version.
+
 3. If a new Codex conversation still lacks MCP tools, check whether the bundled
    MCP server failed to start because Node or Python 3 is missing or blocked.
    The plugin normally bundles the AgentOS runtime and does not require a
@@ -146,6 +152,9 @@ agentos sync --latest --target <project-dir> --require-clean-git --json
 - Never call `agentos sync` before user approval.
 - Prefer dry-run sync before actual sync.
 - Stop if `agentos verify-review` fails.
+- Treat unsigned review or approval warnings as local-development warnings only.
+  Production-like sync should require signed approval records unless the human
+  explicitly accepts the unsigned local trust boundary for the current review.
 - Stop before syncing into a dirty git worktree unless the user explicitly
   accepts that risk.
 - If the session workspace is missing, create a new session instead of syncing

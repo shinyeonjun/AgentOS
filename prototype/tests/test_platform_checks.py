@@ -31,6 +31,7 @@ class PlatformChecksTests(unittest.TestCase):
         statuses = {check.name: check.status for check in result.checks}
         self.assertEqual(statuses["platform"], "passed")
         self.assertEqual(statuses["runtime_identity"], "passed")
+        self.assertEqual(statuses["mcp_storage"], "passed")
         self.assertEqual(statuses["docker_cli"], "warning")
         self.assertEqual(statuses["docker_daemon"], "warning")
         self.assertEqual(statuses["docker_image"], "warning")
@@ -65,7 +66,32 @@ class PlatformChecksTests(unittest.TestCase):
         messages = {check.name: check.message for check in result.checks}
         self.assertEqual(statuses["agentos_cli"], "passed")
         self.assertIn("runtime_identity", statuses)
+        self.assertIn("mcp_storage", statuses)
         self.assertIn("Bundled plugin MCP tools can still run", messages["agentos_cli"])
+
+    def test_doctor_warns_when_runtime_identity_looks_stale(self) -> None:
+        with (
+            patch("agentos.core.platform_checks.platform.system", return_value="Linux"),
+            patch("agentos.core.platform_checks.is_wsl", return_value=False),
+            patch("agentos.core.platform_checks.shutil.which", return_value="/usr/bin/tool"),
+            patch("agentos.core.platform_checks.subprocess.run", side_effect=_docker_success),
+            patch(
+                "agentos.core.platform_checks.runtime_identity",
+                return_value={
+                    "server_version": "0.4.1",
+                    "manifest_version": "0.4.10",
+                    "plugin_root": "C:/Users/test/.codex/plugins/cache/agentos/agentos-workspace/0.4.10",
+                    "node_launcher": "C:/Users/test/.codex/agentos-workspace-launcher.cjs",
+                },
+            ),
+        ):
+            result = run_doctor(workspace_path=Path("/home/user/project"))
+
+        checks = {check.name: check for check in result.checks}
+        self.assertEqual(result.status, "warning")
+        self.assertEqual(checks["runtime_identity"].status, "warning")
+        self.assertIn("older MCP process", checks["runtime_identity"].message)
+        self.assertIn("open a new conversation", checks["runtime_identity"].message)
 
     def test_doctor_warns_when_shell_does_not_expand_pwd(self) -> None:
         with (

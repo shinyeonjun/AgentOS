@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .default_paths import default_mcp_output_dir, default_mcp_state_dir
 from .text_safety import safe_json_dumps
 from .version_info import runtime_identity
 
@@ -124,6 +125,7 @@ def run_doctor(
         _check_platform(),
         _check_python(),
         _check_runtime_identity(),
+        _check_mcp_storage_paths(),
         _check_agentos_cli(),
         docker_cli,
         docker_daemon,
@@ -265,10 +267,27 @@ def _check_runtime_identity() -> DoctorCheck:
     plugin_root = identity.get("plugin_root") or "unknown"
     launcher = identity.get("node_launcher") or identity.get("python_launcher") or "unknown"
     status = "passed" if manifest == server else "warning"
+    prefix = ""
+    if status == "warning":
+        prefix = (
+            "Running MCP server does not match the installed plugin manifest. "
+            "This usually means the current Codex conversation is still attached to an older MCP process; "
+            "restart Codex or open a new conversation after updating AgentOS. "
+        )
     return DoctorCheck(
         "runtime_identity",
         status,
-        f"running server {server}, manifest {manifest}, plugin_root={plugin_root}, launcher={launcher}",
+        f"{prefix}running server {server}, manifest {manifest}, plugin_root={plugin_root}, launcher={launcher}",
+    )
+
+
+def _check_mcp_storage_paths() -> DoctorCheck:
+    state_dir = default_mcp_state_dir()
+    output_dir = default_mcp_output_dir()
+    return DoctorCheck(
+        "mcp_storage",
+        "passed",
+        f"state_dir={state_dir}; output_dir={output_dir}",
     )
 
 
