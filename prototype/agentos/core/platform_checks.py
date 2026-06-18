@@ -242,8 +242,8 @@ def _check_platform() -> DoctorCheck:
     if system == "Windows":
         return DoctorCheck(
             "platform",
-            "warning",
-            "Native Windows support is experimental; prefer WSL2 for Docker and shell-script smoke tests.",
+            "passed",
+            "Native Windows environment detected. WSL2 is still recommended for Docker-heavy workflows.",
         )
     return DoctorCheck("platform", "warning", f"{system} is not an officially tested platform.")
 
@@ -260,7 +260,7 @@ def _check_agentos_cli() -> DoctorCheck:
     if executable is None:
         return DoctorCheck(
             "agentos_cli",
-            "warning",
+            "passed",
             (
                 "agentos executable is not on PATH. Bundled plugin MCP tools can still run; "
                 "install the CLI only for terminal fallback commands."

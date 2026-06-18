@@ -129,6 +129,7 @@ def _handle_tool_call(params: dict[str, Any]) -> dict[str, Any]:
         "approve_scope": _tool_approve_scope,
         "sync_approved": _tool_sync_approved,
         "destroy_session": _tool_destroy_session,
+        "purge_session": _tool_purge_session,
     }
     if name not in tools:
         raise ValueError(f"unknown AgentOS tool: {name}")
@@ -264,6 +265,16 @@ def _tool_sync_approved(arguments: dict[str, Any]) -> dict[str, Any]:
 
 def _tool_destroy_session(arguments: dict[str, Any]) -> dict[str, Any]:
     return destroy_work_session(
+        state_dir=_state_dir(arguments),
+        output_dir=_output_dir(arguments),
+        session_ref=_required_str(arguments, "work_name"),
+    ).to_dict()
+
+
+def _tool_purge_session(arguments: dict[str, Any]) -> dict[str, Any]:
+    from .core.work_sessions import purge_work_session
+
+    return purge_work_session(
         state_dir=_state_dir(arguments),
         output_dir=_output_dir(arguments),
         session_ref=_required_str(arguments, "work_name"),
@@ -487,10 +498,17 @@ def _tool_definitions() -> list[dict[str, Any]]:
         ),
         _tool_definition(
             "destroy_session",
-            "Destroy a session workspace while keeping metadata and artifacts.",
+            "Destroy only the session workspace while keeping metadata and artifacts for audit.",
             {**common_paths, "work_name": _string_schema("Session id, id prefix, or name.")},
             required=["work_name"],
             annotations={"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False},
+        ),
+        _tool_definition(
+            "purge_session",
+            "Permanently delete a session workspace, original snapshot, artifacts, and metadata.",
+            {**common_paths, "work_name": _string_schema("Session id, id prefix, or name.")},
+            required=["work_name"],
+            annotations={"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False},
         ),
     ]
 
@@ -554,7 +572,7 @@ def _jsonable(value: Any) -> Any:
 
 
 def _safe_json_dumps(value: Any, *, indent: int | None = None) -> str:
-    return json.dumps(_jsonable(value), ensure_ascii=False, indent=indent)
+    return json.dumps(_jsonable(value), ensure_ascii=True, indent=indent)
 
 
 def _safe_text(value: str) -> str:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import shutil
 import sqlite3
 import uuid
 from dataclasses import dataclass
@@ -136,6 +137,22 @@ class WorkSessionDestroyResult:
             "session_dir": str(self.session_dir),
             "workspace_path": str(self.workspace_path),
             "destroyed": self.destroyed,
+        }
+
+
+@dataclass(frozen=True)
+class WorkSessionPurgeResult:
+    session_id: str
+    session_dir: Path
+    artifact_dir: Path
+    purged: bool
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "session_id": self.session_id,
+            "session_dir": str(self.session_dir),
+            "artifact_dir": str(self.artifact_dir),
+            "purged": self.purged,
         }
 
 
@@ -391,6 +408,29 @@ def destroy_work_session(
         session_dir=session_dir,
         workspace_path=workspace_path,
         destroyed=not session_dir.exists(),
+    )
+
+
+def purge_work_session(
+    *,
+    state_dir: Path,
+    output_dir: Path,
+    session_ref: str,
+) -> WorkSessionPurgeResult:
+    runtime = AgentOSRuntime(state_dir=state_dir.resolve(), output_dir=output_dir.resolve())
+    session = resolve_session(state_dir=state_dir, session_ref=session_ref)
+    session_dir = Path(session.session_dir)
+    artifact_dir = runtime.artifacts_dir / session.session_id
+    if session_dir.exists():
+        shutil.rmtree(session_dir)
+    if artifact_dir.exists():
+        shutil.rmtree(artifact_dir)
+    runtime.store.delete_session_records(session_id=session.session_id)
+    return WorkSessionPurgeResult(
+        session_id=session.session_id,
+        session_dir=session_dir,
+        artifact_dir=artifact_dir,
+        purged=not session_dir.exists() and not artifact_dir.exists(),
     )
 
 

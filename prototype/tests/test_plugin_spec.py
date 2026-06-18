@@ -25,6 +25,7 @@ class PluginSpecTests(unittest.TestCase):
         self.assertIn("review_session", tools)
         self.assertIn("approve_scope", tools)
         self.assertIn("sync_approved", tools)
+        self.assertIn("purge_session", tools)
         self.assertTrue(tools["approve_scope"]["human_approval_required"])
         self.assertTrue(tools["sync_approved"]["human_approval_required"])
         self.assertIn("workspace_path", tools["create_session"]["outputs"])
@@ -36,7 +37,7 @@ class PluginSpecTests(unittest.TestCase):
         mcp_config = json.loads((plugin_root / ".mcp.json").read_text(encoding="utf-8"))
         marketplace = json.loads((repo_root / ".agents" / "plugins" / "marketplace.json").read_text(encoding="utf-8"))
 
-        self.assertEqual(manifest["version"], "0.4.3")
+        self.assertEqual(manifest["version"], "0.4.4")
         self.assertEqual(manifest["mcpServers"], "./.mcp.json")
         self.assertEqual(manifest["skills"], "./skills/")
         self.assertIn("Before any file edit", manifest["interface"]["defaultPrompt"][0])

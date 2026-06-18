@@ -43,10 +43,27 @@ class PlatformChecksTests(unittest.TestCase):
         ):
             result = run_doctor(workspace_path=Path("C:/project"))
 
-        self.assertEqual(result.status, "warning")
+        self.assertEqual(result.status, "passed")
         self.assertEqual(result.checks[0].name, "platform")
-        self.assertEqual(result.checks[0].status, "warning")
-        self.assertIn("experimental", result.checks[0].message)
+        self.assertEqual(result.checks[0].status, "passed")
+        self.assertIn("Native Windows", result.checks[0].message)
+
+    def test_doctor_treats_missing_cli_as_plugin_fallback_note(self) -> None:
+        def fake_which(name: str) -> str | None:
+            return "/usr/bin/docker" if name == "docker" else None
+
+        with (
+            patch("agentos.core.platform_checks.platform.system", return_value="Linux"),
+            patch("agentos.core.platform_checks.is_wsl", return_value=False),
+            patch("agentos.core.platform_checks.shutil.which", side_effect=fake_which),
+            patch("agentos.core.platform_checks.subprocess.run", side_effect=_docker_success),
+        ):
+            result = run_doctor(workspace_path=Path("/home/user/project"))
+
+        statuses = {check.name: check.status for check in result.checks}
+        messages = {check.name: check.message for check in result.checks}
+        self.assertEqual(statuses["agentos_cli"], "passed")
+        self.assertIn("Bundled plugin MCP tools can still run", messages["agentos_cli"])
 
     def test_doctor_warns_when_shell_does_not_expand_pwd(self) -> None:
         with (

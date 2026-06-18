@@ -33,6 +33,7 @@ from .core.work_sessions import (
     destroy_work_session,
     docker_exec_work_session,
     exec_work_session,
+    purge_work_session,
     review_work_session,
     status_work_session,
 )
@@ -222,11 +223,22 @@ def _main_impl(argv: list[str]) -> int:
     add_output_dir_arg(session_review, default=DEFAULT_OUTPUT_DIR)
     session_review.add_argument("session_ref", help="Session id, id prefix, or name")
     add_json_arg(session_review, noun="session review output")
-    session_destroy = session_subparsers.add_parser("destroy", help="Destroy a persistent session workspace")
+    session_destroy = session_subparsers.add_parser(
+        "destroy",
+        help="Destroy a persistent session workspace while keeping metadata and artifacts",
+    )
     add_state_dir_arg(session_destroy, default=DEFAULT_STATE_DIR)
     add_output_dir_arg(session_destroy, default=DEFAULT_OUTPUT_DIR)
     session_destroy.add_argument("session_ref", help="Session id, id prefix, or name")
     add_json_arg(session_destroy, noun="session destroy output")
+    session_purge = session_subparsers.add_parser(
+        "purge",
+        help="Permanently delete a persistent session workspace, artifacts, and metadata",
+    )
+    add_state_dir_arg(session_purge, default=DEFAULT_STATE_DIR)
+    add_output_dir_arg(session_purge, default=DEFAULT_OUTPUT_DIR)
+    session_purge.add_argument("session_ref", help="Session id, id prefix, or name")
+    add_json_arg(session_purge, noun="session purge output")
     reviews = subparsers.add_parser("reviews", help="List review packages")
     add_state_dir_arg(reviews, default=DEFAULT_STATE_DIR)
     reviews.add_argument(
@@ -634,6 +646,20 @@ def _main_impl(argv: list[str]) -> int:
             print(f"session_dir: {result.session_dir}")
             print(f"workspace_path: {result.workspace_path}")
             print(f"destroyed: {result.destroyed}")
+            return 0
+        if args.session_command == "purge":
+            result = purge_work_session(
+                state_dir=args.state_dir,
+                output_dir=args.output_dir,
+                session_ref=args.session_ref,
+            )
+            if args.json:
+                _print_json(result.to_dict())
+                return 0
+            print(f"session: {result.session_id}")
+            print(f"session_dir: {result.session_dir}")
+            print(f"artifact_dir: {result.artifact_dir}")
+            print(f"purged: {result.purged}")
             return 0
 
     if args.command == "reviews":

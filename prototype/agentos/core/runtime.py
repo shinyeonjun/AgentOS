@@ -4,6 +4,7 @@ import difflib
 import json
 import locale
 import os
+import platform
 import shutil
 import subprocess
 import uuid
@@ -18,6 +19,9 @@ from .sync import PatchApplyResult, apply_patch_to_target
 
 DEFAULT_COMMAND_TIMEOUT_SECONDS = 120
 COMMAND_TIMEOUT_EXIT_CODE = 124
+WINDOWS_SCRIPT_LAUNCHERS = {
+    ".ps1": ("powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File"),
+}
 COPY_IGNORE_NAMES = frozenset(
     {
         ".agentos-output",
@@ -118,11 +122,13 @@ class AgentOSRuntime:
     ) -> ToolResult:
         started_at = utc_now()
         timed_out = False
+        command_env = _command_env(env=env, inherit_env=inherit_env)
+        run_command = _prepare_subprocess_command(command, command_env=command_env)
         try:
             completed = subprocess.run(
-                command,
+                run_command,
                 cwd=cwd,
-                env=_command_env(env=env, inherit_env=inherit_env),
+                env=command_env,
                 text=False,
                 capture_output=True,
                 check=False,
@@ -148,7 +154,7 @@ class AgentOSRuntime:
             session_id=session.session_id,
             started_at=started_at,
             completed_at=utc_now(),
-            command_json=json.dumps(_json_safe(command), ensure_ascii=False),
+            command_json=json.dumps(_json_safe(run_command), ensure_ascii=False),
             cwd=cwd,
             exit_code=exit_code,
             stdout_tail=stdout_tail,
@@ -306,6 +312,45 @@ def _safe_relative_source(root: Path, relative_path: str) -> Path:
     if not source.exists():
         raise FileNotFoundError(f"selected sync source does not exist: {relative_path}")
     return source
+
+
+def _prepare_subprocess_command(command: list[str], *, command_env: dict[str, str] | None) -> list[str]:
+    if not command:
+        return command
+    executable = _resolve_executable(command[0], command_env=command_env)
+    suffix = Path(executable).suffix.lower()
+    if platform.system() == "Windows" and suffix in WINDOWS_SCRIPT_LAUNCHERS:
+        return [*WINDOWS_SCRIPT_LAUNCHERS[suffix], executable, *command[1:]]
+    return [executable, *command[1:]]
+
+
+def _resolve_executable(executable: str, *, command_env: dict[str, str] | None) -> str:
+    if _has_path_separator(executable) or Path(executable).suffix:
+        return executable
+    search_path = None if command_env is None else command_env.get("PATH")
+    resolved = shutil.which(executable, path=search_path)
+    if resolved is not None:
+        return resolved
+    if platform.system() != "Windows":
+        return executable
+    for suffix in _windows_executable_suffixes(command_env):
+        resolved = shutil.which(f"{executable}{suffix}", path=search_path)
+        if resolved is not None:
+            return resolved
+    return executable
+
+
+def _windows_executable_suffixes(command_env: dict[str, str] | None) -> list[str]:
+    pathext = (command_env or os.environ).get("PATHEXT", ".COM;.EXE;.BAT;.CMD")
+    suffixes = [item.lower() for item in pathext.split(os.pathsep if os.pathsep in pathext else ";") if item]
+    for suffix in WINDOWS_SCRIPT_LAUNCHERS:
+        if suffix not in suffixes:
+            suffixes.append(suffix)
+    return suffixes
+
+
+def _has_path_separator(value: str) -> bool:
+    return "/" in value or "\\" in value
 
 
 def _copy_ignore(_directory: str, names: list[str]) -> set[str]:

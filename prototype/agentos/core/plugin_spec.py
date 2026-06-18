@@ -124,6 +124,13 @@ def build_plugin_spec() -> dict[str, Any]:
                 required=["work_name"],
                 outputs=["session_id", "destroyed"],
             ),
+            _tool(
+                name="purge_session",
+                command="agentos session purge <work-name> --json",
+                purpose="Permanently delete a session workspace, original snapshot, artifacts, and metadata.",
+                required=["work_name"],
+                outputs=["session_id", "purged"],
+            ),
         ],
         "agent_rules": [
             "Call doctor before any file edit when AgentOS is selected.",

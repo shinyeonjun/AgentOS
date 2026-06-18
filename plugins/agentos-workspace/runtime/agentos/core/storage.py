@@ -176,6 +176,11 @@ class StateStore:
                 ("destroyed", destroyed_at, session_id),
             )
 
+    def delete_session_records(self, *, session_id: str) -> None:
+        with self.connect() as conn:
+            for table in ("tool_calls", "artifacts", "approvals", "syncs", "sessions"):
+                conn.execute(f"delete from {table} where session_id = ?", (session_id,))
+
     def is_approved(self, session_id: str) -> bool:
         with self.connect() as conn:
             row = conn.execute(

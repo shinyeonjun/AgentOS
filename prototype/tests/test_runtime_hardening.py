@@ -4,8 +4,9 @@ import sys
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
-from agentos.core.runtime import COMMAND_TIMEOUT_EXIT_CODE, AgentOSRuntime
+from agentos.core.runtime import COMMAND_TIMEOUT_EXIT_CODE, AgentOSRuntime, _prepare_subprocess_command
 from agentos.core.sync import PatchApplyError, apply_patch_to_target
 
 
@@ -45,6 +46,29 @@ class RuntimeHardeningTests(unittest.TestCase):
 
             self.assertEqual(result.exit_code, 0)
             self.assertIn("계산기", result.stdout_tail)
+
+    def test_windows_powershell_shim_is_wrapped_for_subprocess(self) -> None:
+        with (
+            patch("agentos.core.runtime.platform.system", return_value="Windows"),
+            patch("agentos.core.runtime.shutil.which", side_effect=lambda name, path=None: "C:/node/npm.ps1" if name == "npm.ps1" else None),
+        ):
+            command = _prepare_subprocess_command(
+                ["npm", "test"],
+                command_env={"PATH": "C:/node", "PATHEXT": ".COM;.EXE;.BAT;.CMD"},
+            )
+
+        self.assertEqual(
+            command,
+            [
+                "powershell.exe",
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                "C:/node/npm.ps1",
+                "test",
+            ],
+        )
 
     def test_run_command_and_artifacts_replace_invalid_unicode(self) -> None:
         with TemporaryDirectory() as tmp:
