@@ -47,6 +47,10 @@ class McpServerTests(unittest.TestCase):
         self.assertTrue(tools_by_name["purge_session"]["annotations"]["destructiveHint"])
         self.assertIn("approval boundary", tools_by_name["sync_approved"]["description"])
         self.assertIn("whether approval is still required", tools_by_name["sync_preflight"]["description"])
+        self.assertTrue(tools_by_name["sync_preflight"]["inputSchema"]["properties"]["require_signed_approval"]["default"])
+        self.assertFalse(tools_by_name["sync_preflight"]["inputSchema"]["properties"]["allow_unsigned_approval"]["default"])
+        self.assertTrue(tools_by_name["sync_approved"]["inputSchema"]["properties"]["require_signed_approval"]["default"])
+        self.assertFalse(tools_by_name["sync_approved"]["inputSchema"]["properties"]["allow_unsigned_approval"]["default"])
 
     def test_tool_result_replaces_unpaired_surrogates(self) -> None:
         from agentos.mcp_server import _tool_result
@@ -326,10 +330,75 @@ class McpServerTests(unittest.TestCase):
             self.assertFalse(preflight_data["safe_to_sync"])
             self.assertEqual(preflight_data["planned_paths"], ["README.md"])
 
+            approve = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 6,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "approve_scope",
+                        "arguments": {
+                            "scope_id": "sync_selected:README.md",
+                            "latest": True,
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                        },
+                    },
+                }
+            )
+            self.assertIsNotNone(approve)
+
+            strict_preflight = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 7,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "sync_preflight",
+                        "arguments": {
+                            "project_dir": str(target),
+                            "scope_id": "sync_selected:README.md",
+                            "latest": True,
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                        },
+                    },
+                }
+            )
+            self.assertIsNotNone(strict_preflight)
+            strict_data = strict_preflight["result"]["structuredContent"]
+            self.assertTrue(strict_data["approval_required"])
+            self.assertFalse(strict_data["safe_to_sync"])
+            self.assertEqual(strict_data["approval_verification_status"], "failed")
+
+            unsigned_preflight = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 8,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "sync_preflight",
+                        "arguments": {
+                            "project_dir": str(target),
+                            "scope_id": "sync_selected:README.md",
+                            "latest": True,
+                            "allow_unsigned_approval": True,
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                        },
+                    },
+                }
+            )
+            self.assertIsNotNone(unsigned_preflight)
+            unsigned_data = unsigned_preflight["result"]["structuredContent"]
+            self.assertFalse(unsigned_data["approval_required"])
+            self.assertTrue(unsigned_data["safe_to_sync"])
+            self.assertEqual(unsigned_data["approval_verification_status"], "warning")
+
             bundle = _handle_rpc(
                 {
                     "jsonrpc": "2.0",
-                    "id": 5,
+                    "id": 9,
                     "method": "tools/call",
                     "params": {
                         "name": "export_debug_bundle",

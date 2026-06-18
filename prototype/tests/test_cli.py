@@ -290,9 +290,30 @@ class AgentOSCliTests(unittest.TestCase):
             )
             self.assertEqual(approved_preflight_exit_code, 0)
             approved_preflight_data = json.loads(approved_preflight_output)
-            self.assertFalse(approved_preflight_data["approval_required"])
-            self.assertTrue(approved_preflight_data["safe_to_sync"])
-            self.assertEqual(approved_preflight_data["next_action"], "sync_approved")
+            self.assertTrue(approved_preflight_data["approval_required"])
+            self.assertFalse(approved_preflight_data["safe_to_sync"])
+            self.assertEqual(approved_preflight_data["approval_verification_status"], "failed")
+
+            unsigned_preflight_exit_code, unsigned_preflight_output = _run_cli(
+                [
+                    "sync-preflight",
+                    "--latest",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--target",
+                    str(target_project),
+                    "--scope",
+                    "sync_selected:README.md",
+                    "--allow-unsigned-approval",
+                    "--json",
+                ]
+            )
+            self.assertEqual(unsigned_preflight_exit_code, 0)
+            unsigned_preflight_data = json.loads(unsigned_preflight_output)
+            self.assertEqual(unsigned_preflight_data["approval_verification_status"], "warning")
+            self.assertFalse(unsigned_preflight_data["approval_required"])
+            self.assertTrue(unsigned_preflight_data["safe_to_sync"])
+            self.assertEqual(unsigned_preflight_data["next_action"], "sync_approved")
 
             sync_exit_code, sync_output = _run_cli(
                 [
@@ -304,12 +325,16 @@ class AgentOSCliTests(unittest.TestCase):
                     str(root / "output"),
                     "--target",
                     str(target_project),
+                    "--allow-unsigned-approval",
                     "--json",
                 ]
             )
             self.assertEqual(sync_exit_code, 0)
             self.assertEqual(json.loads(sync_output)["copied_paths"], ["README.md"])
             self.assertIn("updated", (target_project / "README.md").read_text(encoding="utf-8"))
+
+            self.assertFalse(approved_preflight_data["safe_to_sync"])
+            self.assertEqual(approved_preflight_data["next_action"], "fix blockers, then sync_approved")
 
             debug_exit_code, debug_output = _run_cli(
                 [
@@ -674,6 +699,7 @@ class AgentOSCliTests(unittest.TestCase):
                     str(root / "output"),
                     "--target",
                     str(target_project),
+                    "--allow-unsigned-approval",
                     "--json",
                 ]
             )
@@ -1053,6 +1079,7 @@ class AgentOSCliTests(unittest.TestCase):
                     "--target",
                     str(target_project),
                     "--dry-run",
+                    "--allow-unsigned-approval",
                     "--json",
                 ]
             )

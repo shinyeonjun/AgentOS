@@ -337,7 +337,12 @@ def _main_impl(argv: list[str]) -> int:
     sync.add_argument(
         "--require-signed-approval",
         action="store_true",
-        help="Fail unless approval-record.json has a valid HMAC signature",
+        help="Fail unless approval-record.json has a valid HMAC signature. This is the default unless --allow-unsigned-approval is set.",
+    )
+    sync.add_argument(
+        "--allow-unsigned-approval",
+        action="store_true",
+        help="Allow local unsigned approval records for development-only syncs",
     )
     add_json_arg(sync, noun="sync output")
     sync_preflight = subparsers.add_parser("sync-preflight", help="Show what sync would do and whether approval is still required")
@@ -364,7 +369,12 @@ def _main_impl(argv: list[str]) -> int:
     sync_preflight.add_argument(
         "--require-signed-approval",
         action="store_true",
-        help="Require a signed approval record in the preflight result",
+        help="Require a signed approval record in the preflight result. This is the default unless --allow-unsigned-approval is set.",
+    )
+    sync_preflight.add_argument(
+        "--allow-unsigned-approval",
+        action="store_true",
+        help="Allow local unsigned approval records for development-only preflight checks",
     )
     add_json_arg(sync_preflight, noun="sync preflight output")
     run = subparsers.add_parser("run", help="Create a review-ready Codex task session")
@@ -831,7 +841,7 @@ def _main_impl(argv: list[str]) -> int:
             target_dir=args.target,
             scope_id=args.scope,
             require_clean_git=args.require_clean_git,
-            require_signed_approval=args.require_signed_approval,
+            require_signed_approval=args.require_signed_approval or not args.allow_unsigned_approval,
         )
         if args.json:
             _print_json(result.to_dict())
@@ -860,7 +870,7 @@ def _main_impl(argv: list[str]) -> int:
             target_dir=args.target,
             dry_run=args.dry_run,
             require_clean_git=args.require_clean_git,
-            require_signed_approval=args.require_signed_approval,
+            require_signed_approval=args.require_signed_approval or not args.allow_unsigned_approval,
         )
         if args.json:
             _print_json(result.to_dict())

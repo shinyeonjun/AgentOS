@@ -12,17 +12,39 @@ IGNORED_PATH_PARTS = {
     ".cache",
     ".coverage",
     ".git",
+    ".hg",
     ".mypy_cache",
+    ".next",
     ".pytest_cache",
     ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "build",
+    "dist",
     "__pycache__",
     "htmlcov",
+    "node_modules",
+    "venv",
 }
 
 IGNORED_SUFFIXES = {
+    ".a",
+    ".bin",
+    ".dll",
+    ".dylib",
+    ".exe",
+    ".jpg",
+    ".jpeg",
+    ".o",
+    ".png",
     ".pyc",
     ".pyo",
+    ".so",
+    ".zip",
 }
+
+MAX_COMPARE_BYTES = 10 * 1024 * 1024
 
 
 @dataclass(frozen=True)
@@ -77,12 +99,19 @@ def _file_map(root: Path) -> dict[str, Path]:
     return {
         safe_text(path.relative_to(root).as_posix()): path
         for path in root.rglob("*")
-        if path.is_file() and not _is_ignored(path.relative_to(root))
+        if path.is_file() and not _is_ignored(path.relative_to(root)) and _within_size_limit(path)
     }
 
 
 def _is_ignored(relative_path: Path) -> bool:
     return bool(IGNORED_PATH_PARTS.intersection(relative_path.parts)) or relative_path.suffix in IGNORED_SUFFIXES
+
+
+def _within_size_limit(path: Path) -> bool:
+    try:
+        return path.stat().st_size <= MAX_COMPARE_BYTES
+    except OSError:
+        return False
 
 
 def _build_text_diff(path: str, before_file: Path | None, after_file: Path | None) -> str | None:

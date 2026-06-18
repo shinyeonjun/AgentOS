@@ -53,6 +53,10 @@ class ReviewSummaryTests(unittest.TestCase):
             for base in (original, workspace):
                 (base / ".git").mkdir()
                 (base / ".git" / "index").write_bytes(b"index")
+                (base / "node_modules").mkdir()
+                (base / "node_modules" / "leftpad.js").write_text("cache\n", encoding="utf-8")
+                (base / ".venv").mkdir()
+                (base / ".venv" / "pyvenv.cfg").write_text("cache\n", encoding="utf-8")
                 (base / "__pycache__").mkdir()
                 (base / "__pycache__" / "app.cpython-312.pyc").write_bytes(b"cache")
                 (base / ".pytest_cache").mkdir()
@@ -63,6 +67,22 @@ class ReviewSummaryTests(unittest.TestCase):
             changes = detect_file_changes(original, workspace)
 
             self.assertEqual([change.path for change in changes], ["app.py"])
+
+    def test_change_detection_skips_large_and_binary_files(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            original = root / "original"
+            workspace = root / "workspace"
+            original.mkdir()
+            workspace.mkdir()
+            (original / "README.md").write_text("old\n", encoding="utf-8")
+            (workspace / "README.md").write_text("new\n", encoding="utf-8")
+            (workspace / "artifact.bin").write_bytes(b"binary")
+            (workspace / "large.txt").write_bytes(b"x" * (10 * 1024 * 1024 + 1))
+
+            changes = detect_file_changes(original, workspace)
+
+            self.assertEqual([change.path for change in changes], ["README.md"])
 
 
 if __name__ == "__main__":

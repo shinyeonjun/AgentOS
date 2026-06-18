@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from .core.integrity import verify_review_package
+from .core.default_paths import default_mcp_output_dir, default_mcp_state_dir
 from .core.platform_checks import prepare_docker_environment, run_doctor
 from .core.review import latest_review_package_path, render_review_diffs, summarize_review_package
 from .core.session_ops import approve_review_package, preflight_sync_review, sync_approved_review
@@ -25,8 +26,8 @@ from .core.work_sessions import (
 from .core.text_safety import json_safe, safe_json_dumps, safe_text
 
 SERVER_NAME = "agentos"
-DEFAULT_STATE_DIR = Path(".agentos-state")
-DEFAULT_OUTPUT_DIR = Path(".agentos-output")
+DEFAULT_STATE_DIR = default_mcp_state_dir()
+DEFAULT_OUTPUT_DIR = default_mcp_output_dir()
 DEFAULT_MCP_COMMAND_TIMEOUT_SECONDS = 55
 AGENTOS_WORKFLOW_RULE = (
     "AgentOS selected: call doctor before any file edit. Do not edit the original workspace directly. "
@@ -207,6 +208,7 @@ def _tool_run_command(arguments: dict[str, Any]) -> dict[str, Any]:
         command=command,
         cwd=cwd,
         timeout_seconds=_int_arg(arguments, "timeout_seconds", DEFAULT_MCP_COMMAND_TIMEOUT_SECONDS),
+        inherit_env=_bool_arg(arguments, "inherit_env", True),
     ).to_dict()
 
 
@@ -257,6 +259,7 @@ def _tool_verify_review(arguments: dict[str, Any]) -> dict[str, Any]:
 
 
 def _tool_sync_preflight(arguments: dict[str, Any]) -> dict[str, Any]:
+    allow_unsigned = _bool_arg(arguments, "allow_unsigned_approval", False)
     return preflight_sync_review(
         state_dir=_state_dir(arguments),
         target_dir=_required_path(arguments, "project_dir"),
@@ -264,7 +267,7 @@ def _tool_sync_preflight(arguments: dict[str, Any]) -> dict[str, Any]:
         latest=_bool_arg(arguments, "latest", True),
         scope_id=arguments.get("scope_id") if arguments.get("scope_id") is not None else None,
         require_clean_git=_bool_arg(arguments, "require_clean_git", False),
-        require_signed_approval=_bool_arg(arguments, "require_signed_approval", False),
+        require_signed_approval=_bool_arg(arguments, "require_signed_approval", not allow_unsigned),
     ).to_dict()
 
 
@@ -280,6 +283,7 @@ def _tool_approve_scope(arguments: dict[str, Any]) -> dict[str, Any]:
 
 
 def _tool_sync_approved(arguments: dict[str, Any]) -> dict[str, Any]:
+    allow_unsigned = _bool_arg(arguments, "allow_unsigned_approval", False)
     return sync_approved_review(
         state_dir=_state_dir(arguments),
         output_dir=_output_dir(arguments),
@@ -288,7 +292,7 @@ def _tool_sync_approved(arguments: dict[str, Any]) -> dict[str, Any]:
         latest=_bool_arg(arguments, "latest", True),
         dry_run=_bool_arg(arguments, "dry_run", True),
         require_clean_git=_bool_arg(arguments, "require_clean_git", False),
-        require_signed_approval=_bool_arg(arguments, "require_signed_approval", False),
+        require_signed_approval=_bool_arg(arguments, "require_signed_approval", not allow_unsigned),
     ).to_dict()
 
 
@@ -414,8 +418,8 @@ def _int_arg(arguments: dict[str, Any], name: str, default: int) -> int:
 
 def _tool_definitions() -> list[dict[str, Any]]:
     common_paths = {
-        "state_dir": _string_schema("AgentOS state directory. Defaults to .agentos-state in the MCP process cwd."),
-        "output_dir": _string_schema("AgentOS output directory. Defaults to .agentos-output in the MCP process cwd."),
+        "state_dir": _string_schema("AgentOS state directory. Defaults to AGENTOS_STATE_DIR or CODEX_HOME/agentos/state."),
+        "output_dir": _string_schema("AgentOS output directory. Defaults to AGENTOS_OUTPUT_DIR or CODEX_HOME/agentos/output."),
     }
     review_selector = {
         **common_paths,
@@ -486,6 +490,11 @@ def _tool_definitions() -> list[dict[str, Any]]:
                 "command": {"type": "array", "items": {"type": "string"}, "minItems": 1},
                 "cwd": _string_schema("Optional workspace-relative cwd."),
                 "timeout_seconds": {"type": "integer", "default": DEFAULT_MCP_COMMAND_TIMEOUT_SECONDS},
+                "inherit_env": {
+                    "type": "boolean",
+                    "default": True,
+                    "description": "Inherit a safe allowlist of host environment variables. Explicit env values are not yet exposed through MCP.",
+                },
             },
             required=["work_name", "command"],
             annotations={"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False},
@@ -544,7 +553,12 @@ def _tool_definitions() -> list[dict[str, Any]]:
                 "project_dir": _string_schema("Target project directory to receive approved files."),
                 "scope_id": _string_schema("Approval scope id to preview. Defaults to the review recommendation."),
                 "require_clean_git": {"type": "boolean", "default": False},
-                "require_signed_approval": {"type": "boolean", "default": False},
+                "require_signed_approval": {"type": "boolean", "default": True},
+                "allow_unsigned_approval": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "Development escape hatch. Set true only when unsigned local approvals are acceptable.",
+                },
             },
             required=["project_dir"],
             annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True},
@@ -567,7 +581,12 @@ def _tool_definitions() -> list[dict[str, Any]]:
                 "project_dir": _string_schema("Target project directory to receive approved files."),
                 "dry_run": {"type": "boolean", "default": True},
                 "require_clean_git": {"type": "boolean", "default": False},
-                "require_signed_approval": {"type": "boolean", "default": False},
+                "require_signed_approval": {"type": "boolean", "default": True},
+                "allow_unsigned_approval": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "Development escape hatch. Set true only when unsigned local approvals are acceptable.",
+                },
             },
             required=["project_dir"],
             annotations={"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False},

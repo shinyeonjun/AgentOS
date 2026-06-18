@@ -5,6 +5,7 @@ import json
 import locale
 import os
 import platform
+import re
 import shutil
 import subprocess
 import uuid
@@ -20,6 +21,34 @@ from .text_safety import json_safe, safe_json_dumps, safe_text
 
 DEFAULT_COMMAND_TIMEOUT_SECONDS = 120
 COMMAND_TIMEOUT_EXIT_CODE = 124
+DEFAULT_ENV_ALLOWLIST = frozenset(
+    {
+        "ALLUSERSPROFILE",
+        "APPDATA",
+        "COMSPEC",
+        "HOME",
+        "LANG",
+        "LC_ALL",
+        "LOCALAPPDATA",
+        "PATH",
+        "PATHEXT",
+        "ProgramData",
+        "ProgramFiles",
+        "ProgramFiles(x86)",
+        "PYTHONIOENCODING",
+        "PYTHONUTF8",
+        "SystemDrive",
+        "SystemRoot",
+        "TEMP",
+        "TMP",
+        "USERPROFILE",
+        "WINDIR",
+    }
+)
+SECRET_PATTERNS = (
+    re.compile(r"(?i)(api[_-]?key|token|secret|password)\s*=\s*([^\s]+)"),
+    re.compile(r"sk-[A-Za-z0-9_-]{12,}"),
+)
 WINDOWS_SCRIPT_LAUNCHERS = {
     ".ps1": ("powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File"),
 }
@@ -28,9 +57,18 @@ COPY_IGNORE_NAMES = frozenset(
         ".agentos-output",
         ".agentos-state",
         ".git",
+        ".hg",
         ".mypy_cache",
+        ".next",
         ".pytest_cache",
         ".ruff_cache",
+        ".svn",
+        ".tox",
+        ".venv",
+        "build",
+        "dist",
+        "node_modules",
+        "venv",
         "__pycache__",
     }
 )
@@ -149,8 +187,8 @@ class AgentOSRuntime:
             stderr = (
                 f"{stderr}\n" if stderr else ""
             ) + f"command timed out after {self.command_timeout_seconds} seconds"
-        stdout_tail = safe_text(stdout[-4000:])
-        stderr_tail = safe_text(stderr[-4000:])
+        stdout_tail = _redact_text(safe_text(stdout[-4000:]))
+        stderr_tail = _redact_text(safe_text(stderr[-4000:]))
         status = "timed_out" if timed_out else ("passed" if exit_code == 0 else "failed")
         tool_call_id = self.store.record_tool_call(
             session_id=session.session_id,
@@ -379,10 +417,17 @@ def _output_to_text(value: str | bytes | None) -> str:
 def _command_env(*, env: dict[str, str] | None, inherit_env: bool) -> dict[str, str] | None:
     defaults = {"PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"}
     if inherit_env:
-        command_env = {**os.environ}
+        command_env = {key: value for key, value in os.environ.items() if key in DEFAULT_ENV_ALLOWLIST}
     else:
         command_env = {}
     command_env.update({key: value for key, value in defaults.items() if key not in command_env})
     if env:
         command_env.update({safe_text(str(key)): safe_text(str(value)) for key, value in env.items()})
     return json_safe(command_env)
+
+
+def _redact_text(value: str) -> str:
+    redacted = value
+    for pattern in SECRET_PATTERNS:
+        redacted = pattern.sub(lambda match: f"{match.group(1)}=<redacted>" if match.groups() else "<redacted>", redacted)
+    return redacted

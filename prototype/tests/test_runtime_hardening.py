@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 import sys
 import unittest
@@ -55,6 +56,51 @@ class RuntimeHardeningTests(unittest.TestCase):
                 command_json = conn.execute("select command_json from tool_calls").fetchone()[0]
             self.assertNotIn("계산기", command_json)
             self.assertEqual(json.loads(command_json)[-1], "계산기 인자")
+
+    def test_run_command_inherits_only_safe_host_environment(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            runtime = AgentOSRuntime(state_dir=root / "state", output_dir=root / "output")
+            session = runtime.create_session()
+
+            with patch.dict("os.environ", {"AGENTOS_TEST_SECRET": "do-not-copy", "PATH": os.environ.get("PATH", "")}):
+                result = runtime.run_command(
+                    session=session,
+                    command=[
+                        sys.executable,
+                        "-c",
+                        "import os; print(os.environ.get('AGENTOS_TEST_SECRET', '<missing>'))",
+                    ],
+                    cwd=session.workspace_dir,
+                )
+
+            self.assertEqual(result.exit_code, 0)
+            self.assertIn("<missing>", result.stdout_tail)
+            self.assertNotIn("do-not-copy", result.stdout_tail)
+
+    def test_run_command_redacts_secret_like_output_before_persisting(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            runtime = AgentOSRuntime(state_dir=root / "state", output_dir=root / "output")
+            session = runtime.create_session()
+
+            result = runtime.run_command(
+                session=session,
+                command=[
+                    sys.executable,
+                    "-c",
+                    "print('api_key=sk-abcdefghijklmnopqrstuvwxyz')",
+                ],
+                cwd=session.workspace_dir,
+            )
+
+            self.assertEqual(result.exit_code, 0)
+            self.assertIn("api_key=<redacted>", result.stdout_tail)
+            self.assertNotIn("sk-abcdefghijklmnopqrstuvwxyz", result.stdout_tail)
+            with sqlite3.connect(runtime.db_path) as conn:
+                stdout_tail = conn.execute("select stdout_tail from tool_calls").fetchone()[0]
+            self.assertIn("<redacted>", stdout_tail)
+            self.assertNotIn("sk-abcdefghijklmnopqrstuvwxyz", stdout_tail)
 
     def test_windows_powershell_shim_is_wrapped_for_subprocess(self) -> None:
         with (

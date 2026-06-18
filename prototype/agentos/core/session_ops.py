@@ -123,7 +123,7 @@ def preflight_sync_review(
     latest: bool = False,
     scope_id: str | None = None,
     require_clean_git: bool = False,
-    require_signed_approval: bool = False,
+    require_signed_approval: bool = True,
 ) -> SyncPreflightResult:
     review_path = _review_path(state_dir=state_dir, review_package_path=review_package_path, latest=latest)
     verification = verify_review_package(review_path)
@@ -155,9 +155,11 @@ def preflight_sync_review(
             blockers.append(str(exc))
 
     approved = False
+    approval_present = False
     approval_status = "missing"
     try:
         approval_path = latest_approval_record_path(state_dir=state_dir, session_id=summary.session_id)
+        approval_present = True
         approval_verification = verify_approval_record(
             approval_path,
             review_package_path=review_path,
@@ -173,7 +175,7 @@ def preflight_sync_review(
     safe_to_sync = not blockers
     if safe_to_sync:
         next_action = "sync_approved"
-    elif approved:
+    elif approved or approval_present:
         next_action = "fix blockers, then sync_approved"
     else:
         next_action = "request human approval, then call approve_scope and sync_approved"
@@ -205,7 +207,7 @@ def sync_approved_review(
     latest: bool = False,
     dry_run: bool = False,
     require_clean_git: bool = False,
-    require_signed_approval: bool = False,
+    require_signed_approval: bool = True,
 ) -> SyncCliResult:
     review_path = _review_path(state_dir=state_dir, review_package_path=review_package_path, latest=latest)
     verification = verify_review_package(review_path)
@@ -214,6 +216,10 @@ def sync_approved_review(
     summary = summarize_review_package(review_path)
     session = load_session(state_dir=state_dir, session_id=summary.session_id)
     approval_path = latest_approval_record_path(state_dir=state_dir, session_id=summary.session_id)
+    scope = approval_scope_from_path(approval_path)
+    paths = _sync_paths(scope=scope, review_package=summary.package)
+    workspace_root = Path(session.workspace_dir)
+    _validate_sync_sources(workspace_root=workspace_root, relative_paths=paths)
     approval_verification = verify_approval_record(
         approval_path,
         review_package_path=review_path,
@@ -221,10 +227,6 @@ def sync_approved_review(
     )
     if not approval_verification.passed:
         raise RuntimeError(f"approval record verification failed: {approval_path}")
-    scope = approval_scope_from_path(approval_path)
-    paths = _sync_paths(scope=scope, review_package=summary.package)
-    workspace_root = Path(session.workspace_dir)
-    _validate_sync_sources(workspace_root=workspace_root, relative_paths=paths)
     git_status = check_clean_git(target_dir) if require_clean_git else "not_checked"
     if dry_run:
         return SyncCliResult(

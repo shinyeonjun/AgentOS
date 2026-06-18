@@ -286,6 +286,7 @@ def exec_work_session(
     command: list[str],
     cwd: str | None = None,
     timeout_seconds: int | None = None,
+    inherit_env: bool = True,
 ) -> WorkSessionExecResult:
     runtime = AgentOSRuntime(
         state_dir=state_dir.resolve(),
@@ -295,7 +296,7 @@ def exec_work_session(
     session = resolve_session(state_dir=state_dir, session_ref=session_ref)
     workspace_root = _require_live_workspace(session)
     run_cwd = _resolve_workspace_cwd(workspace_root, cwd)
-    result = runtime.run_command(session, command, run_cwd)
+    result = runtime.run_command(session, command, run_cwd, inherit_env=inherit_env)
     return WorkSessionExecResult(
         session_id=session.session_id,
         tool_call_id=result.tool_call_id,
