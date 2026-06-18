@@ -5,6 +5,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from agentos.core.changes import detect_file_changes
+from agentos.core.path_policy import PathPolicy
 from agentos.core.review import render_review_summary, summarize_review_package
 from agentos.demos.demo import run_code_fix_demo
 
@@ -83,6 +84,49 @@ class ReviewSummaryTests(unittest.TestCase):
             changes = detect_file_changes(original, workspace)
 
             self.assertEqual([change.path for change in changes], ["README.md"])
+
+    def test_path_policy_applies_gitignore_rules_to_review_candidates(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "project"
+            project.mkdir()
+            (project / ".gitignore").write_text(
+                "ignored.txt\n"
+                "logs/\n"
+                "*.local\n",
+                encoding="utf-8",
+            )
+            (project / "tracked.txt").write_text("keep\n", encoding="utf-8")
+            (project / "ignored.txt").write_text("skip\n", encoding="utf-8")
+            (project / "settings.local").write_text("skip\n", encoding="utf-8")
+            (project / "logs").mkdir()
+            (project / "logs" / "run.txt").write_text("skip\n", encoding="utf-8")
+
+            policy = PathPolicy.from_root(project)
+
+            self.assertTrue(policy.is_managed_path(project / "tracked.txt"))
+            self.assertFalse(policy.is_managed_path(project / "ignored.txt"))
+            self.assertFalse(policy.is_managed_path(project / "settings.local"))
+            self.assertFalse(policy.is_managed_path(project / "logs" / "run.txt"))
+
+    def test_change_detection_respects_gitignore(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            original = root / "original"
+            workspace = root / "workspace"
+            original.mkdir()
+            workspace.mkdir()
+            for base in (original, workspace):
+                (base / ".gitignore").write_text("generated/\n*.local\n", encoding="utf-8")
+                (base / "generated").mkdir()
+            (original / "app.py").write_text("old\n", encoding="utf-8")
+            (workspace / "app.py").write_text("new\n", encoding="utf-8")
+            (workspace / "generated" / "report.md").write_text("must not review\n", encoding="utf-8")
+            (workspace / "secret.local").write_text("must not review\n", encoding="utf-8")
+
+            changes = detect_file_changes(original, workspace)
+
+            self.assertEqual([change.path for change in changes], ["app.py"])
 
 
 if __name__ == "__main__":

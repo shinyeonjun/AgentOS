@@ -44,6 +44,7 @@ class ReviewVerificationResult:
         return {
             "review_package_path": safe_text(str(self.review_package_path)),
             "status": self.status,
+            "passed": self.passed,
             "manifest_path": safe_text(str(self.manifest_path)) if self.manifest_path else None,
             "checks": [check.to_dict() for check in self.checks],
         }

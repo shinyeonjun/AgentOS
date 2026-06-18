@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from .approvals import assert_scope_allows, build_approval_record, default_approval_scope
+from .path_policy import build_copy_ignore
 from .storage import StateStore
 from .sync import PatchApplyResult, apply_patch_to_target
 from .text_safety import json_safe, safe_json_dumps, safe_text
@@ -52,28 +53,6 @@ SECRET_PATTERNS = (
 WINDOWS_SCRIPT_LAUNCHERS = {
     ".ps1": ("powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File"),
 }
-COPY_IGNORE_NAMES = frozenset(
-    {
-        ".agentos-output",
-        ".agentos-state",
-        ".git",
-        ".hg",
-        ".mypy_cache",
-        ".next",
-        ".pytest_cache",
-        ".ruff_cache",
-        ".svn",
-        ".tox",
-        ".venv",
-        "build",
-        "dist",
-        "node_modules",
-        "venv",
-        "__pycache__",
-    }
-)
-
-
 def utc_now() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds")
 
@@ -142,8 +121,9 @@ class AgentOSRuntime:
         target = session.workspace_dir / source.name
         original = session.original_dir / source.name
         if source.is_dir():
-            shutil.copytree(source, target, ignore=_copy_ignore)
-            shutil.copytree(source, original, ignore=_copy_ignore)
+            ignore = build_copy_ignore(source)
+            shutil.copytree(source, target, ignore=ignore)
+            shutil.copytree(source, original, ignore=ignore)
         else:
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, target)
@@ -395,10 +375,6 @@ def _windows_executable_suffixes(command_env: dict[str, str] | None) -> list[str
 
 def _has_path_separator(value: str) -> bool:
     return "/" in value or "\\" in value
-
-
-def _copy_ignore(_directory: str, names: list[str]) -> set[str]:
-    return {name for name in names if name in COPY_IGNORE_NAMES}
 
 
 def _output_to_text(value: str | bytes | None) -> str:

@@ -99,6 +99,7 @@ def approve_review_package(
     if not verification.passed:
         raise RuntimeError(f"review package verification failed: {review_path}")
     summary = summarize_review_package(review_path)
+    _require_passed_validation(summary.validation_status)
     scope = _select_approval_scope(summary.package, scope_id=scope_id)
     runtime = AgentOSRuntime(state_dir=state_dir, output_dir=output_dir)
     session = load_session(state_dir=state_dir, session_id=summary.session_id)
@@ -136,6 +137,8 @@ def preflight_sync_review(
     blockers: list[str] = []
     if not verification.passed:
         blockers.append("review package verification failed")
+    if summary.validation_status != "passed":
+        blockers.append(f"review validation is not passed: {summary.validation_status}")
 
     session = load_session(state_dir=state_dir, session_id=summary.session_id)
     try:
@@ -214,6 +217,7 @@ def sync_approved_review(
     if not verification.passed:
         raise RuntimeError(f"review package verification failed: {review_path}")
     summary = summarize_review_package(review_path)
+    _require_passed_validation(summary.validation_status)
     session = load_session(state_dir=state_dir, session_id=summary.session_id)
     approval_path = latest_approval_record_path(state_dir=state_dir, session_id=summary.session_id)
     scope = approval_scope_from_path(approval_path)
@@ -325,6 +329,11 @@ def _select_approval_scope(review_package: dict[str, Any], scope_id: str | None)
         if scope.get("id") == scope_id:
             return dict(scope)
     raise ValueError(f"approval scope not found: {scope_id}")
+
+
+def _require_passed_validation(validation_status: str) -> None:
+    if validation_status != "passed":
+        raise RuntimeError(f"review validation is not passed: {validation_status}")
 
 
 def _sync_paths(*, scope: dict[str, Any], review_package: dict[str, Any]) -> list[str]:

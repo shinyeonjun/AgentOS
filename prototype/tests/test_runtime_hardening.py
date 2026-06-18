@@ -9,7 +9,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from agentos.core.runtime import COMMAND_TIMEOUT_EXIT_CODE, AgentOSRuntime, _prepare_subprocess_command
+from agentos.core.runtime import COMMAND_TIMEOUT_EXIT_CODE, AgentOSRuntime, _output_to_text, _prepare_subprocess_command
 from agentos.core.sync import PatchApplyError, apply_patch_to_target
 
 
@@ -143,6 +143,11 @@ class RuntimeHardeningTests(unittest.TestCase):
             self.assertNotIn("\udcff", result.stdout_tail)
             self.assertNotIn("\udcff", artifact.read_text(encoding="utf-8"))
             self.assertNotIn("\udcff", json_artifact.read_text(encoding="utf-8"))
+
+    def test_windows_command_output_decodes_none_and_legacy_codepage_bytes(self) -> None:
+        self.assertEqual(_output_to_text(None), "")
+        with patch("agentos.core.runtime.locale.getpreferredencoding", return_value="cp949"):
+            self.assertEqual(_output_to_text("디렉터리".encode("cp949")), "디렉터리")
 
     def test_sqlite_connections_are_closed_after_store_context(self) -> None:
         with TemporaryDirectory() as tmp:

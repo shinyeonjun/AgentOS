@@ -272,6 +272,25 @@ class McpServerTests(unittest.TestCase):
             workspace_path = Path(create["result"]["structuredContent"]["workspace_path"])
             (workspace_path / "README.md").write_text("hello\nupdated\n", encoding="utf-8")
 
+            run = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 20,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "run_command",
+                        "arguments": {
+                            "work_name": "preflight-test",
+                            "command": [sys.executable, "-c", "print('validation ok')"],
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                        },
+                    },
+                }
+            )
+            self.assertIsNotNone(run)
+            self.assertEqual(run["result"]["structuredContent"]["exit_code"], 0)
+
             review = _handle_rpc(
                 {
                     "jsonrpc": "2.0",
@@ -288,6 +307,24 @@ class McpServerTests(unittest.TestCase):
                 }
             )
             self.assertIsNotNone(review)
+
+            verify = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 21,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "verify_review",
+                        "arguments": {
+                            "latest": True,
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                        },
+                    },
+                }
+            )
+            self.assertIsNotNone(verify)
+            self.assertTrue(verify["result"]["structuredContent"]["passed"])
 
             summary = _handle_rpc(
                 {
@@ -413,6 +450,118 @@ class McpServerTests(unittest.TestCase):
             self.assertIsNotNone(bundle)
             self.assertTrue(Path(bundle["result"]["structuredContent"]["bundle_path"]).exists())
 
+    def test_failed_validation_blocks_approval_and_preflight(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "project"
+            project.mkdir()
+            (project / "README.md").write_text("hello\n", encoding="utf-8")
+            target = root / "target"
+            target.mkdir()
+            (target / "README.md").write_text("hello\n", encoding="utf-8")
+            state_dir = root / "state"
+            output_dir = root / "output"
+
+            create = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "create_session",
+                        "arguments": {
+                            "project_dir": str(project),
+                            "work_name": "failed-validation",
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                        },
+                    },
+                }
+            )
+            self.assertIsNotNone(create)
+            workspace_path = Path(create["result"]["structuredContent"]["workspace_path"])
+            (workspace_path / "README.md").write_text("hello\nchanged\n", encoding="utf-8")
+
+            failed_run = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 2,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "run_command",
+                        "arguments": {
+                            "work_name": "failed-validation",
+                            "command": [sys.executable, "-c", "raise SystemExit(9)"],
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                        },
+                    },
+                }
+            )
+            self.assertIsNotNone(failed_run)
+            self.assertEqual(failed_run["result"]["structuredContent"]["exit_code"], 9)
+
+            review = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 3,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "review_session",
+                        "arguments": {
+                            "work_name": "failed-validation",
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                        },
+                    },
+                }
+            )
+            self.assertIsNotNone(review)
+            self.assertEqual(review["result"]["structuredContent"]["validation_status"], "failed")
+
+            approve = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 4,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "approve_scope",
+                        "arguments": {
+                            "scope_id": "sync_selected:README.md",
+                            "latest": True,
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                        },
+                    },
+                }
+            )
+            self.assertIsNotNone(approve)
+            self.assertTrue(approve["result"]["isError"])
+            self.assertIn("review validation is not passed: failed", approve["result"]["structuredContent"]["error"])
+
+            preflight = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 5,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "sync_preflight",
+                        "arguments": {
+                            "project_dir": str(target),
+                            "scope_id": "sync_selected:README.md",
+                            "latest": True,
+                            "allow_unsigned_approval": True,
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                        },
+                    },
+                }
+            )
+            self.assertIsNotNone(preflight)
+            preflight_data = preflight["result"]["structuredContent"]
+            self.assertFalse(preflight_data["safe_to_sync"])
+            self.assertIn("review validation is not passed: failed", preflight_data["blockers"])
+
     def test_tool_call_purges_session_metadata_and_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -507,6 +656,43 @@ class McpServerTests(unittest.TestCase):
             workspace_path = Path(create["result"]["structuredContent"]["workspace_path"])
             self.assertTrue((workspace_path / "README.md").exists())
             self.assertFalse((workspace_path / ".agentos-state").exists())
+
+    def test_create_session_respects_project_gitignore(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "project"
+            project.mkdir()
+            (project / ".gitignore").write_text("generated/\n*.local\n", encoding="utf-8")
+            (project / "README.md").write_text("hello\n", encoding="utf-8")
+            (project / "settings.local").write_text("must not copy\n", encoding="utf-8")
+            generated = project / "generated"
+            generated.mkdir()
+            (generated / "report.md").write_text("must not copy\n", encoding="utf-8")
+            state_dir = root / "state"
+            output_dir = root / "output"
+
+            create = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "create_session",
+                        "arguments": {
+                            "project_dir": str(project),
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                        },
+                    },
+                }
+            )
+
+            self.assertIsNotNone(create)
+            workspace_path = Path(create["result"]["structuredContent"]["workspace_path"])
+            self.assertTrue((workspace_path / "README.md").exists())
+            self.assertTrue((workspace_path / ".gitignore").exists())
+            self.assertFalse((workspace_path / "settings.local").exists())
+            self.assertFalse((workspace_path / "generated").exists())
 
     def test_korean_command_output_survives_run_and_status(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
