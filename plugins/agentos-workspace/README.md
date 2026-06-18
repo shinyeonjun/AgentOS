@@ -132,6 +132,12 @@ manifest, do not debug project behavior yet. Restart Codex or open a new
 conversation, then call `doctor` again. If the new conversation still cannot see
 AgentOS tools, run the manual setup helper below from the installed plugin root.
 
+If MCP startup fails, read the launcher stderr literally. "No Python candidate
+could be launched" means Codex cannot find `py`, `python`, or `python3`.
+"Server crashed during startup or runtime" means Python was found and the
+bundled AgentOS server raised an exception; the launcher prints the stderr tail
+so the real Python traceback is not hidden behind a generic setup message.
+
 Local development approvals are intentionally unsigned unless
 `AGENTOS_MANIFEST_KEY` is configured. Review verification may show a warning for
 unsigned local artifacts. Sync defaults should still require signed approvals in

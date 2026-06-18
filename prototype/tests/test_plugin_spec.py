@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import shutil
 import subprocess
 import unittest
 from pathlib import Path
@@ -43,7 +45,7 @@ class PluginSpecTests(unittest.TestCase):
         mcp_config = json.loads((plugin_root / ".mcp.json").read_text(encoding="utf-8"))
         marketplace = json.loads((repo_root / ".agents" / "plugins" / "marketplace.json").read_text(encoding="utf-8"))
 
-        self.assertEqual(manifest["version"], "0.4.11")
+        self.assertEqual(manifest["version"], "0.4.12")
         self.assertEqual(manifest["mcpServers"], "./.mcp.json")
         self.assertEqual(manifest["skills"], "./skills/")
         self.assertIn("Before any file edit", manifest["interface"]["defaultPrompt"][0])
@@ -173,10 +175,41 @@ class PluginSpecTests(unittest.TestCase):
         self.assertIn('process.platform === "win32"', launcher)
         self.assertLess(launcher.index('command: "py"'), launcher.index('const posixCandidates'))
         self.assertIn("exited with code", launcher)
+        self.assertIn("server crashed during startup or runtime", launcher)
+        self.assertIn("stderr tail", launcher)
         self.assertIn("PYTHONUTF8", launcher)
         self.assertIn("PYTHONIOENCODING", launcher)
         self.assertIn("resolveLatestPluginRoot", launcher)
         self.assertIn("tryNext();", launcher)
+
+    def test_node_launcher_distinguishes_python_crash_from_missing_python(self) -> None:
+        repo_root = Path(__file__).resolve().parents[2]
+        launcher = repo_root / "plugins" / "agentos-workspace" / "agentos_mcp_launcher.cjs"
+        node = shutil.which("node")
+        self.assertIsNotNone(node)
+
+        with TemporaryDirectory() as tmp:
+            bin_dir = Path(tmp) / "bin"
+            bin_dir.mkdir()
+            for executable in ("python3", "python", "py"):
+                shim = bin_dir / executable
+                shim.write_text("#!/bin/sh\necho agentos-boom >&2\nexit 42\n", encoding="utf-8")
+                shim.chmod(0o755)
+            result = subprocess.run(
+                [node, str(launcher)],
+                input="",
+                text=True,
+                capture_output=True,
+                check=False,
+                timeout=5,
+                env={**os.environ, "PATH": str(bin_dir)},
+            )
+
+        self.assertEqual(result.returncode, 127)
+        self.assertIn("server crashed during startup or runtime", result.stderr)
+        self.assertIn("exited with code 42", result.stderr)
+        self.assertIn("agentos-boom", result.stderr)
+        self.assertNotIn("no Python candidate could be launched", result.stderr)
 
 
 if __name__ == "__main__":

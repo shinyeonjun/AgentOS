@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+import io
 import json
 import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 
-from agentos.mcp_server import _handle_rpc
+from agentos.mcp_server import _handle_rpc, _write_rpc
 
 
 class McpServerTests(unittest.TestCase):
@@ -64,6 +66,20 @@ class McpServerTests(unittest.TestCase):
         self.assertNotIn("\udcff", result["structuredContent"]["stdout_tail"])
         self.assertIn("\\u2714", result["content"][0]["text"])
         self.assertEqual(result["structuredContent"]["node_reporter"], "✔ ℹ")
+
+    def test_rpc_write_is_ascii_safe_for_legacy_console_codepages(self) -> None:
+        output = io.BytesIO()
+        cp949_stdout = io.TextIOWrapper(output, encoding="cp949", errors="strict", newline="\n")
+
+        with redirect_stdout(cp949_stdout):
+            _write_rpc({"jsonrpc": "2.0", "id": 1, "result": {"text": "계정\ufeff bad-\udcff"}})
+        cp949_stdout.flush()
+
+        line = output.getvalue().decode("cp949")
+        self.assertIn("\\uacc4\\uc815", line)
+        self.assertIn("\\ufeff", line)
+        self.assertNotIn("계정", line)
+        self.assertEqual(json.loads(line)["result"]["text"], "계정\ufeff bad-?")
 
     def test_tool_call_creates_session_and_runs_command(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
