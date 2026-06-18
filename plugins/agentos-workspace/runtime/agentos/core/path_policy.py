@@ -73,6 +73,8 @@ class PathPolicy:
         return cls(root=resolved, ignore_rules=tuple(_read_gitignore_rules(resolved / ".gitignore")))
 
     def is_managed_path(self, path: Path) -> bool:
+        if path != self.root and path.is_symlink():
+            return False
         relative = _relative_to_root(self.root, path)
         if not relative.parts:
             return True

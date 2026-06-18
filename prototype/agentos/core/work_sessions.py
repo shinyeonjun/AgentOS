@@ -442,13 +442,7 @@ def review_work_session(
             )
             artifacts.append(artifact_entry(session.session_id, diff_artifact, "text/x-diff"))
             diff_ref = artifact_ref(session.session_id, diff_artifact)
-        changed_files.append(
-            {
-                "path": change.path,
-                "change_type": change.change_type,
-                "diff_ref": diff_ref,
-            }
-        )
+        changed_files.append(change.to_review_entry(diff_ref=diff_ref))
 
     inspection = inspect_state(state_dir, session_id=session.session_id)["session"]
     tool_calls = list((inspection or {}).get("tool_calls") or [])

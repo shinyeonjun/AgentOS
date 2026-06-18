@@ -230,7 +230,10 @@ def _render_changed_files(changed_files: list[dict[str, Any]]) -> list[str]:
         path = item.get("path", "<unknown>")
         change_type = item.get("change_type", "unknown")
         diff_ref = item.get("diff_ref")
-        suffix = f" diff={diff_ref}" if diff_ref else ""
+        mode_before = item.get("old_mode")
+        mode_after = item.get("new_mode")
+        mode_suffix = f" mode={mode_before}->{mode_after}" if mode_before or mode_after else ""
+        suffix = f"{mode_suffix} diff={diff_ref}" if diff_ref else mode_suffix
         lines.append(f"- {path} ({change_type}){suffix}")
     return lines
 

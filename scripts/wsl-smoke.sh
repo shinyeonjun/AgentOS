@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Keep executable; docs show running this script directly from the repo root.
+
 use_docker=0
 docker_sudo=0
 include_real_worker=0

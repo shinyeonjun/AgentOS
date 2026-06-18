@@ -129,6 +129,77 @@ class ReviewSummaryTests(unittest.TestCase):
 
             self.assertEqual([change.path for change in changes], ["app.py"])
 
+    def test_path_policy_excludes_symlinks_from_session_import(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "project"
+            project.mkdir()
+            external = root / "external-secret.txt"
+            external.write_text("do-not-copy\n", encoding="utf-8")
+            (project / "README.md").write_text("hello\n", encoding="utf-8")
+            (project / "secret-link.txt").symlink_to(external)
+
+            self.assertFalse(PathPolicy.from_root(project).is_managed_path(project / "secret-link.txt"))
+
+            session = create_work_session(
+                state_dir=root / "state",
+                output_dir=root / "output",
+                input_path=project,
+                name="symlink-import",
+            )
+
+            self.assertFalse((session.workspace_path / "secret-link.txt").exists())
+            self.assertFalse((session.original_path / "secret-link.txt").exists())
+
+    def test_change_detection_excludes_symlinks_to_external_files(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            original = root / "original"
+            workspace = root / "workspace"
+            original.mkdir()
+            workspace.mkdir()
+            external = root / "external-secret.txt"
+            external.write_text("do-not-review\n", encoding="utf-8")
+            (original / "README.md").write_text("old\n", encoding="utf-8")
+            (workspace / "README.md").write_text("new\n", encoding="utf-8")
+            (workspace / "secret-link.txt").symlink_to(external)
+
+            changes = detect_file_changes(original, workspace)
+
+            self.assertEqual([change.path for change in changes], ["README.md"])
+
+    def test_change_detection_records_mode_only_changes(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            original = root / "original"
+            workspace = root / "workspace"
+            original.mkdir()
+            workspace.mkdir()
+            for base in (original, workspace):
+                script = base / "tool.sh"
+                script.write_text("#!/usr/bin/env sh\nexit 0\n", encoding="utf-8")
+                script.chmod(0o644)
+            (workspace / "tool.sh").chmod(0o755)
+
+            changes = detect_file_changes(original, workspace)
+
+            self.assertEqual(len(changes), 1)
+            self.assertEqual(changes[0].path, "tool.sh")
+            self.assertEqual(changes[0].change_type, "mode_changed")
+            self.assertIsNone(changes[0].diff_text)
+            self.assertEqual(changes[0].old_mode, "0644")
+            self.assertEqual(changes[0].new_mode, "0755")
+            self.assertEqual(
+                changes[0].to_review_entry(diff_ref=None),
+                {
+                    "path": "tool.sh",
+                    "change_type": "mode_changed",
+                    "diff_ref": None,
+                    "old_mode": "0644",
+                    "new_mode": "0755",
+                },
+            )
+
     def test_review_validation_ignores_failed_exploration_commands(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)

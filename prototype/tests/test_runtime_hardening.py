@@ -189,6 +189,46 @@ class RuntimeHardeningTests(unittest.TestCase):
             self.assertIn("project/calculator.py", result.stdout_tail)
             self.assertIn("return a + b", (nested / "calculator.py").read_text(encoding="utf-8"))
 
+    def test_patch_apply_accepts_git_style_path_prefixes(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            target = root / "target"
+            target.mkdir()
+            (target / "app.py").write_text("value = 1\n", encoding="utf-8")
+            patch_file = root / "change.diff"
+            patch_file.write_text(
+                "--- a/app.py\n"
+                "+++ b/app.py\n"
+                "@@ -1 +1 @@\n"
+                "-value = 1\n"
+                "+value = 2\n",
+                encoding="utf-8",
+            )
+
+            result = apply_patch_to_target(patch_file, target)
+
+            self.assertEqual(result.exit_code, 0)
+            self.assertIn("app.py", result.stdout_tail)
+            self.assertEqual((target / "app.py").read_text(encoding="utf-8"), "value = 2\n")
+
+    def test_patch_apply_rejects_file_creation_or_deletion(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            target = root / "target"
+            target.mkdir()
+            (target / "app.py").write_text("value = 1\n", encoding="utf-8")
+            patch_file = root / "delete.diff"
+            patch_file.write_text(
+                "--- a/app.py\n"
+                "+++ /dev/null\n"
+                "@@ -1 +0,0 @@\n"
+                "-value = 1\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(PatchApplyError, "creation/deletion"):
+                apply_patch_to_target(patch_file, target)
+
     def test_patch_apply_rejects_context_mismatch(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)

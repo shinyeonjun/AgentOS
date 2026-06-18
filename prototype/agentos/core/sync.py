@@ -65,10 +65,11 @@ def _parse_diff_path(line: str, marker: str) -> str:
 
 
 def _select_patch_path(*, old_path: str, new_path: str) -> str:
-    path = new_path if new_path != "/dev/null" else old_path
-    if path == "/dev/null":
+    if old_path == "/dev/null" or new_path == "/dev/null":
         raise PatchApplyError("file creation/deletion patches are not supported yet")
-    return path
+    if old_path.startswith("a/") and new_path.startswith("b/") and old_path[2:] == new_path[2:]:
+        return new_path[2:]
+    return new_path
 
 
 def _safe_target_file(*, target_dir: Path, relative_path: str) -> Path:

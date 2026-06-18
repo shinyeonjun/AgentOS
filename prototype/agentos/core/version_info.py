@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-SERVER_VERSION = "0.4.12"
+SERVER_VERSION = "0.4.13"
 
 
 def runtime_identity(start_path: Path | None = None) -> dict[str, Any]:

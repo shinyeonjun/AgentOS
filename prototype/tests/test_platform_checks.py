@@ -79,8 +79,8 @@ class PlatformChecksTests(unittest.TestCase):
                 "agentos.core.platform_checks.runtime_identity",
                 return_value={
                     "server_version": "0.4.1",
-                    "manifest_version": "0.4.12",
-                    "plugin_root": "C:/Users/test/.codex/plugins/cache/agentos/agentos-workspace/0.4.12",
+                    "manifest_version": "0.4.13",
+                    "plugin_root": "C:/Users/test/.codex/plugins/cache/agentos/agentos-workspace/0.4.13",
                     "node_launcher": "C:/Users/test/.codex/agentos-workspace-launcher.cjs",
                 },
             ),

@@ -237,13 +237,9 @@ def _build_worker_review_package(
     )
 
     changed_files = [
-        {
-            "path": change.path,
-            "change_type": change.change_type,
-            "diff_ref": artifact_ref(session_id, diff_artifacts[change.path])
-            if change.path in diff_artifacts
-            else None,
-        }
+        change.to_review_entry(
+            diff_ref=artifact_ref(session_id, diff_artifacts[change.path]) if change.path in diff_artifacts else None
+        )
         for change in changes
     ]
     artifacts: list[dict[str, Any]] = [
