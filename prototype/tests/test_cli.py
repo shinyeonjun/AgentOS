@@ -16,6 +16,45 @@ from agentos.workers.codex_smoke import SMOKE_LINE
 
 
 class AgentOSCliTests(unittest.TestCase):
+    def test_demo_json_outputs_machine_readable_result(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            exit_code, output = _run_cli(
+                [
+                    "demo",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                    "--json",
+                ]
+            )
+
+            self.assertEqual(exit_code, 0)
+            data = json.loads(output)
+            self.assertEqual(data["first_test_status"], 1)
+            self.assertEqual(data["second_test_status"], 0)
+            self.assertTrue(data["sync_before_approval_blocked"])
+            self.assertTrue(data["destroyed"])
+
+    def test_demo_human_output_explains_review_before_sync(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            exit_code, output = _run_cli(
+                [
+                    "demo",
+                    "--state-dir",
+                    str(root / "state"),
+                    "--output-dir",
+                    str(root / "output"),
+                ]
+            )
+
+            self.assertEqual(exit_code, 0)
+            self.assertIn("AgentOS demo: review before sync", output)
+            self.assertIn("Blocked sync before approval: True", output)
+            self.assertIn("Review package:", output)
+
     def test_run_demo_json_outputs_machine_readable_result(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)

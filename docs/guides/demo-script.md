@@ -8,6 +8,14 @@ AgentOS lets an AI coding agent work inside a copied project workspace, then syn
 
 ## 60-Second Flow
 
+For the fastest public demo, run:
+
+```bash
+agentos demo
+```
+
+For the expanded persistent-session flow:
+
 ```bash
 agentos session create --input ./sample-repo --name demo --json
 agentos session codex demo --task "Update the README with setup notes." --execute --json

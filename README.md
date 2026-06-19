@@ -52,6 +52,7 @@ python3 -m venv .venv
 python3 -m pip install -e .
 agentos doctor --workspace "$PWD"
 scripts/sample-e2e.sh
+agentos demo
 ```
 
 The sample E2E flow uses a fake worker by default, so it does not spend model tokens.
@@ -93,7 +94,7 @@ See [docs/guides/demo-script.md](docs/guides/demo-script.md) for the exact narra
 
 ```bash
 agentos doctor --workspace "$PWD"
-agentos run-demo
+agentos demo
 agentos run --input ../some-project --task "Update the README" --execute
 agentos review --latest
 agentos diff --latest

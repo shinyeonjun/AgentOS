@@ -18,7 +18,7 @@ Use this before sharing AgentOS outside a private conversation.
 
 - [x] 60-second GIF exists at `docs/assets/agentos-demo.gif`.
 - [ ] Terminal recording uses the latest CLI output.
-- [ ] A tiny sample repo is available for repeatable demos.
+- [x] `agentos demo` provides a repeatable token-free demo command.
 - [ ] The demo shows original repo unchanged before approval.
 - [ ] The demo shows sync preflight before sync.
 
