@@ -43,3 +43,9 @@ Operational notes live under [project-ops/](project-ops/). They are useful for c
 ## Integrations
 
 - [Codex plugin instructions](codex-plugin-instructions.md)
+
+## Demo and launch
+
+- [Demo script](guides/demo-script.md)
+- [Launch checklist](guides/launch-checklist.md)
+- [Demo GIF](assets/agentos-demo.gif)

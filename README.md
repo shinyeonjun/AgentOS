@@ -12,6 +12,8 @@ Workspace Session -> Tool Calls -> Artifacts -> Preview/Diff -> Approval -> Sync
 
 The AI can keep working inside a copied project workspace. Your host project changes only after a human reviews the package and approves a sync scope.
 
+![AgentOS demo](docs/assets/agentos-demo.gif)
+
 ## Why This Exists
 
 AI coding agents can edit files, run commands, generate artifacts, and produce convincing summaries. That is useful, but it also makes the boundary between "AI tried something" and "my real project changed" too easy to blur.
@@ -74,6 +76,19 @@ PYTHONPATH=prototype python3 -m agentos doctor --workspace "$PWD"
 
 See [docs/guides/setup-linux-wsl.md](docs/guides/setup-linux-wsl.md) for the full setup flow.
 
+## Demo In 60 Seconds
+
+The GIF above shows the product promise:
+
+1. create a copied workspace session
+2. let an AI worker operate inside the copy
+3. generate a review package and diff
+4. run sync preflight
+5. approve an explicit scope
+6. sync only approved files back to the real repo
+
+See [docs/guides/demo-script.md](docs/guides/demo-script.md) for the exact narrative and terminal flow.
+
 ## Core Commands
 
 ```bash
@@ -135,7 +150,10 @@ docker build -t agentos-base:0.1 docker/agentos-base
 Run a command through the Docker-backed AgentOS workspace:
 
 ```bash
-agentos docker-run   --input ../some-project   --json   -- sh -c 'cat README.md'
+agentos docker-run \
+  --input ../some-project \
+  --json \
+  -- sh -c 'cat README.md'
 ```
 
 Docker sandbox commands use no network, dropped capabilities, no-new-privileges, PID/memory/CPU limits, a read-only root filesystem, and writable task/artifact mounts. The base image includes `/agentos/capabilities.json`; Docker runs also record image capability and provenance artifacts for review.
@@ -195,6 +213,7 @@ Useful entry points:
 - [Sandbox threat model](docs/security/sandbox-threat-model.md)
 - [Exhibition demo script](docs/guides/exhibition-demo-script.md)
 - [Codex plugin instructions](docs/codex-plugin-instructions.md)
+- [Launch checklist](docs/guides/launch-checklist.md)
 
 ## Non-Goals For Now
 
