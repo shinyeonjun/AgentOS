@@ -69,6 +69,18 @@ class PluginSpecTests(unittest.TestCase):
         self.assertTrue((plugin_root / "scripts" / "smoke-mcp.cjs").exists())
         self.assertFalse((plugin_root / "skills" / "agentos-workspace" / "agents" / "openai.yaml").exists())
 
+    def test_codex_plugin_runtime_keeps_review_path_policy_in_sync(self) -> None:
+        repo_root = Path(__file__).resolve().parents[2]
+        runtime_core = repo_root / "plugins" / "agentos-workspace" / "runtime" / "agentos" / "core"
+        prototype_core = repo_root / "prototype" / "agentos" / "core"
+
+        for filename in ("changes.py", "path_policy.py"):
+            with self.subTest(filename=filename):
+                self.assertEqual(
+                    (runtime_core / filename).read_text(encoding="utf-8"),
+                    (prototype_core / filename).read_text(encoding="utf-8"),
+                )
+
     def test_setup_script_writes_absolute_mcp_config(self) -> None:
         repo_root = Path(__file__).resolve().parents[2]
         plugin_root = repo_root / "plugins" / "agentos-workspace"
