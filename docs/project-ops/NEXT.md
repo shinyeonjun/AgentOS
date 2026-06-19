@@ -39,7 +39,7 @@ The first contract slice now exists:
 - approval scope enforcement for sync, patch, and selected-file operations
 - real-worker Codex smoke represented in the main rehearsal suite
 - optional `agentos rehearse --include-real-worker` execution path
-- exhibition demo script at `docs/exhibition-demo-script.md`
+- exhibition demo script at `docs/guides/exhibition-demo-script.md`
 - `agentos review` terminal summary for review packages
 - repo-relative defaults for `.agentos-state` and `.agentos-output`
 - `agentos review --latest` and `agentos verify-review --latest`

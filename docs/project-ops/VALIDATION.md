@@ -606,7 +606,7 @@ Observed result:
 Files updated:
 
 ```text
-docs/sandbox-threat-model.md
+docs/security/sandbox-threat-model.md
 README.md
 docs/project-ops/STATUS.md
 docs/project-ops/NEXT.md

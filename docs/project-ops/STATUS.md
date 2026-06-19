@@ -19,20 +19,20 @@ v0.2 contract, sandbox, Windows/WSL-friendly CLI review polish, and real-worker 
   - `/mnt/usb/projects/agentos/prototype/agentos/sandbox/`
   - `/mnt/usb/projects/agentos/prototype/agentos/workers/`
   - `/mnt/usb/projects/agentos/prototype/agentos/demos/`
-- Current technical plan: `/mnt/usb/projects/agentos/docs/technical-plan.md`
-- Requirements draft: `/mnt/usb/projects/agentos/docs/requirements.md`
-- Architecture draft: `/mnt/usb/projects/agentos/docs/architecture.md`
-- Functional spec draft: `/mnt/usb/projects/agentos/docs/functional-spec.md`
-- Database/table spec draft: `/mnt/usb/projects/agentos/docs/database-spec.md`
-- System flow draft: `/mnt/usb/projects/agentos/docs/system-flow.md`
-- Diagram draft: `/mnt/usb/projects/agentos/docs/diagrams.md`
-- Plugin API draft: `/mnt/usb/projects/agentos/docs/plugin-api.md`
-- Review schema draft: `/mnt/usb/projects/agentos/docs/review-response-schema.md`
-- Context efficiency draft: `/mnt/usb/projects/agentos/docs/context-efficiency.md`
-- Algorithms/data structures draft: `/mnt/usb/projects/agentos/docs/algorithms-data-structures.md`
-- Linux/WSL2 setup guide: `/mnt/usb/projects/agentos/docs/setup-linux-wsl.md`
-- Sandbox threat model: `/mnt/usb/projects/agentos/docs/sandbox-threat-model.md`
-- Exhibition demo script: `/mnt/usb/projects/agentos/docs/exhibition-demo-script.md`
+- Current technical plan: `/mnt/usb/projects/agentos/docs/design/technical-plan.md`
+- Requirements draft: `/mnt/usb/projects/agentos/docs/design/requirements.md`
+- Architecture draft: `/mnt/usb/projects/agentos/docs/design/architecture.md`
+- Functional spec draft: `/mnt/usb/projects/agentos/docs/design/functional-spec.md`
+- Database/table spec draft: `/mnt/usb/projects/agentos/docs/reference/database-spec.md`
+- System flow draft: `/mnt/usb/projects/agentos/docs/design/system-flow.md`
+- Diagram draft: `/mnt/usb/projects/agentos/docs/design/diagrams.md`
+- Plugin API draft: `/mnt/usb/projects/agentos/docs/reference/plugin-api.md`
+- Review schema draft: `/mnt/usb/projects/agentos/docs/reference/review-response-schema.md`
+- Context efficiency draft: `/mnt/usb/projects/agentos/docs/design/context-efficiency.md`
+- Algorithms/data structures draft: `/mnt/usb/projects/agentos/docs/design/algorithms-data-structures.md`
+- Linux/WSL2 setup guide: `/mnt/usb/projects/agentos/docs/guides/setup-linux-wsl.md`
+- Sandbox threat model: `/mnt/usb/projects/agentos/docs/security/sandbox-threat-model.md`
+- Exhibition demo script: `/mnt/usb/projects/agentos/docs/guides/exhibition-demo-script.md`
 - Latest local control-plane run state: `/mnt/usb/projects/agentos/.agentos-state/`
 - Latest approved demo output: `/mnt/usb/projects/agentos/.agentos-output/`
 - Archived old technical plan: `/mnt/usb/projects/agentos/docs/archive/legacy-technical-plan-v3.md`
