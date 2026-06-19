@@ -5,6 +5,7 @@ This directory is organized so GitHub readers can find the right level of detail
 ## Start Here
 
 - [Setup guide](guides/setup-linux-wsl.md) - install and run AgentOS locally.
+- [First real run](guides/first-real-run.md) - try AgentOS on a tiny throwaway repo.
 - [Architecture](design/architecture.md) - major components and boundaries.
 - [System flow](design/system-flow.md) - end-to-end lifecycle from task to sync.
 - [Technical plan](design/technical-plan.md) - current prototype direction and roadmap.
@@ -29,6 +30,8 @@ This directory is organized so GitHub readers can find the right level of detail
 ## Guides
 
 - [Linux/WSL setup](guides/setup-linux-wsl.md)
+- [First real run](guides/first-real-run.md)
+- [Demo script](guides/demo-script.md)
 - [Exhibition demo script](guides/exhibition-demo-script.md)
 
 ## Security And Runtime Notes
@@ -46,6 +49,5 @@ Operational notes live under [project-ops/](project-ops/). They are useful for c
 
 ## Demo and launch
 
-- [Demo script](guides/demo-script.md)
 - [Launch checklist](guides/launch-checklist.md)
 - [Demo GIF](assets/agentos-demo.gif)

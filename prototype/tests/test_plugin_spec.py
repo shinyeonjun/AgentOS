@@ -4,6 +4,7 @@ import json
 import os
 import shutil
 import subprocess
+import tomllib
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -68,6 +69,23 @@ class PluginSpecTests(unittest.TestCase):
         self.assertTrue((plugin_root / "scripts" / "setup-codex-mcp.sh").exists())
         self.assertTrue((plugin_root / "scripts" / "smoke-mcp.cjs").exists())
         self.assertFalse((plugin_root / "skills" / "agentos-workspace" / "agents" / "openai.yaml").exists())
+
+    def test_public_versions_stay_in_sync(self) -> None:
+        repo_root = Path(__file__).resolve().parents[2]
+        plugin_root = repo_root / "plugins" / "agentos-workspace"
+        package = tomllib.loads((repo_root / "pyproject.toml").read_text(encoding="utf-8"))
+        manifest = json.loads((plugin_root / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
+
+        expected_version = manifest["version"]
+        self.assertEqual(package["project"]["version"], expected_version)
+        self.assertIn(
+            f'__version__ = "{expected_version}"',
+            (repo_root / "prototype" / "agentos" / "__init__.py").read_text(encoding="utf-8"),
+        )
+        self.assertIn(
+            f'__version__ = "{expected_version}"',
+            (plugin_root / "runtime" / "agentos" / "__init__.py").read_text(encoding="utf-8"),
+        )
 
     def test_codex_plugin_runtime_keeps_review_path_policy_in_sync(self) -> None:
         repo_root = Path(__file__).resolve().parents[2]

@@ -76,6 +76,15 @@ For the full sample lifecycle without spending model tokens, run:
 scripts/sample-e2e.sh
 ```
 
+For the shortest product demo, run:
+
+```bash
+agentos demo
+```
+
+Then try the review-before-sync flow on a throwaway repo with
+[First real run](first-real-run.md).
+
 When Docker is ready:
 
 ```bash

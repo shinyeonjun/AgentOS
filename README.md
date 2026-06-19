@@ -2,7 +2,9 @@
 
 [![CI](https://github.com/shinyeonjun/AgentOS/actions/workflows/ci.yml/badge.svg)](https://github.com/shinyeonjun/AgentOS/actions/workflows/ci.yml)
 
-Run AI coding agents in persistent, disposable workspaces. Review what changed before anything touches your real project.
+AI coding agents should not touch your repo directly.
+
+AgentOS runs them in persistent, disposable workspaces, then syncs only the changes you explicitly review and approve.
 
 AgentOS is an approval-gated safe workspace runtime for external AI agents such as Codex CLI, Claude Code, Antigravity, Jarvis/OpenClaw, or any future worker that can operate on files.
 
@@ -11,6 +13,8 @@ Workspace Session -> Tool Calls -> Artifacts -> Preview/Diff -> Approval -> Sync
 ```
 
 The AI can keep working inside a copied project workspace. Your host project changes only after a human reviews the package and approves a sync scope.
+
+Use AgentOS when you want AI coding help, but you still want a hard boundary between "the agent tried this" and "my real repo changed."
 
 ![AgentOS demo](docs/assets/agentos-demo.gif)
 
@@ -33,7 +37,7 @@ AgentOS is not the AI brain. It is the safety, review, and sync layer around the
 
 ## Current Status
 
-AgentOS is an alpha prototype with a working local lifecycle:
+AgentOS is an alpha prototype with a working local lifecycle. See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
 - deterministic demo agent for token-free smoke tests
 - persistent workspace sessions
@@ -46,16 +50,23 @@ AgentOS is an alpha prototype with a working local lifecycle:
 
 ## Quick Start
 
+Fastest no-token path:
+
 ```bash
 python3 -m venv .venv
 . .venv/bin/activate
 python3 -m pip install -e .
 agentos doctor --workspace "$PWD"
-scripts/sample-e2e.sh
 agentos demo
 ```
 
 `agentos doctor` prints concrete next steps. When it passes, `agentos demo` runs a token-free review-before-sync flow that shows the core safety contract in one command.
+
+Full sample lifecycle:
+
+```bash
+scripts/sample-e2e.sh
+```
 
 The sample E2E flow uses a fake worker by default, so it does not spend model tokens.
 
@@ -77,7 +88,7 @@ Without installing the package, commands can still run from the repo root with:
 PYTHONPATH=prototype python3 -m agentos doctor --workspace "$PWD"
 ```
 
-See [docs/guides/setup-linux-wsl.md](docs/guides/setup-linux-wsl.md) for the full setup flow.
+See [docs/guides/setup-linux-wsl.md](docs/guides/setup-linux-wsl.md) for the full setup flow, then try [docs/guides/first-real-run.md](docs/guides/first-real-run.md) on a small throwaway repo.
 
 ## Demo In 60 Seconds
 
