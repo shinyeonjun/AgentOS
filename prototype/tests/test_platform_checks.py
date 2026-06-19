@@ -135,6 +135,8 @@ class PlatformChecksTests(unittest.TestCase):
         rendered = render_doctor(result)
         self.assertIn("status: passed", rendered)
         self.assertIn("platform", rendered)
+        self.assertIn("Next steps:", rendered)
+        self.assertIn("agentos demo", rendered)
 
     def test_doctor_warns_when_default_image_is_missing(self) -> None:
         with (
@@ -149,6 +151,8 @@ class PlatformChecksTests(unittest.TestCase):
         self.assertEqual(result.status, "warning")
         self.assertEqual(statuses["docker_daemon"], "passed")
         self.assertEqual(statuses["docker_image"], "warning")
+        rendered = render_doctor(result)
+        self.assertIn("agentos prepare", rendered)
 
     def test_prepare_builds_default_image_when_missing(self) -> None:
         commands: list[list[str]] = []

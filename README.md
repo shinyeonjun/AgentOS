@@ -55,6 +55,8 @@ scripts/sample-e2e.sh
 agentos demo
 ```
 
+`agentos doctor` prints concrete next steps. When it passes, `agentos demo` runs a token-free review-before-sync flow that shows the core safety contract in one command.
+
 The sample E2E flow uses a fake worker by default, so it does not spend model tokens.
 
 Use real Codex only when Codex auth is available:
