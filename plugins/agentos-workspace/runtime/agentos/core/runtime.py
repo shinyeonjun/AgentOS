@@ -208,7 +208,7 @@ class AgentOSRuntime:
     def write_artifact(self, session: Session, name: str, content: str, media_type: str) -> Path:
         session_artifacts = self.artifacts_dir / session.session_id
         session_artifacts.mkdir(parents=True, exist_ok=True)
-        artifact_path = session_artifacts / name
+        artifact_path = _safe_artifact_path(session_artifacts, name)
         artifact_path.write_text(safe_text(content), encoding="utf-8")
         self.store.record_artifact(
             session_id=session.session_id,
@@ -338,6 +338,18 @@ def _safe_relative_source(root: Path, relative_path: str) -> Path:
     if not source.exists():
         raise FileNotFoundError(f"selected sync source does not exist: {relative_path}")
     return source
+
+
+def _safe_artifact_path(session_artifacts: Path, name: str) -> Path:
+    safe_name = safe_text(str(name))
+    if not safe_name or safe_name in {".", ".."} or "/" in safe_name or "\\" in safe_name:
+        raise ValueError(f"artifact name must be a plain filename: {safe_name!r}")
+    root = session_artifacts.resolve()
+    artifact_path = (root / safe_name).resolve()
+    artifact_path.relative_to(root)
+    if artifact_path.name != safe_name:
+        raise ValueError(f"artifact name must be a plain filename: {safe_name!r}")
+    return artifact_path
 
 
 def _prepare_subprocess_command(command: list[str], *, command_env: dict[str, str] | None) -> list[str]:

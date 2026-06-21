@@ -144,6 +144,20 @@ class RuntimeHardeningTests(unittest.TestCase):
             self.assertNotIn("\udcff", artifact.read_text(encoding="utf-8"))
             self.assertNotIn("\udcff", json_artifact.read_text(encoding="utf-8"))
 
+    def test_write_artifact_rejects_path_traversal_names(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            runtime = AgentOSRuntime(state_dir=root / "state", output_dir=root / "output")
+            session = runtime.create_session()
+
+            for name in ("../leak.txt", "nested/file.txt", r"nested\file.txt", "", "."):
+                with self.subTest(name=name):
+                    with self.assertRaisesRegex(ValueError, "plain filename"):
+                        runtime.write_artifact(session, name, "blocked", "text/plain")
+
+            self.assertFalse((runtime.artifacts_dir / "leak.txt").exists())
+            self.assertFalse((runtime.artifacts_dir / session.session_id / "nested").exists())
+
     def test_windows_command_output_decodes_none_and_legacy_codepage_bytes(self) -> None:
         self.assertEqual(_output_to_text(None), "")
         with patch("agentos.core.runtime.locale.getpreferredencoding", return_value="cp949"):
