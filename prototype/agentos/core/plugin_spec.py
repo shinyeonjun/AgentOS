@@ -117,7 +117,7 @@ def build_plugin_spec() -> dict[str, Any]:
             ),
             _tool(
                 name="approve_scope",
-                command="agentos approve --latest --scope <scope-id> --json",
+                command="agentos approve --latest --target <project-dir> --scope <scope-id> --json",
                 purpose="Record explicit human approval for one review scope.",
                 required=["scope_id"],
                 outputs=["approval_record_artifact", "scope"],

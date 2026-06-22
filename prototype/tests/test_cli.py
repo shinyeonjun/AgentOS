@@ -13,6 +13,7 @@ from unittest.mock import patch
 
 from agentos.cli import main
 from agentos.workers.codex_smoke import SMOKE_LINE
+from fake_tools import write_python_tool
 
 
 class AgentOSCliTests(unittest.TestCase):
@@ -77,7 +78,7 @@ class AgentOSCliTests(unittest.TestCase):
             self.assertTrue(data["destroyed"])
             self.assertTrue(data["approval_record_artifact"].endswith("approval-record.json"))
 
-    def test_sync_destroyed_demo_session_fails_before_dry_run(self) -> None:
+    def test_sync_destroyed_demo_session_checks_target_baseline_before_dry_run(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
             run_exit_code, run_output = _run_cli(
@@ -113,7 +114,7 @@ class AgentOSCliTests(unittest.TestCase):
             self.assertEqual(sync_exit_code, 1)
             data = json.loads(sync_output)
             self.assertEqual(data["error"]["type"], "RuntimeError")
-            self.assertIn("--keep-session", data["error"]["message"])
+            self.assertIn("sync target is missing expected file: calculator.py", data["error"]["message"])
 
     def test_rehearse_json_outputs_steps(self) -> None:
         with TemporaryDirectory() as tmp:
@@ -206,7 +207,7 @@ class AgentOSCliTests(unittest.TestCase):
             (input_project / "README.md").write_text("# Demo\n\n", encoding="utf-8")
             target_project = root / "target-project"
             target_project.mkdir()
-            (target_project / "README.md").write_text("# Demo\n", encoding="utf-8")
+            (target_project / "README.md").write_text("# Demo\n\n", encoding="utf-8")
 
             create_exit_code, create_output = _run_cli(
                 [
@@ -331,6 +332,8 @@ class AgentOSCliTests(unittest.TestCase):
                     str(root / "output"),
                     "--scope",
                     "sync_selected:README.md",
+                    "--target",
+                    str(target_project),
                     "--json",
                 ]
             )
@@ -745,6 +748,8 @@ class AgentOSCliTests(unittest.TestCase):
                     str(root / "output"),
                     "--scope",
                     "sync_selected:README.md",
+                    "--target",
+                    str(target_project),
                     "--json",
                 ]
             )
@@ -1123,6 +1128,8 @@ class AgentOSCliTests(unittest.TestCase):
                     str(root / "output"),
                     "--scope",
                     "sync_selected:README.md",
+                    "--target",
+                    str(target_project),
                     "--json",
                 ]
             )
@@ -1184,6 +1191,8 @@ class AgentOSCliTests(unittest.TestCase):
                         str(root / "output"),
                         "--scope",
                         "sync_selected:README.md",
+                        "--target",
+                        str(target_project),
                         "--json",
                     ]
                 )
@@ -1254,6 +1263,8 @@ class AgentOSCliTests(unittest.TestCase):
                     str(root / "output"),
                     "--scope",
                     "sync_selected:README.md",
+                    "--target",
+                    str(target_project),
                     "--json",
                 ]
             )
@@ -1397,72 +1408,61 @@ def _run_cli_with_stderr(argv: list[str]) -> tuple[int, str, str]:
 
 
 def _write_fake_docker(path: Path, *, exit_code: int) -> Path:
-    path.write_text(
-        "#!/bin/sh\n"
-        "if [ \"$1\" = 'info' ]; then exit 0; fi\n"
-        "if [ \"$1\" = 'image' ] && [ \"$2\" = 'inspect' ]; then exit 0; fi\n"
-        "if [ \"$1\" = 'build' ]; then exit 0; fi\n"
-        "artifacts=''\n"
-        "while [ \"$#\" -gt 0 ]; do\n"
-        "  if [ \"$1\" = '-v' ]; then\n"
-        "    shift\n"
-        "    case \"$1\" in\n"
-        "      *:/agentos/artifacts) artifacts=${1%:/agentos/artifacts} ;;\n"
-        "    esac\n"
-        "  fi\n"
-        "  shift\n"
-        "done\n"
-        "printf 'fake docker\\n' > \"$artifacts/result.txt\"\n"
-        f"exit {exit_code}\n",
-        encoding="utf-8",
+    return write_python_tool(
+        path,
+        "from pathlib import Path\n"
+        "import sys\n"
+        "args = sys.argv[1:]\n"
+        "if args[:1] == ['info'] or args[:2] == ['image', 'inspect'] or args[:1] == ['build']:\n"
+        "    raise SystemExit(0)\n"
+        "artifacts = None\n"
+        "for index, value in enumerate(args[:-1]):\n"
+        "    if value == '-v' and args[index + 1].endswith(':/agentos/artifacts'):\n"
+        "        artifacts = args[index + 1][:-len(':/agentos/artifacts')]\n"
+        "if artifacts:\n"
+        "    Path(artifacts, 'result.txt').write_text('fake docker\\n', encoding='utf-8')\n"
+        f"raise SystemExit({exit_code})\n",
     )
-    path.chmod(0o755)
-    return path
 
 
 def _write_fake_docker_workspace_writer(path: Path) -> Path:
-    path.write_text(
-        "#!/bin/sh\n"
-        "if [ \"$1\" = 'info' ]; then exit 0; fi\n"
-        "if [ \"$1\" = 'image' ] && [ \"$2\" = 'inspect' ]; then exit 0; fi\n"
-        "if [ \"$1\" = 'build' ]; then exit 0; fi\n"
-        "work=''\n"
-        "artifacts=''\n"
-        "while [ \"$#\" -gt 0 ]; do\n"
-        "  if [ \"$1\" = '-v' ]; then\n"
-        "    shift\n"
-        "    case \"$1\" in\n"
-        "      *:/agentos/work) work=${1%:/agentos/work} ;;\n"
-        "      *:/agentos/artifacts) artifacts=${1%:/agentos/artifacts} ;;\n"
-        "    esac\n"
-        "  fi\n"
-        "  shift\n"
-        "done\n"
-        "printf 'docker updated\\n' >> \"$work/README.md\"\n"
-        "printf 'ok\\n' > \"$artifacts/result.txt\"\n"
-        "exit 0\n",
-        encoding="utf-8",
+    return write_python_tool(
+        path,
+        "from pathlib import Path\n"
+        "import sys\n"
+        "args = sys.argv[1:]\n"
+        "if args[:1] == ['info'] or args[:2] == ['image', 'inspect'] or args[:1] == ['build']:\n"
+        "    raise SystemExit(0)\n"
+        "work = None\n"
+        "artifacts = None\n"
+        "for index, value in enumerate(args[:-1]):\n"
+        "    if value != '-v':\n"
+        "        continue\n"
+        "    mount = args[index + 1]\n"
+        "    if mount.endswith(':/agentos/work'):\n"
+        "        work = mount[:-len(':/agentos/work')]\n"
+        "    if mount.endswith(':/agentos/artifacts'):\n"
+        "        artifacts = mount[:-len(':/agentos/artifacts')]\n"
+        "if work:\n"
+        "    with Path(work, 'README.md').open('a', encoding='utf-8') as handle:\n"
+        "        handle.write('docker updated\\n')\n"
+        "if artifacts:\n"
+        "    Path(artifacts, 'result.txt').write_text('ok\\n', encoding='utf-8')\n"
+        "raise SystemExit(0)\n",
     )
-    path.chmod(0o755)
-    return path
 
 
 def _write_fake_codex(path: Path, *, edit_readme: bool) -> Path:
-    body = "#!/bin/sh\n"
+    body = "from pathlib import Path\n"
     if edit_readme:
         body += (
-            "python3 - <<'PY'\n"
-            "from pathlib import Path\n"
             "path = Path('README.md')\n"
             "text = path.read_text(encoding='utf-8')\n"
             f"line = {SMOKE_LINE!r}\n"
             "path.write_text(text.replace('\\n\\n', f'\\n\\n{line}\\n\\n', 1), encoding='utf-8')\n"
-            "PY\n"
         )
-    body += "exit 0\n"
-    path.write_text(body, encoding="utf-8")
-    path.chmod(0o755)
-    return path
+    body += "raise SystemExit(0)\n"
+    return write_python_tool(path, body)
 
 
 if __name__ == "__main__":

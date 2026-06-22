@@ -13,6 +13,7 @@ from ..core.contracts import (
     build_review_package,
 )
 from ..core.integrity import build_artifact_manifest, build_manifest_integrity
+from ..core.review_snapshot import ReviewSnapshot, create_review_snapshot
 from ..core.runtime import AgentOSRuntime, Session, ToolResult
 from .env_policy import WorkerEnvPolicy, build_worker_env
 
@@ -134,6 +135,12 @@ def run_worker_in_workspace(
         else None
     )
     changes = detect_file_changes(original_path, workspace_path) if execute else []
+    snapshot = create_review_snapshot(
+        session_id=session.session_id,
+        workspace_root=workspace_path,
+        artifact_dir=runtime.artifacts_dir / session.session_id,
+        changes=changes,
+    )
     diff_artifacts = _write_diff_artifacts(runtime, session, changes)
     worker_result_artifact = _write_worker_result_artifact(
         runtime=runtime,
@@ -157,6 +164,7 @@ def run_worker_in_workspace(
         env_policy_artifact=env_policy_artifact,
         env_policy=env_policy,
         worker_result_artifact=worker_result_artifact,
+        snapshot=snapshot,
         diff_artifacts=diff_artifacts,
         report_artifact=report_artifact,
     )
@@ -192,6 +200,7 @@ def _build_worker_review_package(
     env_policy_artifact: Path,
     env_policy: WorkerEnvPolicy,
     worker_result_artifact: Path,
+    snapshot: ReviewSnapshot,
     diff_artifacts: dict[str, Path],
     report_artifact: Path,
 ) -> dict:
@@ -236,13 +245,15 @@ def _build_worker_review_package(
         }
     )
 
-    changed_files = [
-        change.to_review_entry(
-            diff_ref=artifact_ref(session_id, diff_artifacts[change.path]) if change.path in diff_artifacts else None
-        )
-        for change in changes
-    ]
+    snapshot_files = {str(item["path"]): item for item in snapshot.files}
+    changed_files = []
+    for change in changes:
+        diff_ref = artifact_ref(session_id, diff_artifacts[change.path]) if change.path in diff_artifacts else None
+        snapshot_entry = snapshot_files.get(change.path, {})
+        changed_files.append(change.to_review_entry(diff_ref=diff_ref, snapshot_path=snapshot_entry.get("snapshot_path")))
+    snapshot_artifact = artifact_entry(session_id, snapshot.path, "application/zip")
     artifacts: list[dict[str, Any]] = [
+        snapshot_artifact,
         artifact_entry(session_id, task_manifest_artifact, "application/json"),
         artifact_entry(session_id, command_artifact, "application/json"),
         artifact_entry(session_id, env_policy_artifact, "application/json"),
@@ -285,6 +296,10 @@ def _build_worker_review_package(
         validation_status=validation_status,
         capabilities=task_manifest_capabilities(worker),
         artifacts=artifacts,
+        snapshot={
+            "artifact": snapshot_artifact,
+            "files": list(snapshot.files),
+        },
         risk_notes=risk_notes,
         integrity=build_manifest_integrity(session_id, manifest_artifact),
     )

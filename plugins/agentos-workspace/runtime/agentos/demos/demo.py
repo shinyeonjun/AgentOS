@@ -12,7 +12,9 @@ from ..core.contracts import (
     artifact_ref,
     build_review_package,
 )
+from ..core.changes import detect_file_changes
 from ..core.integrity import build_artifact_manifest, build_manifest_integrity
+from ..core.review_snapshot import create_review_snapshot
 from ..core.runtime import AgentOSRuntime, SyncNotApprovedError
 
 
@@ -66,6 +68,15 @@ def run_code_fix_demo(state_dir: Path, output_dir: Path, destroy_session: bool =
         before_file=session.original_dir / input_dir.name / "calculator.py",
         after_file=workspace_project / "calculator.py",
     )
+    changes = detect_file_changes(session.original_dir / input_dir.name, workspace_project)
+    snapshot = create_review_snapshot(
+        session_id=session.session_id,
+        workspace_root=workspace_project,
+        artifact_dir=runtime.artifacts_dir / session.session_id,
+        changes=changes,
+    )
+    snapshot_artifact = artifact_entry(session.session_id, snapshot.path, "application/zip")
+    snapshot_files = {str(item["path"]): item for item in snapshot.files}
     report_artifact = runtime.write_artifact(
         session,
         "final-report.md",
@@ -73,6 +84,7 @@ def run_code_fix_demo(state_dir: Path, output_dir: Path, destroy_session: bool =
         "text/markdown",
     )
     artifacts = [
+        snapshot_artifact,
         artifact_entry(session.session_id, diff_artifact, "text/x-diff"),
         artifact_entry(session.session_id, report_artifact, "text/markdown"),
         artifact_entry(session.session_id, task_manifest_artifact, "application/json"),
@@ -87,11 +99,11 @@ def run_code_fix_demo(state_dir: Path, output_dir: Path, destroy_session: bool =
         host_agent=task_manifest.host_agent,
         summary="Fixed the calculator bug and unittest now passes.",
         changed_files=[
-            {
-                "path": "calculator.py",
-                "change_type": "modified",
-                "diff_ref": artifact_ref(session.session_id, diff_artifact),
-            }
+            change.to_review_entry(
+                diff_ref=artifact_ref(session.session_id, diff_artifact) if change.path == "calculator.py" else None,
+                snapshot_path=snapshot_files.get(change.path, {}).get("snapshot_path"),
+            )
+            for change in changes
         ],
         validation_checks=[
             {
@@ -110,6 +122,10 @@ def run_code_fix_demo(state_dir: Path, output_dir: Path, destroy_session: bool =
         validation_status="passed" if second.exit_code == 0 else "failed",
         capabilities=task_manifest.capabilities,
         artifacts=artifacts,
+        snapshot={
+            "artifact": snapshot_artifact,
+            "files": list(snapshot.files),
+        },
         integrity=build_manifest_integrity(session.session_id, manifest_artifact),
     )
     review_package_artifact = runtime.write_json_artifact(session, "review_package.json", review_package)

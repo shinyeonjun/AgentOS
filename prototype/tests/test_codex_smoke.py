@@ -6,6 +6,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from agentos.workers.codex_smoke import SMOKE_LINE, run_codex_smoke
+from fake_tools import write_python_tool
 
 
 class CodexSmokeTests(unittest.TestCase):
@@ -30,19 +31,14 @@ class CodexSmokeTests(unittest.TestCase):
     def test_codex_smoke_execute_validates_expected_readme_change(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
-            fake_codex = root / "fake-codex"
-            fake_codex.write_text(
-                "#!/bin/sh\n"
-                f"python3 - <<'PY'\n"
+            fake_codex = write_python_tool(
+                root / "fake-codex",
                 "from pathlib import Path\n"
                 "path = Path('README.md')\n"
                 "text = path.read_text(encoding='utf-8')\n"
                 f"line = {SMOKE_LINE!r}\n"
-                "path.write_text(text.replace('\\n\\n', f'\\n\\n{line}\\n\\n', 1), encoding='utf-8')\n"
-                "PY\n",
-                encoding="utf-8",
+                "path.write_text(text.replace('\\n\\n', f'\\n\\n{line}\\n\\n', 1), encoding='utf-8')\n",
             )
-            fake_codex.chmod(0o755)
 
             result = run_codex_smoke(
                 state_dir=root / "state",

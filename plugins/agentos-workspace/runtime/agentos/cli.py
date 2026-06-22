@@ -65,6 +65,11 @@ def _main_impl(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="agentos", description="AgentOS v0.2 prototype CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
+    demo_public = subparsers.add_parser("demo", help="Run the 60-second review-before-sync demo")
+    add_state_dir_arg(demo_public, default=DEFAULT_STATE_DIR)
+    add_output_dir_arg(demo_public, default=DEFAULT_OUTPUT_DIR)
+    add_keep_session_arg(demo_public)
+    add_json_arg(demo_public, noun="demo output")
     demo = subparsers.add_parser("run-demo", help="Run the deterministic code-fix demo loop")
     add_state_dir_arg(demo, default=DEFAULT_STATE_DIR)
     add_output_dir_arg(demo, default=DEFAULT_OUTPUT_DIR)
@@ -308,6 +313,12 @@ def _main_impl(argv: list[str]) -> int:
     )
     add_output_dir_arg(approve, default=DEFAULT_OUTPUT_DIR)
     approve.add_argument(
+        "--target",
+        required=True,
+        type=Path,
+        help="Target project directory this approval may sync to",
+    )
+    approve.add_argument(
         "--scope",
         help="Approval scope id. Defaults to the first scope in the review package.",
     )
@@ -455,7 +466,7 @@ def _main_impl(argv: list[str]) -> int:
 
     args = parser.parse_args(argv)
 
-    if args.command == "run-demo":
+    if args.command in {"demo", "run-demo"}:
         result = run_code_fix_demo(
             state_dir=args.state_dir,
             output_dir=args.output_dir,
@@ -463,6 +474,9 @@ def _main_impl(argv: list[str]) -> int:
         )
         if args.json:
             _print_json(_result_to_dict(result))
+            return 0
+        if args.command == "demo":
+            _print_public_demo_result(result)
             return 0
         print(f"session: {result.session_id}")
         print(f"first_test_status: {result.first_test_status}")
@@ -831,6 +845,7 @@ def _main_impl(argv: list[str]) -> int:
             review_package_path=args.review_package,
             latest=args.latest,
             scope_id=args.scope,
+            target_dir=args.target,
             approver=args.approver,
         )
         if args.json:
@@ -982,6 +997,19 @@ def _print_json(data: dict[str, Any]) -> None:
     print(safe_json_dumps(data, indent=2) + "\n", end="")
 
 
+def _print_public_demo_result(result: Any) -> None:
+    print("AgentOS demo: review before sync")
+    print("---------------------------------")
+    print(f"1. Created copied workspace session: {result.session_id}")
+    print(f"2. Ran failing validation first: exit {result.first_test_status}")
+    print(f"3. Applied demo fix and reran validation: exit {result.second_test_status}")
+    print(f"4. Blocked sync before approval: {result.sync_before_approval_blocked}")
+    print(f"5. Approved and synced selected outputs: {result.approved_selected_sync_dir}")
+    print(f"6. Review package: {result.review_package_artifact}")
+    print(f"7. Diff artifact: {result.diff_artifact}")
+    print(f"8. Workspace destroyed: {result.destroyed}")
+
+
 def _run_codex_from_args(args: argparse.Namespace) -> Any:
     return run_codex_task(
         state_dir=args.state_dir,
@@ -1020,7 +1048,7 @@ def _next_review_commands() -> list[str]:
         "agentos review --latest",
         "agentos diff --latest",
         "agentos verify-review --latest --json",
-        "agentos approve --latest --scope <scope-id>",
+        "agentos approve --latest --target <target-project> --scope <scope-id>",
         "agentos sync --latest --target <target-project> --dry-run",
     ]
 

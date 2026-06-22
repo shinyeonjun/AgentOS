@@ -3,6 +3,7 @@ from __future__ import annotations
 import hmac
 import json
 import os
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -57,6 +58,7 @@ def build_approval_record(
     approved_at: str,
     scope: dict[str, Any],
     review_package_artifact: Path | None = None,
+    target_identity: dict[str, Any] | None = None,
     signing_key: str | None = None,
     signing_key_id: str | None = None,
 ) -> dict[str, Any]:
@@ -68,6 +70,7 @@ def build_approval_record(
         "approver": approver,
         "scope": scope,
         "review_package": _review_package_entry(session_id, review_package_artifact),
+        "target": target_identity,
     }
     record["signature"] = sign_approval_record(record, signing_key=signing_key, signing_key_id=signing_key_id)
     return record
@@ -128,6 +131,7 @@ def verify_approval_record(
     approval_record_path: Path,
     *,
     review_package_path: Path | None = None,
+    target_dir: Path | None = None,
     signing_key: str | None = None,
     require_signature: bool = False,
 ) -> ApprovalVerificationResult:
@@ -144,8 +148,18 @@ def verify_approval_record(
 
     if review_package_path is not None:
         _verify_review_digest(record, review_package_path.resolve(), checks)
+    if target_dir is not None:
+        _verify_target_identity(record, target_dir, checks)
     _verify_approval_signature(record, checks, signing_key=signing_key, require_signature=require_signature)
     return _approval_verification_result(record_path, checks)
+
+
+def build_target_identity(target_dir: Path) -> dict[str, Any]:
+    resolved = target_dir.resolve()
+    return {
+        "realpath": safe_text(str(resolved)),
+        "git_head": _git_head(resolved),
+    }
 
 
 def _review_package_entry(session_id: str, review_package_artifact: Path | None) -> dict[str, Any] | None:
@@ -178,6 +192,26 @@ def _verify_review_digest(
         checks.append(ApprovalVerificationCheck("review package digest", "passed", "approval digest matches review package"))
     else:
         checks.append(ApprovalVerificationCheck("review package digest", "failed", "approval digest does not match review package"))
+
+
+def _verify_target_identity(
+    record: dict[str, Any],
+    target_dir: Path,
+    checks: list[ApprovalVerificationCheck],
+) -> None:
+    expected = record.get("target") or {}
+    if not expected:
+        checks.append(ApprovalVerificationCheck("target identity", "failed", "approval has no target identity"))
+        return
+    actual = build_target_identity(target_dir)
+    if expected.get("realpath") != actual.get("realpath"):
+        checks.append(ApprovalVerificationCheck("target identity", "failed", "approval target path does not match sync target"))
+        return
+    expected_head = expected.get("git_head")
+    if expected_head and expected_head != actual.get("git_head"):
+        checks.append(ApprovalVerificationCheck("target identity", "failed", "approval target git HEAD changed"))
+        return
+    checks.append(ApprovalVerificationCheck("target identity", "passed", "approval target matches sync target"))
 
 
 def _verify_approval_signature(
@@ -217,6 +251,22 @@ def _verify_approval_signature(
         )
     else:
         checks.append(ApprovalVerificationCheck("approval signature", "failed", "signature value does not match approval payload"))
+
+
+def _git_head(target_dir: Path) -> str | None:
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(target_dir), "rev-parse", "HEAD"],
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=5,
+        )
+    except (FileNotFoundError, PermissionError, subprocess.TimeoutExpired):
+        return None
+    if completed.returncode != 0:
+        return None
+    return completed.stdout.strip() or None
 
 
 def _approval_verification_result(

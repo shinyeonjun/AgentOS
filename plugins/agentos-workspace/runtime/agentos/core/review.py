@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from contextlib import closing
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -109,7 +110,7 @@ def list_review_packages(state_dir: Path, limit: int = 10) -> list[ReviewListIte
     db_path = state_dir / "agentos.sqlite3"
     if not db_path.exists():
         return []
-    with sqlite3.connect(db_path) as conn:
+    with closing(sqlite3.connect(db_path)) as conn:
         rows = conn.execute(
             """
             select s.session_id, a.created_at, s.state, a.path
@@ -137,7 +138,7 @@ def latest_review_package_path(state_dir: Path) -> Path:
     if not db_path.exists():
         raise FileNotFoundError(f"No AgentOS database found at {state_dir}")
 
-    with sqlite3.connect(db_path) as conn:
+    with closing(sqlite3.connect(db_path)) as conn:
         row = conn.execute(
             """
             select a.path

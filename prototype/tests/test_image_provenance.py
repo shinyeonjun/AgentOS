@@ -5,18 +5,16 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from agentos.sandbox.image_provenance import inspect_image_provenance
+from fake_tools import write_python_tool
 
 
 class ImageProvenanceTests(unittest.TestCase):
     def test_inspect_image_provenance_prefers_repo_digest(self) -> None:
         with TemporaryDirectory() as tmp:
-            fake_docker = Path(tmp) / "fake-docker"
-            fake_docker.write_text(
-                "#!/bin/sh\n"
-                "printf '[{\"Id\":\"sha256:abc123\",\"RepoDigests\":[\"agentos-base@sha256:def456\"]}]\\n'\n",
-                encoding="utf-8",
+            fake_docker = write_python_tool(
+                Path(tmp) / "fake-docker",
+                "print('[{\"Id\":\"sha256:abc123\",\"RepoDigests\":[\"agentos-base@sha256:def456\"]}]')\n",
             )
-            fake_docker.chmod(0o755)
 
             provenance = inspect_image_provenance(image="agentos-base:0.1", docker_prefix=[str(fake_docker)])
 
@@ -27,13 +25,10 @@ class ImageProvenanceTests(unittest.TestCase):
 
     def test_inspect_image_provenance_falls_back_to_image_id(self) -> None:
         with TemporaryDirectory() as tmp:
-            fake_docker = Path(tmp) / "fake-docker"
-            fake_docker.write_text(
-                "#!/bin/sh\n"
-                "printf '[{\"Id\":\"sha256:abc123\",\"RepoDigests\":[]}]\\n'\n",
-                encoding="utf-8",
+            fake_docker = write_python_tool(
+                Path(tmp) / "fake-docker",
+                "print('[{\"Id\":\"sha256:abc123\",\"RepoDigests\":[]}]')\n",
             )
-            fake_docker.chmod(0o755)
 
             provenance = inspect_image_provenance(image="agentos-base:0.1", docker_prefix=[str(fake_docker)])
 

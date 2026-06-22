@@ -94,6 +94,7 @@ def build_review_package(
     changed_files: list[dict[str, Any]],
     validation_checks: list[dict[str, Any]],
     artifacts: list[dict[str, Any]],
+    snapshot: dict[str, Any] | None = None,
     validation_status: str | None = None,
     risk_notes: list[dict[str, Any]] | None = None,
     capabilities: list[str] | None = None,
@@ -142,6 +143,7 @@ def build_review_package(
             "checks": validation_checks,
         },
         "artifacts": artifacts,
+        "snapshot": snapshot,
         "integrity": integrity
         or {
             "manifest_ref": None,

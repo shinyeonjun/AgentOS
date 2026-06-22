@@ -5,6 +5,7 @@ import os
 import sqlite3
 import sys
 import unittest
+from contextlib import closing
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
@@ -34,7 +35,7 @@ class RuntimeHardeningTests(unittest.TestCase):
             self.assertEqual(result.exit_code, COMMAND_TIMEOUT_EXIT_CODE)
             self.assertTrue(result.timed_out)
             self.assertIn("command timed out after 1 seconds", result.stderr_tail)
-            with sqlite3.connect(runtime.db_path) as conn:
+            with closing(sqlite3.connect(runtime.db_path)) as conn:
                 row = conn.execute("select timed_out, status, error_type from tool_calls").fetchone()
             self.assertEqual(row, (1, "timed_out", "TimeoutExpired"))
 
@@ -52,7 +53,7 @@ class RuntimeHardeningTests(unittest.TestCase):
 
             self.assertEqual(result.exit_code, 0)
             self.assertIn("계산기 인자", result.stdout_tail)
-            with sqlite3.connect(runtime.db_path) as conn:
+            with closing(sqlite3.connect(runtime.db_path)) as conn:
                 command_json = conn.execute("select command_json from tool_calls").fetchone()[0]
             self.assertNotIn("계산기", command_json)
             self.assertEqual(json.loads(command_json)[-1], "계산기 인자")
@@ -97,7 +98,7 @@ class RuntimeHardeningTests(unittest.TestCase):
             self.assertEqual(result.exit_code, 0)
             self.assertIn("api_key=<redacted>", result.stdout_tail)
             self.assertNotIn("sk-abcdefghijklmnopqrstuvwxyz", result.stdout_tail)
-            with sqlite3.connect(runtime.db_path) as conn:
+            with closing(sqlite3.connect(runtime.db_path)) as conn:
                 stdout_tail = conn.execute("select stdout_tail from tool_calls").fetchone()[0]
             self.assertIn("<redacted>", stdout_tail)
             self.assertNotIn("sk-abcdefghijklmnopqrstuvwxyz", stdout_tail)

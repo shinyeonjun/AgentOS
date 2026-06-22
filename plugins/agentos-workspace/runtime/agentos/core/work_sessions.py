@@ -5,6 +5,7 @@ import shutil
 import sqlite3
 import uuid
 import zipfile
+from contextlib import closing
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -28,6 +29,7 @@ from .contracts import (
 from .integrity import build_artifact_manifest, build_manifest_integrity
 from .inspector import inspect_state
 from .platform_checks import ensure_docker_environment
+from .review_snapshot import create_review_snapshot
 from .runtime import AgentOSRuntime, Session
 from .session_ops import load_session
 from .storage import StateStore
@@ -429,8 +431,16 @@ def review_work_session(
         raise FileNotFoundError(f"session original snapshot is unavailable: {original_root}")
 
     changes = detect_file_changes(original_root=original_root, workspace_root=workspace_root)
+    snapshot = create_review_snapshot(
+        session_id=session.session_id,
+        workspace_root=workspace_root,
+        artifact_dir=runtime.artifacts_dir / session.session_id,
+        changes=changes,
+    )
+    snapshot_artifact = artifact_entry(session.session_id, snapshot.path, "application/zip")
+    snapshot_files = {str(item["path"]): item for item in snapshot.files}
     changed_files: list[dict[str, Any]] = []
-    artifacts: list[dict[str, Any]] = []
+    artifacts: list[dict[str, Any]] = [snapshot_artifact]
     for change in changes:
         diff_ref = None
         if change.diff_text is not None:
@@ -442,7 +452,8 @@ def review_work_session(
             )
             artifacts.append(artifact_entry(session.session_id, diff_artifact, "text/x-diff"))
             diff_ref = artifact_ref(session.session_id, diff_artifact)
-        changed_files.append(change.to_review_entry(diff_ref=diff_ref))
+        snapshot_entry = snapshot_files.get(change.path, {})
+        changed_files.append(change.to_review_entry(diff_ref=diff_ref, snapshot_path=snapshot_entry.get("snapshot_path")))
 
     inspection = inspect_state(state_dir, session_id=session.session_id)["session"]
     tool_calls = list((inspection or {}).get("tool_calls") or [])
@@ -472,6 +483,10 @@ def review_work_session(
         validation_status=validation_status,
         capabilities=["base", "code"],
         artifacts=artifacts,
+        snapshot={
+            "artifact": snapshot_artifact,
+            "files": list(snapshot.files),
+        },
         integrity=build_manifest_integrity(session.session_id, manifest_artifact),
     )
     review_package_artifact = runtime.write_json_artifact(session, "review_package.json", review_package)
@@ -580,7 +595,7 @@ def cleanup_work_sessions(
     if not db_path.exists():
         return WorkSessionCleanupResult(keep_latest=keep_latest, dry_run=dry_run, candidates=(), removed_sessions=())
     StateStore(db_path).init_db()
-    with sqlite3.connect(db_path) as conn:
+    with closing(sqlite3.connect(db_path)) as conn:
         rows = conn.execute(
             "select session_id, session_dir from sessions order by created_at desc, session_id desc"
         ).fetchall()
@@ -689,7 +704,7 @@ def resolve_session(*, state_dir: Path, session_ref: str) -> Session:
     if not db_path.exists():
         raise FileNotFoundError(f"No AgentOS database found at {state_dir}")
     StateStore(db_path).init_db()
-    with sqlite3.connect(db_path) as conn:
+    with closing(sqlite3.connect(db_path)) as conn:
         conn.row_factory = sqlite3.Row
         rows = conn.execute(
             """
@@ -716,7 +731,7 @@ def resolve_session(*, state_dir: Path, session_ref: str) -> Session:
 
 
 def _session_id_prefix_matches(*, state_dir: Path, prefix: str) -> list[str]:
-    with sqlite3.connect(state_dir / "agentos.sqlite3") as conn:
+    with closing(sqlite3.connect(state_dir / "agentos.sqlite3")) as conn:
         rows = conn.execute(
             "select session_id from sessions where session_id like ? order by created_at desc",
             (f"{prefix}%",),
@@ -831,7 +846,7 @@ def _review_report(
 
 def _latest_artifact_path(*, state_dir: Path, session_id: str, artifact_name: str) -> Path | None:
     db_path = state_dir / "agentos.sqlite3"
-    with sqlite3.connect(db_path) as conn:
+    with closing(sqlite3.connect(db_path)) as conn:
         row = conn.execute(
             """
             select path

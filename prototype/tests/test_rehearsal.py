@@ -7,6 +7,7 @@ from tempfile import TemporaryDirectory
 
 from agentos.demos.rehearsal import run_rehearsal
 from agentos.workers.codex_smoke import SMOKE_LINE
+from fake_tools import write_python_tool
 
 
 class AgentOSRehearsalTests(unittest.TestCase):
@@ -38,24 +39,19 @@ class AgentOSRehearsalTests(unittest.TestCase):
     def test_rehearsal_runs_fake_docker_policy_step(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
-            fake_docker = root / "fake-docker"
-            fake_docker.write_text(
-                "#!/bin/sh\n"
-                "artifacts=''\n"
-                "while [ \"$#\" -gt 0 ]; do\n"
-                "  if [ \"$1\" = '-v' ]; then\n"
-                "    shift\n"
-                "    case \"$1\" in\n"
-                "      *:/agentos/artifacts) artifacts=${1%:/agentos/artifacts} ;;\n"
-                "    esac\n"
-                "  fi\n"
-                "  shift\n"
-                "done\n"
-                "printf 'rehearsed\\n' > \"$artifacts/readme.txt\"\n"
-                "exit 0\n",
-                encoding="utf-8",
+            fake_docker = write_python_tool(
+                root / "fake-docker",
+                "from pathlib import Path\n"
+                "import sys\n"
+                "artifacts = None\n"
+                "args = sys.argv[1:]\n"
+                "for index, value in enumerate(args[:-1]):\n"
+                "    if value == '-v' and args[index + 1].endswith(':/agentos/artifacts'):\n"
+                "        artifacts = args[index + 1][:-len(':/agentos/artifacts')]\n"
+                "if artifacts:\n"
+                "    Path(artifacts, 'readme.txt').write_text('rehearsed\\n', encoding='utf-8')\n"
+                "raise SystemExit(0)\n",
             )
-            fake_docker.chmod(0o755)
 
             result = run_rehearsal(
                 state_dir=root / "state",
@@ -91,19 +87,14 @@ class AgentOSRehearsalTests(unittest.TestCase):
 
 
 def _write_fake_codex(path: Path) -> Path:
-    path.write_text(
-        "#!/bin/sh\n"
-        "python3 - <<'PY'\n"
+    return write_python_tool(
+        path,
         "from pathlib import Path\n"
         "path = Path('README.md')\n"
         "text = path.read_text(encoding='utf-8')\n"
         f"line = {SMOKE_LINE!r}\n"
-        "path.write_text(text.replace('\\n\\n', f'\\n\\n{line}\\n\\n', 1), encoding='utf-8')\n"
-        "PY\n",
-        encoding="utf-8",
+        "path.write_text(text.replace('\\n\\n', f'\\n\\n{line}\\n\\n', 1), encoding='utf-8')\n",
     )
-    path.chmod(0o755)
-    return path
 
 
 if __name__ == "__main__":

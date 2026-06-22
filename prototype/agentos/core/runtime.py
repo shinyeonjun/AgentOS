@@ -237,6 +237,7 @@ class AgentOSRuntime:
         approver: str = "human",
         scope: dict[str, Any] | None = None,
         review_package_artifact: Path | None = None,
+        target_identity: dict[str, Any] | None = None,
     ) -> Path:
         approved_at = utc_now()
         self.store.approve_session(session_id=session.session_id, approved_at=approved_at, approver=approver)
@@ -246,6 +247,7 @@ class AgentOSRuntime:
             approved_at=approved_at,
             scope=scope or default_approval_scope(),
             review_package_artifact=review_package_artifact,
+            target_identity=target_identity,
         )
         return self.write_json_artifact(session, "approval-record.json", approval_record)
 

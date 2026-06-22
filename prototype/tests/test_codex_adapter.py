@@ -9,6 +9,7 @@ from unittest.mock import patch
 from agentos.core.work_sessions import create_work_session
 from agentos.core.inspector import inspect_state
 from agentos.workers.codex_adapter import run_codex_session_task, run_codex_task
+from fake_tools import write_python_tool
 
 
 class CodexAdapterTests(unittest.TestCase):
@@ -39,7 +40,7 @@ class CodexAdapterTests(unittest.TestCase):
             self.assertEqual(task_manifest["host_agent"], "codex-cli")
             self.assertEqual(command_artifact["execute"], False)
             self.assertEqual(command_artifact["worker"], "codex-cli")
-            self.assertEqual(command_artifact["worker_command"][0], "codex")
+            self.assertIn(Path(command_artifact["worker_command"][0]).name.lower(), {"codex", "codex.cmd"})
             self.assertEqual(command_artifact["execution_command"][-1], "Summarize the project.")
             self.assertEqual(command_artifact["env_policy"]["mode"], "allowlist")
             self.assertEqual(env_policy_artifact["mode"], "allowlist")
@@ -89,14 +90,7 @@ class CodexAdapterTests(unittest.TestCase):
             input_project = root / "input-project"
             input_project.mkdir()
             (input_project / "README.md").write_text("# Demo\n", encoding="utf-8")
-            fake_codex = root / "fake-codex"
-            fake_codex.write_text(
-                "#!/bin/sh\n"
-                "printf '# Demo\\n\\nUpdated by fake Codex.\\n' > README.md\n"
-                "exit 0\n",
-                encoding="utf-8",
-            )
-            fake_codex.chmod(0o755)
+            fake_codex = _write_readme_codex(root / "fake-codex", "# Demo\n\nUpdated by fake Codex.\n")
 
             result = run_codex_task(
                 state_dir=root / "state",
@@ -147,14 +141,7 @@ class CodexAdapterTests(unittest.TestCase):
             input_project = root / "input-project"
             input_project.mkdir()
             (input_project / "README.md").write_text("# Demo\n", encoding="utf-8")
-            fake_codex = root / "fake-codex"
-            fake_codex.write_text(
-                "#!/bin/sh\n"
-                "printf '# Demo\\n\\nUpdated inside persistent session.\\n' > README.md\n"
-                "exit 0\n",
-                encoding="utf-8",
-            )
-            fake_codex.chmod(0o755)
+            fake_codex = _write_readme_codex(root / "fake-codex", "# Demo\n\nUpdated inside persistent session.\n")
             session = create_work_session(
                 state_dir=root / "state",
                 output_dir=root / "output",
@@ -190,14 +177,12 @@ class CodexAdapterTests(unittest.TestCase):
             input_project = root / "input-project"
             input_project.mkdir()
             (input_project / "README.md").write_text("# Demo\n", encoding="utf-8")
-            fake_codex = root / "fake-codex"
-            fake_codex.write_text(
-                "#!/bin/sh\n"
-                "env > env.txt\n"
-                "exit 0\n",
-                encoding="utf-8",
+            fake_codex = write_python_tool(
+                root / "fake-codex",
+                "from pathlib import Path\n"
+                "import os\n"
+                "Path('env.txt').write_text(''.join(f'{key}={value}\\n' for key, value in os.environ.items()), encoding='utf-8')\n",
             )
-            fake_codex.chmod(0o755)
 
             with patch.dict("os.environ", {"AGENTOS_SECRET_TOKEN": "do-not-pass", "PATH": "/usr/bin"}):
                 result = run_codex_task(
@@ -221,14 +206,7 @@ class CodexAdapterTests(unittest.TestCase):
             input_project = root / "input-project"
             input_project.mkdir()
             (input_project / "README.md").write_text("# Demo\n", encoding="utf-8")
-            fake_codex = root / "fake-codex"
-            fake_codex.write_text(
-                "#!/bin/sh\n"
-                "printf '# Demo\\n\\nUpdated by host-side fake Codex.\\n' > README.md\n"
-                "exit 0\n",
-                encoding="utf-8",
-            )
-            fake_codex.chmod(0o755)
+            fake_codex = _write_readme_codex(root / "fake-codex", "# Demo\n\nUpdated by host-side fake Codex.\n")
 
             result = run_codex_task(
                 state_dir=root / "state",
@@ -282,6 +260,14 @@ class CodexAdapterTests(unittest.TestCase):
 
             command_artifact = json.loads(result.command_artifact.read_text())
             self.assertEqual(command_artifact["env_overrides"], ["CODEX_HOME"])
+
+
+def _write_readme_codex(path: Path, text: str) -> Path:
+    return write_python_tool(
+        path,
+        "from pathlib import Path\n"
+        f"Path('README.md').write_text({text!r}, encoding='utf-8')\n",
+    )
 
 
 if __name__ == "__main__":

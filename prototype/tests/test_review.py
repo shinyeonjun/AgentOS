@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import sys
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -137,7 +139,10 @@ class ReviewSummaryTests(unittest.TestCase):
             external = root / "external-secret.txt"
             external.write_text("do-not-copy\n", encoding="utf-8")
             (project / "README.md").write_text("hello\n", encoding="utf-8")
-            (project / "secret-link.txt").symlink_to(external)
+            try:
+                (project / "secret-link.txt").symlink_to(external)
+            except OSError as exc:
+                self.skipTest(f"symlink creation unavailable: {exc}")
 
             self.assertFalse(PathPolicy.from_root(project).is_managed_path(project / "secret-link.txt"))
 
@@ -162,13 +167,18 @@ class ReviewSummaryTests(unittest.TestCase):
             external.write_text("do-not-review\n", encoding="utf-8")
             (original / "README.md").write_text("old\n", encoding="utf-8")
             (workspace / "README.md").write_text("new\n", encoding="utf-8")
-            (workspace / "secret-link.txt").symlink_to(external)
+            try:
+                (workspace / "secret-link.txt").symlink_to(external)
+            except OSError as exc:
+                self.skipTest(f"symlink creation unavailable: {exc}")
 
             changes = detect_file_changes(original, workspace)
 
             self.assertEqual([change.path for change in changes], ["README.md"])
 
     def test_change_detection_records_mode_only_changes(self) -> None:
+        if os.name == "nt":
+            self.skipTest("POSIX mode-bit changes are not reliable on Windows")
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
             original = root / "original"
@@ -219,13 +229,13 @@ class ReviewSummaryTests(unittest.TestCase):
                 state_dir=state_dir,
                 output_dir=output_dir,
                 session_ref="role-filter",
-                command=["python3", "-c", "raise SystemExit(7)"],
+                command=[sys.executable, "-c", "raise SystemExit(7)"],
             )
             passed_validation = exec_work_session(
                 state_dir=state_dir,
                 output_dir=output_dir,
                 session_ref="role-filter",
-                command=["python3", "-c", "print('ok')"],
+                command=[sys.executable, "-c", "print('ok')"],
                 role="validation",
             )
 
@@ -240,6 +250,8 @@ class ReviewSummaryTests(unittest.TestCase):
             self.assertEqual(summary.validation_checks[0]["role"], "validation")
 
     def test_create_session_cleans_failed_import_workspace(self) -> None:
+        if os.name == "nt":
+            self.skipTest("chmod(0) does not reliably block reads on Windows")
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
             project = root / "project"

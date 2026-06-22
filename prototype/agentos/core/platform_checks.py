@@ -378,13 +378,14 @@ def _check_docker_image(*, docker_bin: str, use_sudo: bool, image: str, docker_d
 def _check_workspace_path(workspace_path: Path) -> DoctorCheck:
     resolved = workspace_path.resolve()
     path_text = str(resolved)
+    normalized_path_text = path_text.replace("\\", "/")
     if "$PWD" in path_text:
         return DoctorCheck(
             "workspace_path",
             "warning",
             "Workspace path contains literal $PWD; use . in Windows CMD or a shell that expands $PWD.",
         )
-    if path_text.startswith("/mnt/c/") or path_text.startswith("/mnt/d/"):
+    if normalized_path_text.startswith("/mnt/c/") or normalized_path_text.startswith("/mnt/d/"):
         return DoctorCheck(
             "workspace_path",
             "warning",

@@ -227,7 +227,37 @@ def ensure_docker_environment(
 def render_doctor(result: DoctorResult) -> str:
     lines = [f"status: {result.status}"]
     lines.extend(f"{check.status}: {check.name} - {check.message}" for check in result.checks)
+    lines.extend(["", "Next steps:"])
+    lines.extend(_doctor_next_steps(result))
     return "\n".join(lines)
+
+
+def _doctor_next_steps(result: DoctorResult) -> list[str]:
+    checks_by_name = {check.name: check for check in result.checks}
+    steps: list[str] = []
+
+    docker_cli = checks_by_name.get("docker_cli")
+    docker_daemon = checks_by_name.get("docker_daemon")
+    docker_image = checks_by_name.get("docker_image")
+    workspace_path = checks_by_name.get("workspace_path")
+
+    if docker_cli and docker_cli.status != "passed":
+        steps.append("- Install Docker, then run `agentos doctor --workspace \"$PWD\"` again.")
+    elif docker_daemon and docker_daemon.status != "passed":
+        steps.append("- Start Docker, then run `agentos doctor --workspace \"$PWD\"` again.")
+    elif docker_image and docker_image.status != "passed":
+        steps.append("- Run `agentos prepare`, then run `agentos doctor --workspace \"$PWD\"` again.")
+
+    if workspace_path and workspace_path.status != "passed":
+        steps.append("- Move or fix the workspace path shown above before using sync.")
+
+    if result.status == "passed":
+        steps.append("- Run `agentos demo` to see the review-before-sync flow.")
+        steps.append("- Then try `agentos run --input <project> --task \"Update the README\" --execute`.")
+    elif not steps:
+        steps.append("- Fix the warning above, or continue with non-Docker commands if it does not apply.")
+
+    return steps
 
 
 def is_wsl() -> bool:
@@ -348,13 +378,14 @@ def _check_docker_image(*, docker_bin: str, use_sudo: bool, image: str, docker_d
 def _check_workspace_path(workspace_path: Path) -> DoctorCheck:
     resolved = workspace_path.resolve()
     path_text = str(resolved)
+    normalized_path_text = path_text.replace("\\", "/")
     if "$PWD" in path_text:
         return DoctorCheck(
             "workspace_path",
             "warning",
             "Workspace path contains literal $PWD; use . in Windows CMD or a shell that expands $PWD.",
         )
-    if path_text.startswith("/mnt/c/") or path_text.startswith("/mnt/d/"):
+    if normalized_path_text.startswith("/mnt/c/") or normalized_path_text.startswith("/mnt/d/"):
         return DoctorCheck(
             "workspace_path",
             "warning",

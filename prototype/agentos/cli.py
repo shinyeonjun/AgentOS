@@ -313,6 +313,12 @@ def _main_impl(argv: list[str]) -> int:
     )
     add_output_dir_arg(approve, default=DEFAULT_OUTPUT_DIR)
     approve.add_argument(
+        "--target",
+        required=True,
+        type=Path,
+        help="Target project directory this approval may sync to",
+    )
+    approve.add_argument(
         "--scope",
         help="Approval scope id. Defaults to the first scope in the review package.",
     )
@@ -839,6 +845,7 @@ def _main_impl(argv: list[str]) -> int:
             review_package_path=args.review_package,
             latest=args.latest,
             scope_id=args.scope,
+            target_dir=args.target,
             approver=args.approver,
         )
         if args.json:
@@ -1041,7 +1048,7 @@ def _next_review_commands() -> list[str]:
         "agentos review --latest",
         "agentos diff --latest",
         "agentos verify-review --latest --json",
-        "agentos approve --latest --scope <scope-id>",
+        "agentos approve --latest --target <target-project> --scope <scope-id>",
         "agentos sync --latest --target <target-project> --dry-run",
     ]
 

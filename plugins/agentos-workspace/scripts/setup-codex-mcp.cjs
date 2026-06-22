@@ -177,7 +177,7 @@ function checkConfig(existing, options, configPath) {
   }
   const hasManagedBlock = existing.includes(MARKER_BEGIN) && existing.includes(MARKER_END);
   const hasServer = findSection(existing, options.serverName) !== null;
-  if (hasManagedBlock && hasServer && existing.includes(paths.launcher)) {
+  if (hasManagedBlock && hasServer && existing.includes(tomlString(paths.launcher))) {
     if (!fs.existsSync(paths.launcher)) {
       return {
         ok: false,

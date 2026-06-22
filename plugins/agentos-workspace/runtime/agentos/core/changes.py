@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import difflib
+import hashlib
 import os
 import stat
 from dataclasses import dataclass
@@ -15,19 +16,33 @@ class FileChange:
     path: str
     change_type: str
     diff_text: str | None
+    old_digest: str | None = None
+    new_digest: str | None = None
     old_mode: str | None = None
     new_mode: str | None = None
+    old_size: int | None = None
+    new_size: int | None = None
 
-    def to_review_entry(self, *, diff_ref: str | None) -> dict[str, str | None]:
-        entry: dict[str, str | None] = {
+    def to_review_entry(self, *, diff_ref: str | None, snapshot_path: str | None = None) -> dict[str, str | int | None]:
+        entry: dict[str, str | int | None] = {
             "path": self.path,
             "change_type": self.change_type,
             "diff_ref": diff_ref,
         }
+        if snapshot_path is not None:
+            entry["snapshot_path"] = snapshot_path
+        if self.old_digest is not None:
+            entry["old_digest"] = self.old_digest
+        if self.new_digest is not None:
+            entry["new_digest"] = self.new_digest
         if self.old_mode is not None:
             entry["old_mode"] = self.old_mode
         if self.new_mode is not None:
             entry["new_mode"] = self.new_mode
+        if self.old_size is not None:
+            entry["old_size"] = self.old_size
+        if self.new_size is not None:
+            entry["new_size"] = self.new_size
         return entry
 
 
@@ -35,6 +50,8 @@ class FileChange:
 class FileSnapshot:
     path: Path
     mode: int
+    digest: str
+    size: int
 
 
 def detect_file_changes(original_root: Path, workspace_root: Path) -> list[FileChange]:
@@ -49,7 +66,9 @@ def detect_file_changes(original_root: Path, workspace_root: Path) -> list[FileC
                 path=path,
                 change_type="deleted",
                 diff_text=_build_text_diff(path, before.path, None),
+                old_digest=before.digest,
                 old_mode=_format_mode(before.mode),
+                old_size=before.size,
             )
         )
 
@@ -60,7 +79,9 @@ def detect_file_changes(original_root: Path, workspace_root: Path) -> list[FileC
                 path=path,
                 change_type="added",
                 diff_text=_build_text_diff(path, None, after.path),
+                new_digest=after.digest,
                 new_mode=_format_mode(after.mode),
+                new_size=after.size,
             )
         )
 
@@ -76,8 +97,12 @@ def detect_file_changes(original_root: Path, workspace_root: Path) -> list[FileC
                 path=path,
                 change_type="modified" if content_changed else "mode_changed",
                 diff_text=_build_text_diff(path, before.path, after.path) if content_changed else None,
+                old_digest=before.digest,
+                new_digest=after.digest,
                 old_mode=_format_mode(before.mode) if mode_changed else None,
                 new_mode=_format_mode(after.mode) if mode_changed else None,
+                old_size=before.size,
+                new_size=after.size,
             )
         )
 
@@ -93,9 +118,12 @@ def _file_map(root: Path) -> dict[str, FileSnapshot]:
         for filename in filenames:
             path = directory_path / filename
             if policy.is_managed_path(path):
+                stat_result = path.stat()
                 files[safe_text(path.relative_to(root).as_posix())] = FileSnapshot(
                     path=path,
-                    mode=stat.S_IMODE(path.stat().st_mode),
+                    mode=stat.S_IMODE(stat_result.st_mode),
+                    digest=_file_sha256(path),
+                    size=stat_result.st_size,
                 )
     return files
 
@@ -125,3 +153,11 @@ def _read_text_lines(path: Path | None) -> list[str] | None:
         return path.read_text(encoding="utf-8").splitlines(keepends=True)
     except UnicodeDecodeError:
         return None
+
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as file:
+        for chunk in iter(lambda: file.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()

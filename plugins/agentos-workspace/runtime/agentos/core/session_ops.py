@@ -3,13 +3,15 @@ from __future__ import annotations
 import json
 import sqlite3
 import subprocess
+from contextlib import closing
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .approvals import verify_approval_record
+from .approvals import build_target_identity, verify_approval_record
 from .integrity import verify_review_package
 from .review import latest_review_package_path, summarize_review_package
+from .review_snapshot import apply_review_snapshot, validate_review_snapshot_sources
 from .runtime import AgentOSRuntime, Session
 
 
@@ -92,8 +94,11 @@ def approve_review_package(
     review_package_path: Path | None = None,
     latest: bool = False,
     scope_id: str | None = None,
+    target_dir: Path | None = None,
     approver: str = "human",
 ) -> ApprovalCliResult:
+    if target_dir is None:
+        raise ValueError("target_dir is required to bind approval to a sync target")
     review_path = _review_path(state_dir=state_dir, review_package_path=review_package_path, latest=latest)
     verification = verify_review_package(review_path)
     if not verification.passed:
@@ -108,6 +113,7 @@ def approve_review_package(
         approver=approver,
         scope=scope,
         review_package_artifact=review_path,
+        target_identity=build_target_identity(target_dir),
     )
     return ApprovalCliResult(
         session_id=summary.session_id,
@@ -140,9 +146,13 @@ def preflight_sync_review(
     if summary.validation_status != "passed":
         blockers.append(f"review validation is not passed: {summary.validation_status}")
 
-    session = load_session(state_dir=state_dir, session_id=summary.session_id)
     try:
-        _validate_sync_sources(workspace_root=Path(session.workspace_dir), relative_paths=list(planned_paths))
+        validate_review_snapshot_sources(
+            review_package_path=review_path,
+            review_package=summary.package,
+            target_dir=target_dir,
+            relative_paths=list(planned_paths),
+        )
     except (FileNotFoundError, RuntimeError, ValueError) as exc:
         blockers.append(str(exc))
 
@@ -166,6 +176,7 @@ def preflight_sync_review(
         approval_verification = verify_approval_record(
             approval_path,
             review_package_path=review_path,
+            target_dir=target_dir,
             require_signature=require_signed_approval,
         )
         approval_status = approval_verification.status
@@ -218,15 +229,19 @@ def sync_approved_review(
         raise RuntimeError(f"review package verification failed: {review_path}")
     summary = summarize_review_package(review_path)
     _require_passed_validation(summary.validation_status)
-    session = load_session(state_dir=state_dir, session_id=summary.session_id)
     approval_path = latest_approval_record_path(state_dir=state_dir, session_id=summary.session_id)
     scope = approval_scope_from_path(approval_path)
     paths = _sync_paths(scope=scope, review_package=summary.package)
-    workspace_root = Path(session.workspace_dir)
-    _validate_sync_sources(workspace_root=workspace_root, relative_paths=paths)
+    validate_review_snapshot_sources(
+        review_package_path=review_path,
+        review_package=summary.package,
+        target_dir=target_dir,
+        relative_paths=paths,
+    )
     approval_verification = verify_approval_record(
         approval_path,
         review_package_path=review_path,
+        target_dir=target_dir,
         require_signature=require_signed_approval,
     )
     if not approval_verification.passed:
@@ -242,16 +257,15 @@ def sync_approved_review(
             review_verification_status=verification.status,
             approval_verification_status=approval_verification.status,
         )
-    runtime = AgentOSRuntime(state_dir=state_dir, output_dir=output_dir)
-    result = runtime.sync_approved_selected(
-        session,
-        workspace_root=workspace_root,
-        relative_paths=paths,
+    result = apply_review_snapshot(
+        review_package_path=review_path,
+        review_package=summary.package,
         target_dir=target_dir,
+        relative_paths=paths,
     )
     return SyncCliResult(
         session_id=summary.session_id,
-        target_dir=result.target_dir,
+        target_dir=target_dir,
         copied_paths=result.copied_paths,
         dry_run=False,
         git_status=git_status,
@@ -264,7 +278,7 @@ def load_session(*, state_dir: Path, session_id: str) -> Session:
     db_path = state_dir / "agentos.sqlite3"
     if not db_path.exists():
         raise FileNotFoundError(f"No AgentOS database found at {state_dir}")
-    with sqlite3.connect(db_path) as conn:
+    with closing(sqlite3.connect(db_path)) as conn:
         row = conn.execute(
             "select session_id, session_dir, workspace_path from sessions where session_id = ?",
             (session_id,),
@@ -366,7 +380,7 @@ def _latest_artifact_path(*, state_dir: Path, session_id: str, artifact_name: st
     db_path = state_dir / "agentos.sqlite3"
     if not db_path.exists():
         raise FileNotFoundError(f"No AgentOS database found at {state_dir}")
-    with sqlite3.connect(db_path) as conn:
+    with closing(sqlite3.connect(db_path)) as conn:
         row = conn.execute(
             """
             select path

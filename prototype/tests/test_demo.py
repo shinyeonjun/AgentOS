@@ -70,7 +70,9 @@ class AgentOSDemoTests(unittest.TestCase):
             self.assertEqual(manifest_artifact["digest"]["algorithm"], "sha256")
             manifest_path = result.review_package_artifact.parent / "artifact-manifest.json"
             manifest = json.loads(manifest_path.read_text())
-            self.assertEqual(manifest["artifact_count"], 3)
+            self.assertEqual(manifest["artifact_count"], 4)
+            self.assertIn("snapshot", review_package)
+            self.assertEqual(review_package["snapshot"]["artifact"]["type"], "application/zip")
             self.assertEqual(manifest["signature"]["status"], "not_signed")
             approval_record = json.loads(result.approval_record_artifact.read_text())
             self.assertEqual(approval_record["approver"], "demo-human")

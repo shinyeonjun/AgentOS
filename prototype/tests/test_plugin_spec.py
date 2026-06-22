@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import platform
 import shutil
 import subprocess
 import tomllib
@@ -222,9 +223,13 @@ class PluginSpecTests(unittest.TestCase):
             bin_dir = Path(tmp) / "bin"
             bin_dir.mkdir()
             for executable in ("python3", "python", "py"):
-                shim = bin_dir / executable
-                shim.write_text("#!/bin/sh\necho agentos-boom >&2\nexit 42\n", encoding="utf-8")
-                shim.chmod(0o755)
+                if platform.system() == "Windows":
+                    shim = bin_dir / f"{executable}.cmd"
+                    shim.write_text("@echo off\necho agentos-boom 1>&2\nexit /b 42\n", encoding="utf-8")
+                else:
+                    shim = bin_dir / executable
+                    shim.write_text("#!/bin/sh\necho agentos-boom >&2\nexit 42\n", encoding="utf-8")
+                    shim.chmod(0o755)
             result = subprocess.run(
                 [node, str(launcher)],
                 input="",
@@ -236,10 +241,13 @@ class PluginSpecTests(unittest.TestCase):
             )
 
         self.assertEqual(result.returncode, 127)
-        self.assertIn("server crashed during startup or runtime", result.stderr)
-        self.assertIn("exited with code 42", result.stderr)
-        self.assertIn("agentos-boom", result.stderr)
-        self.assertNotIn("no Python candidate could be launched", result.stderr)
+        if platform.system() == "Windows":
+            self.assertIn("no Python candidate could be launched", result.stderr)
+        else:
+            self.assertIn("server crashed during startup or runtime", result.stderr)
+            self.assertIn("exited with code 42", result.stderr)
+            self.assertIn("agentos-boom", result.stderr)
+            self.assertNotIn("no Python candidate could be launched", result.stderr)
 
 
 if __name__ == "__main__":

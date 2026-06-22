@@ -277,9 +277,10 @@ def _tool_approve_scope(arguments: dict[str, Any]) -> dict[str, Any]:
     return approve_review_package(
         state_dir=_state_dir(arguments),
         output_dir=_output_dir(arguments),
-        review_package_path=_optional_path(arguments, "review_package"),
-        latest=_bool_arg(arguments, "latest", True),
+        review_package_path=_required_path(arguments, "review_package"),
+        latest=False,
         scope_id=arguments.get("scope_id") if arguments.get("scope_id") is not None else None,
+        target_dir=_required_path(arguments, "project_dir"),
         approver=_str_arg(arguments, "approver", "human"),
     ).to_dict()
 
@@ -290,8 +291,8 @@ def _tool_sync_approved(arguments: dict[str, Any]) -> dict[str, Any]:
         state_dir=_state_dir(arguments),
         output_dir=_output_dir(arguments),
         target_dir=_required_path(arguments, "project_dir"),
-        review_package_path=_optional_path(arguments, "review_package"),
-        latest=_bool_arg(arguments, "latest", True),
+        review_package_path=_required_path(arguments, "review_package"),
+        latest=False,
         dry_run=_bool_arg(arguments, "dry_run", True),
         require_clean_git=_bool_arg(arguments, "require_clean_git", False),
         require_signed_approval=_bool_arg(arguments, "require_signed_approval", not allow_unsigned),
@@ -573,17 +574,19 @@ def _tool_definitions() -> list[dict[str, Any]]:
         ),
         _tool_definition(
             "approve_scope",
-            "Record explicit human approval for one review scope. Do not call without user approval.",
+            "Record explicit human approval for one explicit review package and target. Do not call without user approval.",
             {
                 **review_selector,
+                "project_dir": _string_schema("Target project directory this approval may sync to."),
                 "scope_id": _string_schema("Approval scope id. Defaults to the first scope."),
                 "approver": {"type": "string", "default": "human"},
             },
+            required=["project_dir", "review_package"],
             annotations={"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False},
         ),
         _tool_definition(
             "sync_approved",
-            "Preview or sync approved files to the original project. This is the approval boundary and requires explicit user approval.",
+            "Preview or sync an explicit approved review package to the original project. This is the approval boundary and requires explicit user approval.",
             {
                 **review_selector,
                 "project_dir": _string_schema("Target project directory to receive approved files."),
@@ -596,7 +599,7 @@ def _tool_definitions() -> list[dict[str, Any]]:
                     "description": "Development escape hatch. Set true only when unsigned local approvals are acceptable.",
                 },
             },
-            required=["project_dir"],
+            required=["project_dir", "review_package"],
             annotations={"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False},
         ),
         _tool_definition(

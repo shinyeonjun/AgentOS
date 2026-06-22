@@ -56,6 +56,8 @@ class McpServerTests(unittest.TestCase):
         self.assertFalse(tools_by_name["sync_preflight"]["inputSchema"]["properties"]["allow_unsigned_approval"]["default"])
         self.assertTrue(tools_by_name["sync_approved"]["inputSchema"]["properties"]["require_signed_approval"]["default"])
         self.assertFalse(tools_by_name["sync_approved"]["inputSchema"]["properties"]["allow_unsigned_approval"]["default"])
+        self.assertIn("review_package", tools_by_name["approve_scope"]["inputSchema"]["required"])
+        self.assertIn("review_package", tools_by_name["sync_approved"]["inputSchema"]["required"])
 
     def test_tool_result_replaces_unpaired_surrogates(self) -> None:
         from agentos.mcp_server import _tool_result
@@ -328,6 +330,7 @@ class McpServerTests(unittest.TestCase):
                 }
             )
             self.assertIsNotNone(review)
+            review_package = review["result"]["structuredContent"]["review_package_artifact"]
 
             verify = _handle_rpc(
                 {
@@ -374,8 +377,8 @@ class McpServerTests(unittest.TestCase):
                         "name": "sync_preflight",
                         "arguments": {
                             "project_dir": str(target),
+                            "review_package": review_package,
                             "scope_id": "sync_selected:README.md",
-                            "latest": True,
                             "state_dir": str(state_dir),
                             "output_dir": str(output_dir),
                         },
@@ -396,8 +399,9 @@ class McpServerTests(unittest.TestCase):
                     "params": {
                         "name": "approve_scope",
                         "arguments": {
+                            "project_dir": str(target),
+                            "review_package": review_package,
                             "scope_id": "sync_selected:README.md",
-                            "latest": True,
                             "state_dir": str(state_dir),
                             "output_dir": str(output_dir),
                         },
@@ -540,6 +544,7 @@ class McpServerTests(unittest.TestCase):
             )
             self.assertIsNotNone(review)
             self.assertEqual(review["result"]["structuredContent"]["validation_status"], "failed")
+            review_package = review["result"]["structuredContent"]["review_package_artifact"]
 
             approve = _handle_rpc(
                 {
@@ -549,8 +554,9 @@ class McpServerTests(unittest.TestCase):
                     "params": {
                         "name": "approve_scope",
                         "arguments": {
+                            "project_dir": str(target),
+                            "review_package": review_package,
                             "scope_id": "sync_selected:README.md",
-                            "latest": True,
                             "state_dir": str(state_dir),
                             "output_dir": str(output_dir),
                         },
