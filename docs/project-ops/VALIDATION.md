@@ -905,8 +905,8 @@ Observed result:
 - Full unit suite passed: 58 tests.
 - Ruff passed.
 - Compileall passed.
-- `agentos approve --latest --scope sync_selected:README.md` records `approval-record.json` for a worker review package.
-- `agentos sync --latest --target <dir>` copies only approved paths.
+- `agentos approve --latest --target <dir> --scope sync_selected:README.md` records `approval-record.json` for a worker review package.
+- `agentos sync --latest --target <dir> --allow-unsigned-approval` copies only approved paths in local unsigned mode.
 - Regression test confirmed selected sync updates `README.md` and preserves unrelated `KEEP.md`.
 - Runtime selected-file sync no longer removes the whole target directory.
 - Default WSL smoke path passed with rehearsal `75a79fa965c4`.

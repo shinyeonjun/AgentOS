@@ -149,10 +149,10 @@ For a real worker session with changed files, approve and sync selected files:
 
 ```bash
 agentos run --input ../some-project --task "Update the README with setup notes." --execute
-agentos approve --latest --scope sync_selected:README.md
-agentos sync --latest --target ../some-project --dry-run
-agentos sync --latest --target ../some-project --require-clean-git
-AGENTOS_APPROVAL_KEY=dev-secret agentos approve --latest --scope sync_selected:README.md
+agentos approve --latest --target ../some-project --scope sync_selected:README.md
+agentos sync --latest --target ../some-project --dry-run --allow-unsigned-approval
+agentos sync --latest --target ../some-project --require-clean-git --allow-unsigned-approval
+AGENTOS_APPROVAL_KEY=dev-secret agentos approve --latest --target ../some-project --scope sync_selected:README.md
 AGENTOS_APPROVAL_KEY=dev-secret agentos sync --latest --target ../some-project --require-signed-approval
 ```
 

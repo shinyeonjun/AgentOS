@@ -48,10 +48,13 @@ agentos verify-review --latest --json
 After the user approves a scope:
 
 ```bash
-agentos approve --latest --scope <scope-id> --json
-agentos sync --latest --target <project-dir> --dry-run --json
-agentos sync --latest --target <project-dir> --require-clean-git --json
+agentos approve --latest --target <project-dir> --scope <scope-id> --json
+agentos sync --latest --target <project-dir> --dry-run --allow-unsigned-approval --json
+agentos sync --latest --target <project-dir> --require-clean-git --allow-unsigned-approval --json
 ```
+
+For production-like approval records, set `AGENTOS_APPROVAL_KEY` and omit
+`--allow-unsigned-approval`.
 
 ## Worker Prompt Contract
 

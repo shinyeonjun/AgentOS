@@ -14,7 +14,7 @@ from ..core.contracts import (
 )
 from ..core.changes import detect_file_changes
 from ..core.integrity import build_artifact_manifest, build_manifest_integrity
-from ..core.review_snapshot import create_review_snapshot
+from ..core.review_snapshot import create_review_snapshot, review_entry_from_snapshot
 from ..core.runtime import AgentOSRuntime, SyncNotApprovedError
 
 
@@ -100,9 +100,10 @@ def run_markdown_document_demo(
         host_agent=task_manifest.host_agent,
         summary="Structured raw meeting notes into a Markdown summary with decisions and action items.",
         changed_files=[
-            change.to_review_entry(
+            review_entry_from_snapshot(
+                change,
                 diff_ref=artifact_ref(session.session_id, diff_artifact) if change.path == DOCUMENT_NAME else None,
-                snapshot_path=snapshot_files.get(change.path, {}).get("snapshot_path"),
+                snapshot_entry=snapshot_files.get(change.path, {}),
             )
             for change in changes
         ],

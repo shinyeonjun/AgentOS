@@ -57,9 +57,9 @@ git -C /tmp/agentos-first-run status --short
 Only approve the path you expect:
 
 ```bash
-agentos approve --latest --scope sync_selected:README.md
-agentos sync --latest --target /tmp/agentos-first-run --dry-run
-agentos sync --latest --target /tmp/agentos-first-run --require-clean-git
+agentos approve --latest --target /tmp/agentos-first-run --scope sync_selected:README.md
+agentos sync --latest --target /tmp/agentos-first-run --dry-run --allow-unsigned-approval
+agentos sync --latest --target /tmp/agentos-first-run --require-clean-git --allow-unsigned-approval
 ```
 
 Now inspect the real repo:

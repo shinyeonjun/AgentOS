@@ -144,9 +144,9 @@ agentos sync-preflight --latest --target <project-dir> --json
     After approval:
 
 ```bash
-agentos approve --latest --scope <scope-id> --json
-agentos sync --latest --target <project-dir> --dry-run --json
-agentos sync --latest --target <project-dir> --require-clean-git --json
+agentos approve --latest --target <project-dir> --scope <scope-id> --json
+agentos sync --latest --target <project-dir> --dry-run --allow-unsigned-approval --json
+agentos sync --latest --target <project-dir> --require-clean-git --allow-unsigned-approval --json
 ```
 
 ## Safety Rules

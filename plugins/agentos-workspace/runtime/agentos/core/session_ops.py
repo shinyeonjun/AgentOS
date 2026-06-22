@@ -13,6 +13,7 @@ from .integrity import verify_review_package
 from .review import latest_review_package_path, summarize_review_package
 from .review_snapshot import apply_review_snapshot, validate_review_snapshot_sources
 from .runtime import AgentOSRuntime, Session
+from .text_safety import safe_json_dumps
 
 
 @dataclass(frozen=True)
@@ -286,6 +287,20 @@ def sync_approved_review(
         target_dir=target_dir,
         relative_paths=paths,
     )
+    runtime = AgentOSRuntime(state_dir=state_dir, output_dir=output_dir)
+    runtime.store.record_sync(
+        session_id=summary.session_id,
+        synced_at=runtime_module_utc_now(),
+        source_path=safe_json_dumps(
+            {
+                "kind": "review_snapshot",
+                "review_package": str(review_path),
+                "paths": list(result.copied_paths),
+            },
+            sort_keys=True,
+        ),
+        target_path=target_dir,
+    )
     return SyncCliResult(
         session_id=summary.session_id,
         target_dir=target_dir,
@@ -316,6 +331,12 @@ def load_session(*, state_dir: Path, session_id: str) -> Session:
         workspace_dir=workspace_dir,
         original_dir=session_dir / "original",
     )
+
+
+def runtime_module_utc_now() -> str:
+    from .runtime import utc_now
+
+    return utc_now()
 
 
 def latest_approval_scope(*, state_dir: Path, session_id: str) -> dict[str, Any]:

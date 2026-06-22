@@ -129,7 +129,7 @@ def build_review_package(
         "summary": {
             "short": summary,
             "details_ref": next(
-                (item["ref"] for item in artifacts if item["name"] == "final-report.md"),
+                (item["ref"] for item in artifacts if _artifact_matches_logical_name(item["name"], "final-report.md")),
                 None,
             ),
         },
@@ -157,6 +157,15 @@ def build_review_package(
             "scopes": approval_scopes,
         },
     }
+
+
+def _artifact_matches_logical_name(actual_name: str, logical_name: str) -> bool:
+    if actual_name == logical_name:
+        return True
+    logical_path = Path(logical_name)
+    suffix = logical_path.suffix
+    stem = logical_path.name[: -len(suffix)] if suffix else logical_path.name
+    return actual_name.startswith(f"{stem}-") and actual_name.endswith(suffix)
 
 
 def build_approval_scopes(changed_files: list[dict[str, Any]]) -> list[dict[str, Any]]:

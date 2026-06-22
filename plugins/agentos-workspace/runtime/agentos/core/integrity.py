@@ -222,10 +222,19 @@ def _verify_manifest_signature(
 
 def _verify_review_lists_manifest(review_package: dict[str, Any], checks: list[IntegrityCheck]) -> None:
     artifact_names = {item.get("name") for item in review_package.get("artifacts", [])}
-    if MANIFEST_NAME in artifact_names:
+    if any(_artifact_matches_logical_name(str(name), MANIFEST_NAME) for name in artifact_names):
         checks.append(IntegrityCheck("review artifact manifest entry", "passed", f"{MANIFEST_NAME} is listed"))
     else:
         checks.append(IntegrityCheck("review artifact manifest entry", "failed", f"{MANIFEST_NAME} is not listed"))
+
+
+def _artifact_matches_logical_name(actual_name: str, logical_name: str) -> bool:
+    if actual_name == logical_name:
+        return True
+    logical_path = Path(logical_name)
+    suffix = logical_path.suffix
+    stem = logical_path.name[: -len(suffix)] if suffix else logical_path.name
+    return actual_name.startswith(f"{stem}-") and actual_name.endswith(suffix)
 
 
 def _verification_result(

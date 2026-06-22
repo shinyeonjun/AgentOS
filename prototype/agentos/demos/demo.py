@@ -14,7 +14,7 @@ from ..core.contracts import (
 )
 from ..core.changes import detect_file_changes
 from ..core.integrity import build_artifact_manifest, build_manifest_integrity
-from ..core.review_snapshot import create_review_snapshot
+from ..core.review_snapshot import create_review_snapshot, review_entry_from_snapshot
 from ..core.runtime import AgentOSRuntime, SyncNotApprovedError
 
 
@@ -99,9 +99,10 @@ def run_code_fix_demo(state_dir: Path, output_dir: Path, destroy_session: bool =
         host_agent=task_manifest.host_agent,
         summary="Fixed the calculator bug and unittest now passes.",
         changed_files=[
-            change.to_review_entry(
+            review_entry_from_snapshot(
+                change,
                 diff_ref=artifact_ref(session.session_id, diff_artifact) if change.path == "calculator.py" else None,
-                snapshot_path=snapshot_files.get(change.path, {}).get("snapshot_path"),
+                snapshot_entry=snapshot_files.get(change.path, {}),
             )
             for change in changes
         ],

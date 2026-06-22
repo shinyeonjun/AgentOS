@@ -50,9 +50,9 @@ agentos session review <work-name> --json
 agentos review --latest --json
 agentos diff --latest
 agentos verify-review --latest --json
-agentos approve --latest --scope <scope-id> --json
-agentos sync --latest --target <project-dir> --dry-run --json
-agentos sync --latest --target <project-dir> --require-clean-git --json
+agentos approve --latest --target <project-dir> --scope <scope-id> --json
+agentos sync --latest --target <project-dir> --dry-run --allow-unsigned-approval --json
+agentos sync --latest --target <project-dir> --require-clean-git --allow-unsigned-approval --json
 agentos session destroy <work-name> --json
 ```
 
@@ -175,7 +175,7 @@ Records human approval for a concrete review scope.
 CLI:
 
 ```bash
-agentos approve --latest --scope <scope-id> --json
+agentos approve --latest --target <project-dir> --scope <scope-id> --json
 ```
 
 The agent app must not choose approval itself. It can recommend a scope, but the
@@ -188,8 +188,8 @@ Copies only approved changed files to an explicit target.
 CLI:
 
 ```bash
-agentos sync --latest --target <project-dir> --dry-run --json
-agentos sync --latest --target <project-dir> --require-clean-git --json
+agentos sync --latest --target <project-dir> --dry-run --allow-unsigned-approval --json
+agentos sync --latest --target <project-dir> --require-clean-git --allow-unsigned-approval --json
 ```
 
 ### destroy_session

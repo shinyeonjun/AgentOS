@@ -214,6 +214,7 @@ class AgentOSRuntime:
         session_artifacts = self.artifacts_dir / session.session_id
         session_artifacts.mkdir(parents=True, exist_ok=True)
         artifact_path = _safe_artifact_path(session_artifacts, name)
+        artifact_path = _available_artifact_path(artifact_path)
         artifact_path.write_text(safe_text(content), encoding="utf-8")
         self.store.record_artifact(
             session_id=session.session_id,
@@ -357,6 +358,18 @@ def _safe_artifact_path(session_artifacts: Path, name: str) -> Path:
     if artifact_path.name != safe_name:
         raise ValueError(f"artifact name must be a plain filename: {safe_name!r}")
     return artifact_path
+
+
+def _available_artifact_path(artifact_path: Path) -> Path:
+    if not artifact_path.exists():
+        return artifact_path
+    suffix = artifact_path.suffix
+    stem = artifact_path.name[: -len(suffix)] if suffix else artifact_path.name
+    for _ in range(100):
+        candidate = artifact_path.with_name(f"{stem}-{uuid.uuid4().hex[:8]}{suffix}")
+        if not candidate.exists():
+            return candidate
+    raise FileExistsError(f"could not allocate unique artifact path for {artifact_path.name}")
 
 
 def _prepare_subprocess_command(command: list[str], *, command_env: dict[str, str] | None) -> list[str]:

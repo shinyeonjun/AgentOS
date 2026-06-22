@@ -23,8 +23,8 @@ agentos session review demo --json
 agentos review --latest
 agentos diff --latest
 agentos sync-preflight --latest --target ./sample-repo --json
-agentos approve --latest --scope sync_selected:README.md
-agentos sync --latest --target ./sample-repo --require-clean-git
+agentos approve --latest --target ./sample-repo --scope sync_selected:README.md
+agentos sync --latest --target ./sample-repo --require-clean-git --allow-unsigned-approval
 ```
 
 ## What To Say While Showing It

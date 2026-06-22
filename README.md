@@ -113,9 +113,9 @@ agentos review --latest
 agentos diff --latest
 agentos verify-review --latest --json
 agentos sync-preflight --latest --target ../some-project --json
-agentos approve --latest --scope sync_selected:README.md
-agentos sync --latest --target ../some-project --dry-run
-agentos sync --latest --target ../some-project --require-clean-git
+agentos approve --latest --target ../some-project --scope sync_selected:README.md
+agentos sync --latest --target ../some-project --dry-run --allow-unsigned-approval
+agentos sync --latest --target ../some-project --require-clean-git --allow-unsigned-approval
 ```
 
 `agentos run` prepares a copied workspace, runs or prepares the worker, records artifacts, and prints the review/approval/sync next steps. It does not sync changes by itself.
@@ -238,4 +238,4 @@ Useful entry points:
 
 ## License
 
-No license file is included yet. Treat the code as not licensed for reuse until a license is added.
+MIT. See [LICENSE](LICENSE).

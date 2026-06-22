@@ -1,13 +1,9 @@
 # Changelog
 
-## v0.4.13-alpha
+## 0.5.0a1
 
-First public alpha polish release.
-
-- Added the `agentos demo` one-command review-before-sync demo.
-- Polished the GitHub README, demo GIF, social preview, repository topics, and onboarding docs.
-- Added first-run guidance to `agentos doctor`.
-- Added a first real run guide for trying AgentOS on a throwaway repo.
-- Guarded Codex plugin runtime packaging so review path policy stays in sync with the prototype runtime.
-
-AgentOS is still alpha software. Use it on small or disposable repos first, inspect review packages carefully, and sync only approved paths.
+- Record successful snapshot syncs in session state and the sync history table.
+- Verify review snapshot payload digests and sizes before preflight or sync.
+- Keep repeated review artifacts append-only instead of overwriting prior files.
+- Require docs and scripts to bind approvals to an explicit `--target`.
+- Document local unsigned approval usage separately from signed approval records.

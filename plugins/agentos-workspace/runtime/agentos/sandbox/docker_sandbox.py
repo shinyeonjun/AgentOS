@@ -17,7 +17,7 @@ from ..core.contracts import (
 from ..core.changes import detect_file_changes
 from ..core.integrity import build_artifact_manifest, build_manifest_integrity
 from ..core.platform_checks import ensure_docker_environment
-from ..core.review_snapshot import ReviewSnapshot, create_review_snapshot
+from ..core.review_snapshot import ReviewSnapshot, create_review_snapshot, review_entry_from_snapshot
 from ..core.runtime import AgentOSRuntime, Session
 
 
@@ -347,7 +347,7 @@ def _write_docker_review_package(
     ]
     snapshot_files = {str(item["path"]): item for item in snapshot.files}
     changed_files = [
-        change.to_review_entry(snapshot_path=snapshot_files.get(change.path, {}).get("snapshot_path"))
+        review_entry_from_snapshot(change, diff_ref=None, snapshot_entry=snapshot_files.get(change.path, {}))
         for change in changes
     ]
     snapshot_artifact = artifact_entry(session.session_id, snapshot.path, "application/zip")

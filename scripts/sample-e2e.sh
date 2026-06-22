@@ -173,6 +173,7 @@ AGENTOS_APPROVAL_KEY=sample-e2e-secret AGENTOS_APPROVAL_KEY_ID=sample-e2e \
     --state-dir "$state_dir" \
     --output-dir "$output_dir" \
     --latest \
+    --target "$target_dir" \
     --scope sync_selected:README.md \
     --approver sample-e2e \
     --json >"$sample_root/approve.json"

@@ -13,7 +13,7 @@ from ..core.contracts import (
     build_review_package,
 )
 from ..core.integrity import build_artifact_manifest, build_manifest_integrity
-from ..core.review_snapshot import ReviewSnapshot, create_review_snapshot
+from ..core.review_snapshot import ReviewSnapshot, create_review_snapshot, review_entry_from_snapshot
 from ..core.runtime import AgentOSRuntime, Session, ToolResult
 from .env_policy import WorkerEnvPolicy, build_worker_env
 
@@ -250,7 +250,7 @@ def _build_worker_review_package(
     for change in changes:
         diff_ref = artifact_ref(session_id, diff_artifacts[change.path]) if change.path in diff_artifacts else None
         snapshot_entry = snapshot_files.get(change.path, {})
-        changed_files.append(change.to_review_entry(diff_ref=diff_ref, snapshot_path=snapshot_entry.get("snapshot_path")))
+        changed_files.append(review_entry_from_snapshot(change, diff_ref=diff_ref, snapshot_entry=snapshot_entry))
     snapshot_artifact = artifact_entry(session_id, snapshot.path, "application/zip")
     artifacts: list[dict[str, Any]] = [
         snapshot_artifact,

@@ -29,7 +29,7 @@ from .contracts import (
 from .integrity import build_artifact_manifest, build_manifest_integrity
 from .inspector import inspect_state
 from .platform_checks import ensure_docker_environment
-from .review_snapshot import create_review_snapshot
+from .review_snapshot import create_review_snapshot, review_entry_from_snapshot
 from .runtime import AgentOSRuntime, Session
 from .session_ops import load_session
 from .storage import StateStore
@@ -453,7 +453,7 @@ def review_work_session(
             artifacts.append(artifact_entry(session.session_id, diff_artifact, "text/x-diff"))
             diff_ref = artifact_ref(session.session_id, diff_artifact)
         snapshot_entry = snapshot_files.get(change.path, {})
-        changed_files.append(change.to_review_entry(diff_ref=diff_ref, snapshot_path=snapshot_entry.get("snapshot_path")))
+        changed_files.append(review_entry_from_snapshot(change, diff_ref=diff_ref, snapshot_entry=snapshot_entry))
 
     inspection = inspect_state(state_dir, session_id=session.session_id)["session"]
     tool_calls = list((inspection or {}).get("tool_calls") or [])
@@ -770,6 +770,8 @@ def _original_root_for_workspace(session: Session) -> Path:
 def _safe_artifact_stem(path: str) -> str:
     stem = re.sub(r"[^A-Za-z0-9_.-]+", "-", safe_text(path)).strip("-")
     return stem or "change"
+
+
 
 
 def _validation_checks(tool_calls: list[dict[str, Any]]) -> list[dict[str, Any]]:

@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .changes import _file_sha256
 from .changes import FileChange
 from .contracts import artifact_sha256
 from .text_safety import safe_json_dumps, safe_text
@@ -55,6 +56,10 @@ def create_review_snapshot(
                 source = _safe_workspace_file(workspace_root, change.path)
                 snapshot_member = _snapshot_member(change.path)
                 bundle.write(source, snapshot_member)
+                stat_result = source.stat()
+                entry["new_digest"] = _file_sha256(source)
+                entry["new_size"] = stat_result.st_size
+                entry["new_mode"] = f"{stat_result.st_mode & 0o7777:04o}"
                 entry["snapshot_path"] = snapshot_member
             files.append(entry)
         manifest = {
@@ -91,6 +96,7 @@ def apply_review_snapshot(
 ) -> SnapshotApplyResult:
     snapshot = load_review_snapshot(review_package_path=review_package_path, review_package=review_package)
     entries = _selected_entries(snapshot.files, relative_paths)
+    _validate_snapshot_payloads(snapshot.path, entries)
     target_root = target_dir.resolve()
     backup_dir = target_root / f".agentos-sync-backup-{uuid.uuid4().hex[:8]}"
     backups: list[tuple[Path, Path, bool]] = []
@@ -142,10 +148,19 @@ def validate_review_snapshot_sources(
 ) -> None:
     snapshot = load_review_snapshot(review_package_path=review_package_path, review_package=review_package)
     entries = _selected_entries(snapshot.files, relative_paths)
+    _validate_snapshot_payloads(snapshot.path, entries)
     target_root = target_dir.resolve()
     for entry in entries:
         target = _safe_target_file(target_root, str(entry["path"]))
         _assert_target_baseline(target, entry)
+
+
+def review_entry_from_snapshot(change: FileChange, *, diff_ref: str | None, snapshot_entry: dict[str, Any]) -> dict[str, Any]:
+    entry = change.to_review_entry(diff_ref=diff_ref, snapshot_path=snapshot_entry.get("snapshot_path"))
+    for key in ("new_digest", "new_mode", "new_size"):
+        if key in snapshot_entry:
+            entry[key] = snapshot_entry[key]
+    return entry
 
 
 def _selected_entries(entries: tuple[dict[str, Any], ...], relative_paths: list[str]) -> list[dict[str, Any]]:
@@ -156,6 +171,39 @@ def _selected_entries(entries: tuple[dict[str, Any], ...], relative_paths: list[
             raise RuntimeError(f"approved path is missing from review snapshot: {relative_path}")
         selected.append(by_path[relative_path])
     return selected
+
+
+def _validate_snapshot_payloads(snapshot_path: Path, entries: list[dict[str, Any]]) -> None:
+    with zipfile.ZipFile(snapshot_path, "r") as bundle:
+        for entry in entries:
+            if entry.get("change_type") == "deleted":
+                continue
+            relative_path = str(entry["path"])
+            member = entry.get("snapshot_path")
+            if not isinstance(member, str):
+                raise RuntimeError(f"snapshot entry has no file payload: {relative_path}")
+            try:
+                with bundle.open(member, "r") as source:
+                    digest, size = _stream_sha256(source)
+            except KeyError as exc:
+                raise RuntimeError(f"snapshot payload is missing: {relative_path}") from exc
+            expected_digest = entry.get("new_digest")
+            if expected_digest and digest != expected_digest:
+                raise RuntimeError(f"snapshot payload digest mismatch: {relative_path}")
+            expected_size = entry.get("new_size")
+            if isinstance(expected_size, int) and size != expected_size:
+                raise RuntimeError(f"snapshot payload size mismatch: {relative_path}")
+
+
+def _stream_sha256(source: Any) -> tuple[str, int]:
+    import hashlib
+
+    digest = hashlib.sha256()
+    size = 0
+    for chunk in iter(lambda: source.read(1024 * 1024), b""):
+        size += len(chunk)
+        digest.update(chunk)
+    return digest.hexdigest(), size
 
 
 def _assert_target_baseline(target: Path, entry: dict[str, Any]) -> None:
