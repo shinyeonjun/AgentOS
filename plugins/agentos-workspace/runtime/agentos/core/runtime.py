@@ -9,6 +9,7 @@ import re
 import shutil
 import subprocess
 import uuid
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -46,6 +47,10 @@ DEFAULT_ENV_ALLOWLIST = frozenset(
         "WINDIR",
     }
 )
+WINDOWS_ENV_FALLBACKS = {
+    "SystemRoot": ("WINDIR",),
+    "WINDIR": ("SystemRoot",),
+}
 SECRET_PATTERNS = (
     re.compile(r"(?i)(api[_-]?key|token|secret|password)\s*=\s*([^\s]+)"),
     re.compile(r"sk-[A-Za-z0-9_-]{12,}"),
@@ -409,13 +414,41 @@ def _output_to_text(value: str | bytes | None) -> str:
 def _command_env(*, env: dict[str, str] | None, inherit_env: bool) -> dict[str, str] | None:
     defaults = {"PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"}
     if inherit_env:
-        command_env = {key: value for key, value in os.environ.items() if key in DEFAULT_ENV_ALLOWLIST}
+        command_env = _inherit_allowed_env(os.environ)
     else:
         command_env = {}
+    if platform.system() == "Windows":
+        _fill_windows_env_fallbacks(command_env)
     command_env.update({key: value for key, value in defaults.items() if key not in command_env})
     if env:
         command_env.update({safe_text(str(key)): safe_text(str(value)) for key, value in env.items()})
     return json_safe(command_env)
+
+
+def _inherit_allowed_env(source_env: Mapping[str, str]) -> dict[str, str]:
+    if platform.system() != "Windows":
+        return {key: value for key, value in source_env.items() if key in DEFAULT_ENV_ALLOWLIST}
+
+    by_lower = {str(key).lower(): str(value) for key, value in source_env.items()}
+    command_env: dict[str, str] = {}
+    for key in DEFAULT_ENV_ALLOWLIST:
+        value = source_env.get(key)
+        if value is None:
+            value = by_lower.get(key.lower())
+        if value is not None:
+            command_env[key] = str(value)
+    return command_env
+
+
+def _fill_windows_env_fallbacks(command_env: dict[str, str]) -> None:
+    for target, sources in WINDOWS_ENV_FALLBACKS.items():
+        if command_env.get(target):
+            continue
+        for source in sources:
+            value = command_env.get(source)
+            if value:
+                command_env[target] = value
+                break
 
 
 def _redact_text(value: str) -> str:

@@ -156,6 +156,29 @@ def preflight_sync_review(
     except (FileNotFoundError, RuntimeError, ValueError) as exc:
         blockers.append(str(exc))
 
+    if not changed_files:
+        next_action = (
+            "fix validation blockers, then discard or keep_session"
+            if blockers
+            else "no changed files to sync; discard or keep_session"
+        )
+        return SyncPreflightResult(
+            session_id=summary.session_id,
+            target_dir=target_dir,
+            approved=False,
+            approval_required=False,
+            recommended_scope_id=None,
+            approval_scopes=scopes,
+            planned_paths=planned_paths,
+            changed_files=changed_files,
+            git_status="not_checked",
+            review_verification_status=verification.status,
+            approval_verification_status="not_required",
+            safe_to_sync=False,
+            blockers=tuple(blockers),
+            next_action=next_action,
+        )
+
     git_status = "not_checked"
     if require_clean_git:
         try:

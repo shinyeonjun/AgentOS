@@ -150,6 +150,21 @@ function removeSection(text, serverName) {
   return `${text.slice(0, section.start)}${text.slice(section.end)}`.trimEnd();
 }
 
+function managedValue(text, key) {
+  const pattern = new RegExp(`^${escapeRegExp(key)}\\s*=\\s*"((?:\\\\.|[^"])*)"\\s*$`, "m");
+  const match = text.match(pattern);
+  return match ? tomlUnescape(match[1]) : null;
+}
+
+function managedLauncher(text) {
+  const match = text.match(/^args\s*=\s*\[\s*"((?:\\.|[^"])*)"\s*\]\s*$/m);
+  return match ? tomlUnescape(match[1]) : null;
+}
+
+function tomlUnescape(value) {
+  return value.replace(/\\\\/g, "\\").replace(/\\"/g, '"');
+}
+
 function updateConfig(existing, options) {
   let next = removeManagedBlock(existing);
   const hasUnmanaged = findSection(next, options.serverName) !== null;
@@ -192,12 +207,18 @@ function checkConfig(existing, options, configPath) {
     };
   }
   if (hasManagedBlock && hasServer) {
+    const configuredLauncher = managedLauncher(existing) || "<unknown>";
+    const configuredCwd = managedValue(existing, "cwd") || "<unknown>";
     return {
       ok: false,
       code: 3,
       message:
-        `[mcp_servers.${options.serverName}] is managed but points at a stale AgentOS launcher. ` +
-        "Run setup again, then restart Codex.",
+        `[mcp_servers.${options.serverName}] is managed but points at a different AgentOS runtime.\n` +
+        `Configured launcher: ${configuredLauncher}\n` +
+        `Expected launcher:   ${paths.launcher}\n` +
+        `Configured cwd:      ${configuredCwd}\n` +
+        `Expected cwd:        ${paths.cwd}\n` +
+        "Run setup from the plugin root you want Codex to use, then restart Codex.",
     };
   }
   if (hasServer) {

@@ -6,7 +6,7 @@ Updated: 2026-06-17
 
 AgentOS is the safe workspace runtime that an external AI agent app can call
 when it needs to edit files, run checks, review changes, and sync approved
-results.
+results without directly mutating the user's original project.
 
 The AI agent is still the brain. AgentOS is the workbench:
 
@@ -20,6 +20,14 @@ Codex / Claude Code / another agent app
 AgentOS must not become another coding agent. Its job is to provide the
 session, filesystem boundary, tool evidence, review package, approval gate, and
 sync boundary.
+
+AgentOS also must not become the agent app's version-control system,
+distributed filesystem, operating system, or semantic memory store. Storage
+optimizations are allowed only when they preserve the same lifecycle contract
+and keep the original-project mutation boundary easy to audit.
+
+See [Scope boundary](../design/scope-boundary.md) for the product boundary that
+agent integrations should assume.
 
 ## Implemented CLI Contract
 
@@ -80,6 +88,10 @@ sequence:
 7. Dry-run sync before actual sync.
 8. Sync only approved files to the explicit target path.
 9. Keep or destroy the session based on user intent.
+
+The agent app should treat `workspace_path` as disposable working state. The
+review package, validation records, and sync result are the durable contract
+between AgentOS and the host app.
 
 ## Tool Descriptions for Agent Apps
 
@@ -204,6 +216,8 @@ External agents must follow these rules:
    risk.
 8. If a session workspace is missing, create a new session instead of syncing
    from stale artifacts.
+9. Do not depend on AgentOS retaining an infinite workspace history or exposing
+   Git-like revision operations.
 
 ## Legacy Notes
 

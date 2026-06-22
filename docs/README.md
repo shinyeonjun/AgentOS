@@ -7,6 +7,7 @@ This directory is organized so GitHub readers can find the right level of detail
 - [Setup guide](guides/setup-linux-wsl.md) - install and run AgentOS locally.
 - [First real run](guides/first-real-run.md) - try AgentOS on a tiny throwaway repo.
 - [Architecture](design/architecture.md) - major components and boundaries.
+- [Scope boundary](design/scope-boundary.md) - what AgentOS is and is not.
 - [System flow](design/system-flow.md) - end-to-end lifecycle from task to sync.
 - [Technical plan](design/technical-plan.md) - current prototype direction and roadmap.
 
@@ -15,6 +16,7 @@ This directory is organized so GitHub readers can find the right level of detail
 - [Requirements](design/requirements.md)
 - [Functional spec](design/functional-spec.md)
 - [Architecture](design/architecture.md)
+- [Scope boundary](design/scope-boundary.md)
 - [System flow](design/system-flow.md)
 - [Technical plan](design/technical-plan.md)
 - [Diagrams](design/diagrams.md)

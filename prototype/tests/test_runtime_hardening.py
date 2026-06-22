@@ -10,7 +10,13 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from agentos.core.runtime import COMMAND_TIMEOUT_EXIT_CODE, AgentOSRuntime, _output_to_text, _prepare_subprocess_command
+from agentos.core.runtime import (
+    COMMAND_TIMEOUT_EXIT_CODE,
+    AgentOSRuntime,
+    _command_env,
+    _output_to_text,
+    _prepare_subprocess_command,
+)
 from agentos.core.sync import PatchApplyError, apply_patch_to_target
 
 
@@ -78,6 +84,58 @@ class RuntimeHardeningTests(unittest.TestCase):
             self.assertEqual(result.exit_code, 0)
             self.assertIn("<missing>", result.stdout_tail)
             self.assertNotIn("do-not-copy", result.stdout_tail)
+
+    def test_windows_env_inheritance_is_case_insensitive(self) -> None:
+        with patch("agentos.core.runtime.platform.system", return_value="Windows"):
+            with patch.dict(
+                "os.environ",
+                {
+                    "SYSTEMROOT": "C:\\Windows",
+                    "PROGRAMFILES": "C:\\Program Files",
+                    "COMSPEC": "C:\\Windows\\System32\\cmd.exe",
+                    "PATH": "C:\\Windows\\System32",
+                    "AGENTOS_TEST_SECRET": "do-not-copy",
+                },
+                clear=True,
+            ):
+                env = _command_env(env=None, inherit_env=True)
+
+        assert env is not None
+        self.assertEqual(env["SystemRoot"], "C:\\Windows")
+        self.assertEqual(env["ProgramFiles"], "C:\\Program Files")
+        self.assertEqual(env["COMSPEC"], "C:\\Windows\\System32\\cmd.exe")
+        self.assertNotIn("AGENTOS_TEST_SECRET", env)
+
+    def test_windows_env_fills_systemroot_from_windir(self) -> None:
+        with patch("agentos.core.runtime.platform.system", return_value="Windows"):
+            with patch.dict(
+                "os.environ",
+                {
+                    "WINDIR": "C:\\Windows",
+                    "PATH": "C:\\Windows\\System32",
+                },
+                clear=True,
+            ):
+                env = _command_env(env=None, inherit_env=True)
+
+        assert env is not None
+        self.assertEqual(env["SystemRoot"], "C:\\Windows")
+
+    @unittest.skipUnless(os.name == "nt", "Windows-only Node environment regression")
+    def test_run_command_can_start_node_on_windows(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            runtime = AgentOSRuntime(state_dir=root / "state", output_dir=root / "output")
+            session = runtime.create_session()
+
+            result = runtime.run_command(
+                session=session,
+                command=["node", "-e", "console.log('node-ok')"],
+                cwd=session.workspace_dir,
+            )
+
+            self.assertEqual(result.exit_code, 0, result.stderr_tail)
+            self.assertIn("node-ok", result.stdout_tail)
 
     def test_run_command_redacts_secret_like_output_before_persisting(self) -> None:
         with TemporaryDirectory() as tmp:

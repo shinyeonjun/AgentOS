@@ -22,7 +22,17 @@ class PluginSpecTests(unittest.TestCase):
         self.assertEqual(spec["interfaces"]["mcp_stdio"], "agentos mcp serve")
         self.assertEqual(spec["runtime_contract"]["first_action"], "doctor_before_file_edits")
         self.assertEqual(spec["runtime_contract"]["missing_agentos_tools"], "stop_without_direct_edits")
+        self.assertEqual(spec["scope_boundary"]["product_role"], "safe_workspace_runtime")
+        self.assertEqual(
+            spec["scope_boundary"]["primary_invariant"],
+            "original_project_is_not_mutated_before_approved_sync",
+        )
+        self.assertIn("version_control_system", spec["scope_boundary"]["not_a"])
+        self.assertIn("operating_system", spec["scope_boundary"]["not_a"])
+        self.assertIn("semantic_memory_platform", spec["scope_boundary"]["not_a"])
+        self.assertIn("disposable working state", spec["scope_boundary"]["storage_policy"])
         self.assertIn("Call doctor before any file edit", spec["agent_rules"][0])
+        self.assertTrue(any("Git replacement" in rule for rule in spec["agent_rules"]))
         self.assertIn("create_session", tools)
         self.assertIn("run_command", tools)
         self.assertIn("run_docker_command", tools)
@@ -39,6 +49,18 @@ class PluginSpecTests(unittest.TestCase):
         self.assertTrue(tools["sync_approved"]["human_approval_required"])
         self.assertFalse(tools["sync_preflight"]["human_approval_required"])
         self.assertIn("workspace_path", tools["create_session"]["outputs"])
+
+    def test_scope_boundary_document_defends_v0_product_scope(self) -> None:
+        repo_root = Path(__file__).resolve().parents[2]
+        doc = (repo_root / "docs" / "design" / "scope-boundary.md").read_text(encoding="utf-8")
+
+        self.assertIn("original project is not mutated", doc)
+        self.assertIn("Create Session -> Work In Copy -> Review -> Preflight -> Human Approval -> Sync -> Cleanup", doc)
+        self.assertIn("Out Of Scope For v0", doc)
+        self.assertIn("Replacing Git", doc)
+        self.assertIn("semantic memory system", doc)
+        self.assertIn("OverlayFS", doc)
+        self.assertIn("ProjFS", doc)
 
     def test_codex_plugin_declares_agentos_mcp_server(self) -> None:
         repo_root = Path(__file__).resolve().parents[2]
@@ -159,7 +181,11 @@ class PluginSpecTests(unittest.TestCase):
             )
 
         self.assertEqual(result.returncode, 3)
-        self.assertIn("stale AgentOS launcher", result.stdout)
+        self.assertIn("points at a different AgentOS runtime", result.stdout)
+        self.assertIn("Configured launcher:", result.stdout)
+        self.assertIn("Expected launcher:", result.stdout)
+        self.assertIn("Configured cwd:", result.stdout)
+        self.assertIn("Expected cwd:", result.stdout)
 
     def test_setup_script_refuses_unmanaged_existing_server_without_force(self) -> None:
         repo_root = Path(__file__).resolve().parents[2]

@@ -10,6 +10,26 @@ def build_plugin_spec() -> dict[str, Any]:
         "schema_version": PLUGIN_SPEC_VERSION,
         "name": "agentos",
         "description": "Safe workspace runtime for external AI coding agents.",
+        "scope_boundary": {
+            "product_role": "safe_workspace_runtime",
+            "primary_invariant": "original_project_is_not_mutated_before_approved_sync",
+            "agent_app_contract": (
+                "External agent apps work in workspace_path, inspect review artifacts, "
+                "request human approval, and sync only approved paths."
+            ),
+            "not_a": [
+                "coding_agent",
+                "version_control_system",
+                "distributed_filesystem",
+                "operating_system",
+                "semantic_memory_platform",
+                "tool_marketplace",
+            ],
+            "storage_policy": (
+                "Review snapshots and artifacts are durable contract records; session workspaces "
+                "are disposable working state and may be cleaned up by policy."
+            ),
+        },
         "interfaces": {
             "cli": "agentos",
             "mcp_stdio": "agentos mcp serve",
@@ -179,6 +199,7 @@ def build_plugin_spec() -> dict[str, Any]:
             "Prefer sync dry-run before actual sync.",
             "Stop if verify_review fails.",
             "Stop before syncing into a dirty git target unless the user explicitly accepts the risk.",
+            "Do not rely on AgentOS as a Git replacement, revision filesystem, OS, or semantic memory store.",
         ],
     }
 
