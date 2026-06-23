@@ -33,6 +33,7 @@ class McpServerTests(unittest.TestCase):
         self.assertIn("run_command", names)
         self.assertIn("session_summary", names)
         self.assertIn("sync_preflight", names)
+        self.assertIn("open_workbench", names)
         self.assertIn("cleanup_sessions", names)
         self.assertIn("repair_session", names)
         self.assertIn("export_debug_bundle", names)
@@ -54,6 +55,11 @@ class McpServerTests(unittest.TestCase):
         self.assertTrue(tools_by_name["purge_session"]["annotations"]["destructiveHint"])
         self.assertIn("approval boundary", tools_by_name["sync_approved"]["description"])
         self.assertIn("whether approval is still required", tools_by_name["sync_preflight"]["description"])
+        self.assertEqual(
+            tools_by_name["open_workbench"]["_meta"]["openai/outputTemplate"],
+            "ui://agentos-workspace/workbench.html",
+        )
+        self.assertTrue(tools_by_name["open_workbench"]["_meta"]["openai/widgetAccessible"])
         self.assertTrue(tools_by_name["sync_preflight"]["inputSchema"]["properties"]["require_signed_approval"]["default"])
         self.assertFalse(tools_by_name["sync_preflight"]["inputSchema"]["properties"]["allow_unsigned_approval"]["default"])
         self.assertTrue(tools_by_name["sync_approved"]["inputSchema"]["properties"]["require_signed_approval"]["default"])
@@ -62,6 +68,43 @@ class McpServerTests(unittest.TestCase):
         self.assertIn("human_approval_token", tools_by_name["approve_scope"]["inputSchema"]["properties"])
         self.assertIn("review_package", tools_by_name["sync_approved"]["inputSchema"]["required"])
         self.assertIn("human_approval_token", tools_by_name["sync_approved"]["inputSchema"]["properties"])
+
+    def test_workbench_resource_is_registered_and_readable(self) -> None:
+        resources = _handle_rpc({"jsonrpc": "2.0", "id": 1, "method": "resources/list", "params": {}})
+        self.assertIsNotNone(resources)
+        resource = resources["result"]["resources"][0]
+        self.assertEqual(resource["uri"], "ui://agentos-workspace/workbench.html")
+        self.assertEqual(resource["mimeType"], "text/html")
+        self.assertEqual(resource["_meta"]["openai/widgetDescription"].split()[0], "Observe")
+
+        read = _handle_rpc(
+            {
+                "jsonrpc": "2.0",
+                "id": 2,
+                "method": "resources/read",
+                "params": {"uri": "ui://agentos-workspace/workbench.html"},
+            }
+        )
+        self.assertIsNotNone(read)
+        content = read["result"]["contents"][0]
+        self.assertEqual(content["mimeType"], "text/html")
+        self.assertIn("AgentOS Workbench", content["text"])
+        self.assertIn("Approval Gate", content["text"])
+
+    def test_open_workbench_returns_widget_context(self) -> None:
+        result = _handle_rpc(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/call",
+                "params": {"name": "open_workbench", "arguments": {}},
+            }
+        )
+        self.assertIsNotNone(result)
+        content = result["result"]["structuredContent"]
+        self.assertEqual(content["resource_uri"], "ui://agentos-workspace/workbench.html")
+        self.assertIn("approval", content["panels"])
+        self.assertIn("sync_approved dry_run=false", content["dangerous_actions"])
 
     def test_tool_result_replaces_unpaired_surrogates(self) -> None:
         from agentos.mcp_server import _tool_result

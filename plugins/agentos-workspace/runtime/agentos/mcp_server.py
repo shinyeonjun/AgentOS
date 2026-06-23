@@ -13,7 +13,25 @@ from .core.platform_checks import prepare_docker_environment, run_doctor
 from .core.review import latest_review_package_path, render_review_diffs, summarize_review_package
 from .core.session_ops import approve_review_package, preflight_sync_review, sync_approved_review
 from .core.version_info import SERVER_VERSION, runtime_identity
+
 MCP_HUMAN_APPROVAL_TOKEN_ENV = "AGENTOS_MCP_HUMAN_APPROVAL_TOKEN"
+WORKBENCH_WIDGET_URI = "ui://agentos-workspace/workbench.html"
+WORKBENCH_WIDGET_MIME_TYPE = "text/html"
+WORKBENCH_WIDGET_META = {
+    "ui": {
+        "prefersBorder": False,
+        "csp": {
+            "connectDomains": [],
+            "resourceDomains": [],
+        },
+    },
+    "openai/widgetDescription": "Observe AgentOS sessions, sandbox runs, review packages, and approval gates.",
+    "openai/widgetPrefersBorder": False,
+    "openai/widgetCSP": {
+        "connect_domains": [],
+        "resource_domains": [],
+    },
+}
 
 from .core.work_sessions import (
     create_work_session,
@@ -83,7 +101,9 @@ def _handle_rpc(message: Any) -> dict[str, Any] | None:
         if method == "tools/call":
             return _rpc_response(message_id, _handle_tool_call(params))
         if method == "resources/list":
-            return _rpc_response(message_id, {"resources": []})
+            return _rpc_response(message_id, {"resources": _resource_definitions()})
+        if method == "resources/read":
+            return _rpc_response(message_id, _handle_resource_read(params))
         if method == "resources/templates/list":
             return _rpc_response(message_id, {"resourceTemplates": []})
         if method == "prompts/list":
@@ -141,6 +161,7 @@ def _handle_tool_call(params: dict[str, Any]) -> dict[str, Any]:
         "render_diff": _tool_render_diff,
         "verify_review": _tool_verify_review,
         "sync_preflight": _tool_sync_preflight,
+        "open_workbench": _tool_open_workbench,
         "approve_scope": _tool_approve_scope,
         "sync_approved": _tool_sync_approved,
         "cleanup_sessions": _tool_cleanup_sessions,
@@ -152,6 +173,39 @@ def _handle_tool_call(params: dict[str, Any]) -> dict[str, Any]:
     if name not in tools:
         raise ValueError(f"unknown AgentOS tool: {name}")
     return _tool_result(tools[name](arguments))
+
+
+def _resource_definitions() -> list[dict[str, Any]]:
+    return [
+        {
+            "uri": WORKBENCH_WIDGET_URI,
+            "name": "agentos-workbench",
+            "title": "AgentOS Workbench",
+            "description": "Session, command, sandbox, review, and approval visibility for AgentOS workspaces.",
+            "mimeType": WORKBENCH_WIDGET_MIME_TYPE,
+            "_meta": WORKBENCH_WIDGET_META,
+        }
+    ]
+
+
+def _handle_resource_read(params: dict[str, Any]) -> dict[str, Any]:
+    uri = params.get("uri")
+    if uri != WORKBENCH_WIDGET_URI:
+        raise ValueError(f"unknown AgentOS resource: {uri}")
+    return {
+        "contents": [
+            {
+                "uri": WORKBENCH_WIDGET_URI,
+                "mimeType": WORKBENCH_WIDGET_MIME_TYPE,
+                "text": _workbench_html(),
+                "_meta": WORKBENCH_WIDGET_META,
+            }
+        ]
+    }
+
+
+def _workbench_html() -> str:
+    return (Path(__file__).resolve().parent / "ui" / "workbench.html").read_text(encoding="utf-8")
 
 
 def _tool_doctor(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -275,6 +329,39 @@ def _tool_sync_preflight(arguments: dict[str, Any]) -> dict[str, Any]:
         require_clean_git=_bool_arg(arguments, "require_clean_git", False),
         require_signed_approval=_bool_arg(arguments, "require_signed_approval", not allow_unsigned),
     ).to_dict()
+
+
+def _tool_open_workbench(arguments: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "title": "AgentOS Workbench",
+        "resource_uri": WORKBENCH_WIDGET_URI,
+        "mode": "observe_and_approve",
+        "state_dir": str(_state_dir(arguments)),
+        "output_dir": str(_output_dir(arguments)),
+        "panels": [
+            "sessions",
+            "commands",
+            "sandbox",
+            "review",
+            "approval",
+        ],
+        "approval_boundary": {
+            "approve_scope": "requires host-mediated human approval",
+            "sync_approved": "non-dry-run sync requires host-mediated human approval",
+        },
+        "safe_actions": [
+            "doctor",
+            "list_sessions",
+            "session_summary",
+            "verify_review",
+            "sync_preflight",
+        ],
+        "dangerous_actions": [
+            "approve_scope",
+            "sync_approved dry_run=false",
+            "purge_session",
+        ],
+    }
 
 
 def _tool_approve_scope(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -593,6 +680,22 @@ def _tool_definitions() -> list[dict[str, Any]]:
             annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True},
         ),
         _tool_definition(
+            "open_workbench",
+            "Open the AgentOS Workbench UI for observing sessions, sandbox commands, review packages, and approval gates.",
+            common_paths,
+            annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True},
+            meta={
+                "ui": {
+                    "resourceUri": WORKBENCH_WIDGET_URI,
+                    "visibility": ["model", "app"],
+                },
+                "openai/outputTemplate": WORKBENCH_WIDGET_URI,
+                "openai/widgetAccessible": True,
+                "openai/toolInvocation/invoking": "Opening AgentOS Workbench...",
+                "openai/toolInvocation/invoked": "AgentOS Workbench ready",
+            },
+        ),
+        _tool_definition(
             "approve_scope",
             "Record explicit human approval for one explicit review package and target. Do not call without user approval.",
             {
@@ -676,6 +779,7 @@ def _tool_definition(
     *,
     required: list[str] | None = None,
     annotations: dict[str, Any] | None = None,
+    meta: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     definition = {
         "name": name,
@@ -689,6 +793,8 @@ def _tool_definition(
     }
     if annotations:
         definition["annotations"] = annotations
+    if meta:
+        definition["_meta"] = meta
     return definition
 
 

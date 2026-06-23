@@ -1,0 +1,583 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AgentOS Workbench</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f7f8fb;
+        --panel: #ffffff;
+        --panel-2: #eef2f7;
+        --text: #18202b;
+        --muted: #607084;
+        --line: #d7dde6;
+        --accent: #2563eb;
+        --ok: #15803d;
+        --warn: #b45309;
+        --bad: #b91c1c;
+        --shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0f1217;
+          --panel: #171b22;
+          --panel-2: #202630;
+          --text: #eef2f7;
+          --muted: #9aa8b8;
+          --line: #2d3542;
+          --accent: #6ea8fe;
+          --ok: #4ade80;
+          --warn: #fbbf24;
+          --bad: #fb7185;
+          --shadow: 0 18px 42px rgba(0, 0, 0, 0.22);
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        letter-spacing: 0;
+      }
+
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+
+      .shell {
+        min-height: 100vh;
+        display: grid;
+        grid-template-rows: auto 1fr;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--line);
+        background: color-mix(in srgb, var(--panel) 92%, transparent);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+      }
+
+      .mark {
+        width: 32px;
+        height: 32px;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--panel-2);
+        color: var(--accent);
+        font-weight: 800;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 17px;
+        line-height: 1.2;
+      }
+
+      .subtitle {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .status-strip {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 5px 9px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--panel);
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: minmax(190px, 0.85fr) minmax(320px, 1.6fr) minmax(260px, 1fr);
+        gap: 1px;
+        background: var(--line);
+        min-height: 0;
+      }
+
+      .pane {
+        background: var(--bg);
+        min-width: 0;
+        overflow: auto;
+      }
+
+      .pane-inner {
+        padding: 18px;
+      }
+
+      .section {
+        margin-bottom: 22px;
+      }
+
+      .section-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 10px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 750;
+        text-transform: uppercase;
+      }
+
+      .list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .row {
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--panel);
+        padding: 10px;
+        box-shadow: var(--shadow);
+      }
+
+      .row.compact {
+        box-shadow: none;
+      }
+
+      .row-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 13px;
+        font-weight: 760;
+      }
+
+      .meta {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.4;
+        overflow-wrap: anywhere;
+      }
+
+      .badge {
+        flex: 0 0 auto;
+        border-radius: 6px;
+        padding: 3px 7px;
+        font-size: 11px;
+        font-weight: 750;
+        background: var(--panel-2);
+        color: var(--muted);
+      }
+
+      .badge.ok {
+        color: var(--ok);
+      }
+
+      .badge.warn {
+        color: var(--warn);
+      }
+
+      .badge.bad {
+        color: var(--bad);
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .metric {
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--panel);
+        padding: 12px;
+      }
+
+      .metric-value {
+        font-size: 24px;
+        font-weight: 800;
+        line-height: 1;
+      }
+
+      .metric-label {
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .timeline {
+        display: grid;
+        gap: 10px;
+      }
+
+      .event {
+        display: grid;
+        grid-template-columns: 86px minmax(0, 1fr);
+        gap: 12px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--panel);
+      }
+
+      .role {
+        font-size: 11px;
+        color: var(--muted);
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+
+      code,
+      pre {
+        font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+      }
+
+      pre {
+        margin: 8px 0 0;
+        max-height: 136px;
+        overflow: auto;
+        padding: 10px;
+        border-radius: 6px;
+        background: var(--panel-2);
+        color: var(--text);
+        font-size: 11px;
+        line-height: 1.45;
+        white-space: pre-wrap;
+      }
+
+      .actions {
+        display: grid;
+        gap: 8px;
+      }
+
+      .action {
+        width: 100%;
+        min-height: 36px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--panel);
+        color: var(--text);
+        text-align: left;
+        padding: 8px 10px;
+        cursor: pointer;
+      }
+
+      .action.primary {
+        border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+        color: var(--accent);
+        font-weight: 750;
+      }
+
+      .action:disabled {
+        cursor: not-allowed;
+        color: var(--muted);
+        opacity: 0.65;
+      }
+
+      .empty {
+        border: 1px dashed var(--line);
+        border-radius: 7px;
+        padding: 14px;
+        color: var(--muted);
+        background: color-mix(in srgb, var(--panel) 72%, transparent);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      @media (max-width: 920px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .topbar {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .status-strip {
+          justify-content: flex-start;
+        }
+
+        .metrics {
+          grid-template-columns: 1fr;
+        }
+
+        .event {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="mark">A</div>
+          <div>
+            <h1>AgentOS Workbench</h1>
+            <div class="subtitle">Copied workspace visibility and approval-gated sync</div>
+          </div>
+        </div>
+        <div class="status-strip">
+          <span class="pill" id="mode">observe_and_approve</span>
+          <span class="pill" id="stateDir">state: default</span>
+          <span class="pill" id="outputDir">output: default</span>
+        </div>
+      </header>
+
+      <section class="grid" aria-label="AgentOS workbench">
+        <aside class="pane">
+          <div class="pane-inner">
+            <div class="section">
+              <div class="section-title">Sessions <span id="sessionCount">0</span></div>
+              <div class="list" id="sessions"></div>
+            </div>
+
+            <div class="section">
+              <div class="section-title">Safe Tools</div>
+              <div class="list" id="safeActions"></div>
+            </div>
+          </div>
+        </aside>
+
+        <section class="pane">
+          <div class="pane-inner">
+            <div class="section">
+              <div class="section-title">Run State</div>
+              <div class="metrics">
+                <div class="metric">
+                  <div class="metric-value" id="commandCount">0</div>
+                  <div class="metric-label">commands</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-value" id="changedCount">0</div>
+                  <div class="metric-label">changed files</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-value" id="blockerCount">0</div>
+                  <div class="metric-label">blockers</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="section">
+              <div class="section-title">Timeline</div>
+              <div class="timeline" id="timeline"></div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="pane">
+          <div class="pane-inner">
+            <div class="section">
+              <div class="section-title">Review</div>
+              <div class="list" id="review"></div>
+            </div>
+
+            <div class="section">
+              <div class="section-title">Approval Gate</div>
+              <div class="actions">
+                <button class="action" id="verifyReview" type="button">Verify review package</button>
+                <button class="action" id="syncPreflight" type="button">Run sync preflight</button>
+                <button class="action primary" id="approveSync" type="button">Approve and sync selected scope</button>
+              </div>
+              <div class="empty" id="approvalNote">
+                Real mutation still requires host-mediated approval. This panel should request a token
+                from the host before approve_scope or non-dry-run sync_approved.
+              </div>
+            </div>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <script>
+      const fallback = {
+        title: "AgentOS Workbench",
+        mode: "observe_and_approve",
+        state_dir: "default",
+        output_dir: "default",
+        panels: ["sessions", "commands", "sandbox", "review", "approval"],
+        safe_actions: ["doctor", "list_sessions", "session_summary", "verify_review", "sync_preflight"],
+        dangerous_actions: ["approve_scope", "sync_approved dry_run=false", "purge_session"],
+        approval_boundary: {
+          approve_scope: "requires host-mediated human approval",
+          sync_approved: "non-dry-run sync requires host-mediated human approval",
+        },
+      };
+
+      const state = {
+        data: fallback,
+        toolResult: null,
+      };
+
+      function getToolData() {
+        const candidates = [
+          window.openai && window.openai.toolResult,
+          window.__OPENAI_TOOL_RESULT__,
+          window.__AGENTOS_WORKBENCH_DATA__,
+        ];
+        return candidates.find((item) => item && typeof item === "object") || fallback;
+      }
+
+      function setText(id, text) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text;
+      }
+
+      function badgeClass(status) {
+        const value = String(status || "").toLowerCase();
+        if (["passed", "complete", "ready", "ok", "synced"].includes(value)) return "ok";
+        if (["failed", "blocked", "error"].includes(value)) return "bad";
+        if (["warning", "missing", "pending"].includes(value)) return "warn";
+        return "";
+      }
+
+      function row({ name, meta = "", badge = "" }) {
+        const cls = badgeClass(badge);
+        return [
+          '<div class="row compact">',
+          '<div class="row-head">',
+          `<div class="name">${escapeHtml(name)}</div>`,
+          badge ? `<span class="badge ${cls}">${escapeHtml(badge)}</span>` : "",
+          "</div>",
+          meta ? `<div class="meta">${escapeHtml(meta)}</div>` : "",
+          "</div>",
+        ].join("");
+      }
+
+      function empty(text) {
+        return `<div class="empty">${escapeHtml(text)}</div>`;
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      function render() {
+        const data = getToolData();
+        state.data = data.structuredContent || data;
+
+        setText("mode", state.data.mode || "observe");
+        setText("stateDir", `state: ${state.data.state_dir || "default"}`);
+        setText("outputDir", `output: ${state.data.output_dir || "default"}`);
+
+        const sessions = state.data.sessions || state.data.recent_sessions || [];
+        setText("sessionCount", sessions.length);
+        document.getElementById("sessions").innerHTML = sessions.length
+          ? sessions
+              .map((session) =>
+                row({
+                  name: session.name || session.session_id || "session",
+                  meta: session.workspace_path || session.input_path || "",
+                  badge: session.state || session.validation_status || "",
+                }),
+              )
+              .join("")
+          : empty("Open with list_sessions or session_summary results to populate live sessions.");
+
+        const safeActions = state.data.safe_actions || fallback.safe_actions;
+        document.getElementById("safeActions").innerHTML = safeActions
+          .map((name) => row({ name, meta: "safe read or preflight action" }))
+          .join("");
+
+        const commands = state.data.tool_calls || state.data.commands || [];
+        const changed = state.data.changed_files || state.data.planned_paths || [];
+        const blockers = state.data.blockers || [];
+        setText("commandCount", commands.length);
+        setText("changedCount", changed.length);
+        setText("blockerCount", blockers.length);
+
+        document.getElementById("timeline").innerHTML = commands.length
+          ? commands
+              .slice(-12)
+              .map((cmd) => {
+                const command = Array.isArray(cmd.command) ? cmd.command.join(" ") : cmd.command || "";
+                const detail = cmd.stdout_tail || cmd.stderr_tail || command || cmd.cwd || "";
+                return [
+                  '<div class="event">',
+                  `<div><div class="role">${escapeHtml(cmd.role || "run")}</div><span class="badge ${badgeClass(cmd.status)}">${escapeHtml(cmd.status || cmd.exit_code || "done")}</span></div>`,
+                  `<div><div class="name">${escapeHtml(command || "command")}</div><div class="meta">${escapeHtml(cmd.cwd || "")}</div>${detail ? `<pre>${escapeHtml(detail)}</pre>` : ""}</div>`,
+                  "</div>",
+                ].join("");
+              })
+              .join("")
+          : empty("Command events appear here after session_status or session_summary data is supplied.");
+
+        const reviewItems = [
+          ["review package", state.data.review_package_artifact || state.data.review_package_path],
+          ["validation", state.data.validation_status],
+          ["approval", state.data.approval_verification_status],
+          ["sync", state.data.next_action],
+        ].filter((item) => item[1]);
+        document.getElementById("review").innerHTML = reviewItems.length
+          ? reviewItems.map(([name, meta]) => row({ name, meta, badge: meta })).join("")
+          : empty("Review package, diff, and sync preflight details appear here.");
+
+        const hasBridge = Boolean(window.openai && typeof window.openai.callTool === "function");
+        for (const id of ["verifyReview", "syncPreflight", "approveSync"]) {
+          document.getElementById(id).disabled = !hasBridge;
+        }
+        if (!hasBridge) {
+          setText(
+            "approvalNote",
+            "Action buttons are waiting for a host bridge. The approval boundary remains enforced by MCP tokens.",
+          );
+        }
+      }
+
+      render();
+      window.addEventListener("message", render);
+    </script>
+  </body>
+</html>
