@@ -140,22 +140,40 @@ echo "== AgentOS sample E2E =="
 echo "sample_root: $sample_root"
 echo "worker: $([[ "$real_codex" -eq 1 ]] && echo real-codex || echo fake-codex)"
 
-run_json="$(
-  agentos_cmd run \
+create_json="$(
+  agentos_cmd session create \
     --state-dir "$state_dir" \
     --output-dir "$output_dir" \
     --input "$source_dir" \
-    --task 'Update README.md by adding a concise Usage section for running python3 app.py. Only edit README.md.' \
-    --codex-bin "$worker_bin" \
-    --execute \
+    --name sample-e2e \
     --json
 )"
-printf '%s\n' "$run_json" >"$sample_root/run.json"
-session_id="$(printf '%s\n' "$run_json" | json_get '"session_id"')"
+printf '%s\n' "$create_json" >"$sample_root/create.json"
+session_id="$(printf '%s\n' "$create_json" | json_get '"session_id"')"
+
+exec_json="$(
+  agentos_cmd session exec \
+    --state-dir "$state_dir" \
+    --output-dir "$output_dir" \
+    --role edit \
+    "$session_id" \
+    -- "$worker_bin"
+)"
+printf '%s\n' "$exec_json" >"$sample_root/exec.json"
+
+validation_json="$(
+  agentos_cmd session exec \
+    --state-dir "$state_dir" \
+    --output-dir "$output_dir" \
+    --role validation \
+    "$session_id" \
+    -- python3 app.py
+)"
+printf '%s\n' "$validation_json" >"$sample_root/validation.json"
 
 echo
 echo "== Review =="
-agentos_cmd review --state-dir "$state_dir" --latest
+agentos_cmd session review --state-dir "$state_dir" --output-dir "$output_dir" "$session_id"
 
 echo
 echo "== Diff =="
