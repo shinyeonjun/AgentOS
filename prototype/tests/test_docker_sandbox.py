@@ -119,6 +119,7 @@ class DockerSandboxTests(unittest.TestCase):
                 "        artifacts = args[index + 1][:-len(':/agentos/artifacts')]\n"
                 "if artifacts:\n"
                 "    Path(artifacts, 'result.txt').write_text('ok\\n', encoding='utf-8')\n"
+                "    Path(artifacts, 'sandbox-policy.json').write_text('{\"tampered_by_container\": true}', encoding='utf-8')\n"
                 "raise SystemExit(0)\n",
             )
 
@@ -142,6 +143,9 @@ class DockerSandboxTests(unittest.TestCase):
             self.assertEqual(provenance_artifact["status"], "unavailable")
             self.assertEqual(capability_artifact["capabilities"][0]["name"], "base")
             self.assertEqual(command_artifact["policy_status"], "passed")
+            self.assertTrue(command_artifact["worker_artifact_dir"].endswith("container-output"))
+            self.assertTrue((Path(command_artifact["worker_artifact_dir"]) / "sandbox-policy.json").exists())
+            self.assertNotIn("tampered_by_container", policy_artifact)
             self.assertEqual(command_artifact["policy_ref"], f"artifact://{result.session_id}/sandbox-policy.json")
             self.assertEqual(command_artifact["capabilities_ref"], f"artifact://{result.session_id}/image-capabilities.json")
             self.assertEqual(command_artifact["image_provenance_ref"], f"artifact://{result.session_id}/image-provenance.json")

@@ -338,6 +338,8 @@ def docker_exec_work_session(
     workspace_root = _require_live_workspace(session)
     artifact_dir = runtime.artifacts_dir / session.session_id
     artifact_dir.mkdir(parents=True, exist_ok=True)
+    worker_artifact_dir = artifact_dir / "container-output"
+    worker_artifact_dir.mkdir(parents=True, exist_ok=True)
     suffix = uuid.uuid4().hex[:8]
 
     ensure_docker_environment(image=image, docker_bin=docker_bin, use_sudo=use_sudo)
@@ -355,7 +357,7 @@ def docker_exec_work_session(
         image=run_image,
         network="none",
         workspace_dir=workspace_root,
-        artifact_dir=artifact_dir,
+        artifact_dir=worker_artifact_dir,
     )
     policy_validation = validate_sandbox_policy(policy)
     policy_artifact = runtime.write_json_artifact(
@@ -377,7 +379,7 @@ def docker_exec_work_session(
     )
     docker_command = build_docker_run_command(
         workspace_dir=workspace_root,
-        artifact_dir=artifact_dir,
+        artifact_dir=worker_artifact_dir,
         command=command,
         image=run_image,
         docker_bin=docker_bin,
@@ -397,6 +399,7 @@ def docker_exec_work_session(
             "capabilities_ref": artifact_ref(session.session_id, capability_artifact),
             "workspace_mount": "/agentos/work",
             "artifact_mount": "/agentos/artifacts",
+            "worker_artifact_dir": str(worker_artifact_dir),
             "command": docker_command,
         },
     )

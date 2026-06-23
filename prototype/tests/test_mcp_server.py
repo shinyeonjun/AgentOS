@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import subprocess
 import sys
 import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
+from unittest.mock import patch
 
 from agentos.mcp_server import _handle_rpc, _write_rpc
 
@@ -57,7 +59,9 @@ class McpServerTests(unittest.TestCase):
         self.assertTrue(tools_by_name["sync_approved"]["inputSchema"]["properties"]["require_signed_approval"]["default"])
         self.assertFalse(tools_by_name["sync_approved"]["inputSchema"]["properties"]["allow_unsigned_approval"]["default"])
         self.assertIn("review_package", tools_by_name["approve_scope"]["inputSchema"]["required"])
+        self.assertIn("human_approval_token", tools_by_name["approve_scope"]["inputSchema"]["properties"])
         self.assertIn("review_package", tools_by_name["sync_approved"]["inputSchema"]["required"])
+        self.assertIn("human_approval_token", tools_by_name["sync_approved"]["inputSchema"]["properties"])
 
     def test_tool_result_replaces_unpaired_surrogates(self) -> None:
         from agentos.mcp_server import _tool_result
@@ -391,7 +395,7 @@ class McpServerTests(unittest.TestCase):
             self.assertFalse(preflight_data["safe_to_sync"])
             self.assertEqual(preflight_data["planned_paths"], ["README.md"])
 
-            approve = _handle_rpc(
+            blocked_approve = _handle_rpc(
                 {
                     "jsonrpc": "2.0",
                     "id": 6,
@@ -408,7 +412,54 @@ class McpServerTests(unittest.TestCase):
                     },
                 }
             )
+            self.assertIsNotNone(blocked_approve)
+            self.assertTrue(blocked_approve["result"]["isError"])
+            self.assertIn("human approval token", blocked_approve["result"]["structuredContent"]["error"])
+
+            with patch.dict(os.environ, {"AGENTOS_MCP_HUMAN_APPROVAL_TOKEN": "test-token"}):
+                approve = _handle_rpc(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 6,
+                        "method": "tools/call",
+                        "params": {
+                            "name": "approve_scope",
+                            "arguments": {
+                                "project_dir": str(target),
+                                "review_package": review_package,
+                                "scope_id": "sync_selected:README.md",
+                                "human_approval_token": "test-token",
+                                "state_dir": str(state_dir),
+                                "output_dir": str(output_dir),
+                            },
+                        },
+                    }
+                )
             self.assertIsNotNone(approve)
+
+            blocked_sync = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 61,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "sync_approved",
+                        "arguments": {
+                            "project_dir": str(target),
+                            "review_package": review_package,
+                            "scope_id": "sync_selected:README.md",
+                            "dry_run": False,
+                            "allow_unsigned_approval": True,
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                        },
+                    },
+                }
+            )
+            self.assertIsNotNone(blocked_sync)
+            self.assertTrue(blocked_sync["result"]["isError"])
+            self.assertIn("human approval token", blocked_sync["result"]["structuredContent"]["error"])
+            self.assertEqual((target / "README.md").read_text(encoding="utf-8"), "hello\n")
 
             strict_preflight = _handle_rpc(
                 {
@@ -546,23 +597,25 @@ class McpServerTests(unittest.TestCase):
             self.assertEqual(review["result"]["structuredContent"]["validation_status"], "failed")
             review_package = review["result"]["structuredContent"]["review_package_artifact"]
 
-            approve = _handle_rpc(
-                {
-                    "jsonrpc": "2.0",
-                    "id": 4,
-                    "method": "tools/call",
-                    "params": {
-                        "name": "approve_scope",
-                        "arguments": {
-                            "project_dir": str(target),
-                            "review_package": review_package,
-                            "scope_id": "sync_selected:README.md",
-                            "state_dir": str(state_dir),
-                            "output_dir": str(output_dir),
+            with patch.dict(os.environ, {"AGENTOS_MCP_HUMAN_APPROVAL_TOKEN": "test-token"}):
+                approve = _handle_rpc(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 4,
+                        "method": "tools/call",
+                        "params": {
+                            "name": "approve_scope",
+                            "arguments": {
+                                "project_dir": str(target),
+                                "review_package": review_package,
+                                "scope_id": "sync_selected:README.md",
+                                "human_approval_token": "test-token",
+                                "state_dir": str(state_dir),
+                                "output_dir": str(output_dir),
+                            },
                         },
-                    },
-                }
-            )
+                    }
+                )
             self.assertIsNotNone(approve)
             self.assertTrue(approve["result"]["isError"])
             self.assertIn("review validation is not passed: failed", approve["result"]["structuredContent"]["error"])

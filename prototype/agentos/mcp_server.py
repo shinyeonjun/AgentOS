@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hmac
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any, Callable
@@ -11,6 +13,8 @@ from .core.platform_checks import prepare_docker_environment, run_doctor
 from .core.review import latest_review_package_path, render_review_diffs, summarize_review_package
 from .core.session_ops import approve_review_package, preflight_sync_review, sync_approved_review
 from .core.version_info import SERVER_VERSION, runtime_identity
+MCP_HUMAN_APPROVAL_TOKEN_ENV = "AGENTOS_MCP_HUMAN_APPROVAL_TOKEN"
+
 from .core.work_sessions import (
     create_work_session,
     cleanup_work_sessions,
@@ -274,6 +278,7 @@ def _tool_sync_preflight(arguments: dict[str, Any]) -> dict[str, Any]:
 
 
 def _tool_approve_scope(arguments: dict[str, Any]) -> dict[str, Any]:
+    _require_human_mutation_authority(arguments, operation="approve_scope")
     return approve_review_package(
         state_dir=_state_dir(arguments),
         output_dir=_output_dir(arguments),
@@ -286,6 +291,9 @@ def _tool_approve_scope(arguments: dict[str, Any]) -> dict[str, Any]:
 
 
 def _tool_sync_approved(arguments: dict[str, Any]) -> dict[str, Any]:
+    dry_run = _bool_arg(arguments, "dry_run", True)
+    if not dry_run:
+        _require_human_mutation_authority(arguments, operation="sync_approved")
     allow_unsigned = _bool_arg(arguments, "allow_unsigned_approval", False)
     return sync_approved_review(
         state_dir=_state_dir(arguments),
@@ -293,10 +301,22 @@ def _tool_sync_approved(arguments: dict[str, Any]) -> dict[str, Any]:
         target_dir=_required_path(arguments, "project_dir"),
         review_package_path=_required_path(arguments, "review_package"),
         latest=False,
-        dry_run=_bool_arg(arguments, "dry_run", True),
+        dry_run=dry_run,
         require_clean_git=_bool_arg(arguments, "require_clean_git", False),
         require_signed_approval=_bool_arg(arguments, "require_signed_approval", not allow_unsigned),
     ).to_dict()
+
+
+def _require_human_mutation_authority(arguments: dict[str, Any], *, operation: str) -> None:
+    expected = os.environ.get(MCP_HUMAN_APPROVAL_TOKEN_ENV, "")
+    provided = str(arguments.get("human_approval_token") or "")
+    if not expected:
+        raise PermissionError(
+            f"{operation} requires a host-provided human approval token; "
+            f"set {MCP_HUMAN_APPROVAL_TOKEN_ENV} only in a trusted host approval flow"
+        )
+    if not provided or not hmac.compare_digest(provided, expected):
+        raise PermissionError(f"{operation} requires a valid host-provided human approval token")
 
 
 def _tool_cleanup_sessions(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -580,6 +600,7 @@ def _tool_definitions() -> list[dict[str, Any]]:
                 "project_dir": _string_schema("Target project directory this approval may sync to."),
                 "scope_id": _string_schema("Approval scope id. Defaults to the first scope."),
                 "approver": {"type": "string", "default": "human"},
+                "human_approval_token": _string_schema("Opaque token supplied by a trusted host approval flow."),
             },
             required=["project_dir", "review_package"],
             annotations={"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False},
@@ -598,6 +619,7 @@ def _tool_definitions() -> list[dict[str, Any]]:
                     "default": False,
                     "description": "Development escape hatch. Set true only when unsigned local approvals are acceptable.",
                 },
+                "human_approval_token": _string_schema("Opaque token supplied by a trusted host approval flow for non-dry-run sync."),
             },
             required=["project_dir", "review_package"],
             annotations={"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False},

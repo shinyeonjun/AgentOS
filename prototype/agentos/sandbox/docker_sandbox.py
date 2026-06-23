@@ -136,6 +136,8 @@ def run_docker_task(
     workspace_path = runtime.import_input(session, input_path)
     artifact_dir = runtime.artifacts_dir / session.session_id
     artifact_dir.mkdir(parents=True, exist_ok=True)
+    worker_artifact_dir = artifact_dir / "container-output"
+    worker_artifact_dir.mkdir(parents=True, exist_ok=True)
     ensure_docker_environment(image=image, docker_bin=docker_bin, use_sudo=use_sudo)
     image_provenance = inspect_image_provenance(
         image=image,
@@ -151,7 +153,7 @@ def run_docker_task(
         image=run_image,
         network="none",
         workspace_dir=workspace_path,
-        artifact_dir=artifact_dir,
+        artifact_dir=worker_artifact_dir,
     )
     policy_validation = validate_sandbox_policy(policy)
     policy_artifact = runtime.write_json_artifact(
@@ -173,7 +175,7 @@ def run_docker_task(
     )
     docker_command = build_docker_run_command(
         workspace_dir=workspace_path,
-        artifact_dir=artifact_dir,
+        artifact_dir=worker_artifact_dir,
         command=command,
         image=run_image,
         docker_bin=docker_bin,
@@ -202,6 +204,7 @@ def run_docker_task(
             "capabilities_ref": artifact_ref(session.session_id, capability_artifact),
             "workspace_mount": "/agentos/work",
             "artifact_mount": "/agentos/artifacts",
+            "worker_artifact_dir": str(worker_artifact_dir),
             "command": docker_command,
         },
     )
