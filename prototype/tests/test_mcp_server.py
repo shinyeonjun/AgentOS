@@ -200,7 +200,7 @@ class McpServerTests(unittest.TestCase):
             target.mkdir()
             plugin_root = Path(__file__).resolve().parents[2] / "plugins" / "agentos-workspace"
             process = subprocess.Popen(
-                ["node", str(plugin_root / "agentos_mcp_launcher.cjs")],
+                ["node", str(plugin_root / "mcp" / "server.mjs"), "--stdio"],
                 cwd=plugin_root,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
@@ -1054,7 +1054,7 @@ class McpServerTests(unittest.TestCase):
         repo_root = Path(__file__).resolve().parents[2]
         request = {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}
         result = subprocess.run(
-            ["node", str(repo_root / "plugins" / "agentos-workspace" / "agentos_mcp_launcher.cjs")],
+            ["node", str(repo_root / "plugins" / "agentos-workspace" / "mcp" / "server.mjs"), "--stdio"],
             input=json.dumps(request) + "\n",
             text=True,
             capture_output=True,

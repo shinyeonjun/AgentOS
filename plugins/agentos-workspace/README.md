@@ -60,7 +60,7 @@ Add the AgentOS repository as a Codex plugin marketplace, then install
 The plugin packages the AgentOS Python runtime and starts its MCP server with:
 
 ```bash
-node ./agentos_mcp_launcher.cjs
+node ./mcp/server.mjs --stdio
 ```
 
 OpenAI's Codex plugin model lets a plugin bundle skills and MCP servers. In
@@ -177,7 +177,7 @@ Useful options:
 node scripts/setup-codex-mcp.cjs --check
 node scripts/setup-codex-mcp.cjs --dry-run
 node scripts/setup-codex-mcp.cjs --server-name agentos-local
-node scripts/setup-codex-mcp.cjs --launcher /absolute/path/to/agentos_mcp_launcher.cjs
+node scripts/setup-codex-mcp.cjs --launcher /absolute/path/to/mcp/server.mjs
 node scripts/setup-codex-mcp.cjs --force
 ```
 

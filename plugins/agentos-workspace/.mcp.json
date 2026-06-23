@@ -5,7 +5,8 @@
       "description": "Create safe copied workspaces, run checks, build review packages, and sync only approved changes.",
       "cwd": ".",
       "command": "node",
-      "args": ["./agentos_mcp_launcher.cjs"]
+      "args": ["./mcp/server.mjs", "--stdio"],
+      "tool_timeout_sec": 60
     }
   }
 }

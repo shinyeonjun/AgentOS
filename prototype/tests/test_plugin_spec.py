@@ -83,7 +83,10 @@ class PluginSpecTests(unittest.TestCase):
         server = mcp_config["mcpServers"]["agentos"]
         self.assertEqual(server["cwd"], ".")
         self.assertEqual(server["command"], "node")
-        self.assertEqual(server["args"], ["./agentos_mcp_launcher.cjs"])
+        self.assertEqual(server["args"], ["./mcp/server.mjs", "--stdio"])
+        self.assertEqual(server["tool_timeout_sec"], 60)
+        self.assertTrue((plugin_root / "mcp" / "server.mjs").exists())
+        self.assertTrue((plugin_root / "mcp" / "python-bridge.mjs").exists())
         self.assertTrue((plugin_root / "runtime" / "agentos" / "mcp_server.py").exists())
         self.assertTrue((plugin_root / "agents" / "openai.yaml").exists())
         self.assertTrue((plugin_root / "skills" / "agentos-setup" / "SKILL.md").exists())
@@ -146,6 +149,8 @@ class PluginSpecTests(unittest.TestCase):
             self.assertTrue(shim.exists())
             shim_text = shim.read_text(encoding="utf-8")
             self.assertIn("path.resolve(fallbackPluginRoot)", shim_text)
+            self.assertIn('path.join(pluginRoot, "mcp", "server.mjs")', shim_text)
+            self.assertIn('[launcher, "--stdio"]', shim_text)
             self.assertNotIn("resolveLatestPluginRoot", shim_text)
             self.assertNotIn("readdirSync", shim_text)
 
@@ -171,7 +176,7 @@ class PluginSpecTests(unittest.TestCase):
                 "# BEGIN AgentOS Workspace MCP\n"
                 "[mcp_servers.agentos]\n"
                 'command = "node"\n'
-                'args = ["C:\\\\Users\\\\x\\\\.codex\\\\plugins\\\\cache\\\\agentos\\\\agentos-workspace\\\\0.4.1\\\\agentos_mcp_launcher.cjs"]\n'
+                'args = ["C:\\\\Users\\\\x\\\\.codex\\\\plugins\\\\cache\\\\agentos\\\\agentos-workspace\\\\0.4.1\\\\mcp\\\\server.mjs"]\n'
                 'cwd = "C:\\\\Users\\\\x\\\\.codex\\\\plugins\\\\cache\\\\agentos\\\\agentos-workspace\\\\0.4.1"\n'
                 "# END AgentOS Workspace MCP\n",
                 encoding="utf-8",
@@ -228,7 +233,11 @@ class PluginSpecTests(unittest.TestCase):
 
     def test_codex_plugin_launcher_handles_windows_python_aliases(self) -> None:
         repo_root = Path(__file__).resolve().parents[2]
-        launcher = (repo_root / "plugins" / "agentos-workspace" / "agentos_mcp_launcher.cjs").read_text(
+        launcher = (repo_root / "plugins" / "agentos-workspace" / "mcp" / "python-bridge.mjs").read_text(
+            encoding="utf-8"
+        )
+        server = (repo_root / "plugins" / "agentos-workspace" / "mcp" / "server.mjs").read_text(encoding="utf-8")
+        legacy_launcher = (repo_root / "plugins" / "agentos-workspace" / "agentos_mcp_launcher.cjs").read_text(
             encoding="utf-8"
         )
 
@@ -239,14 +248,15 @@ class PluginSpecTests(unittest.TestCase):
         self.assertIn("stderr tail", launcher)
         self.assertIn("PYTHONUTF8", launcher)
         self.assertIn("PYTHONIOENCODING", launcher)
-        self.assertIn("const pluginRoot = path.resolve(__dirname);", launcher)
+        self.assertIn("pluginRootFromImportMeta(import.meta.url)", server)
+        self.assertIn('path.join(pluginRoot, "mcp", "server.mjs")', legacy_launcher)
         self.assertNotIn("resolveLatestPluginRoot", launcher)
         self.assertNotIn("readdirSync", launcher)
         self.assertIn("tryNext();", launcher)
 
     def test_node_launcher_distinguishes_python_crash_from_missing_python(self) -> None:
         repo_root = Path(__file__).resolve().parents[2]
-        launcher = repo_root / "plugins" / "agentos-workspace" / "agentos_mcp_launcher.cjs"
+        launcher = repo_root / "plugins" / "agentos-workspace" / "mcp" / "server.mjs"
         node = shutil.which("node")
         self.assertIsNotNone(node)
 
