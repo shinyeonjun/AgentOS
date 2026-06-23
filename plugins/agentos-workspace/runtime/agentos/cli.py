@@ -7,9 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .cli_args import (
-    add_codex_task_args,
     add_json_arg,
-    add_keep_session_arg,
     add_output_dir_arg,
     add_review_package_selector,
     add_state_dir_arg,
@@ -41,16 +39,18 @@ from .core.work_sessions import (
     status_work_session,
     summarize_work_session,
 )
-from .demos.demo import run_code_fix_demo
-from .demos.document_demo import run_markdown_document_demo
-from .demos.rehearsal import run_rehearsal
 from .mcp_server import run_stdio as run_mcp_stdio
 from .sandbox.docker_sandbox import DEFAULT_IMAGE, run_docker_task
-from .workers.codex_adapter import run_codex_session_task, run_codex_task
-from .workers.codex_smoke import run_codex_smoke
 
 DEFAULT_STATE_DIR = Path(".agentos-state")
 DEFAULT_OUTPUT_DIR = Path(".agentos-output")
+VISIBLE_SESSION_COMMANDS = "list,create,exec,docker-exec,status,summary,review"
+MAINTENANCE_SESSION_COMMANDS = ("cleanup", "repair", "debug-bundle", "destroy", "purge")
+
+
+def _hide_subparser_help(subparsers: argparse._SubParsersAction, *names: str) -> None:
+    hidden = set(names)
+    subparsers._choices_actions[:] = [action for action in subparsers._choices_actions if action.dest not in hidden]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -62,58 +62,9 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _main_impl(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(prog="agentos", description="AgentOS v0.2 prototype CLI")
+    parser = argparse.ArgumentParser(prog="agentos", description="AgentOS plugin safety-kernel CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    demo_public = subparsers.add_parser("demo", help="Run the 60-second review-before-sync demo")
-    add_state_dir_arg(demo_public, default=DEFAULT_STATE_DIR)
-    add_output_dir_arg(demo_public, default=DEFAULT_OUTPUT_DIR)
-    add_keep_session_arg(demo_public)
-    add_json_arg(demo_public, noun="demo output")
-    demo = subparsers.add_parser("run-demo", help="Run the deterministic code-fix demo loop")
-    add_state_dir_arg(demo, default=DEFAULT_STATE_DIR)
-    add_output_dir_arg(demo, default=DEFAULT_OUTPUT_DIR)
-    add_keep_session_arg(demo)
-    add_json_arg(demo, noun="result output")
-    doc_demo = subparsers.add_parser("run-doc-demo", help="Run the deterministic Markdown document demo loop")
-    add_state_dir_arg(doc_demo, default=DEFAULT_STATE_DIR)
-    add_output_dir_arg(doc_demo, default=DEFAULT_OUTPUT_DIR)
-    add_keep_session_arg(doc_demo)
-    add_json_arg(doc_demo, noun="result output")
-    rehearse = subparsers.add_parser("rehearse", help="Run the AgentOS end-to-end rehearsal suite")
-    add_state_dir_arg(rehearse, default=DEFAULT_STATE_DIR)
-    add_output_dir_arg(rehearse, default=DEFAULT_OUTPUT_DIR)
-    rehearse.add_argument(
-        "--docker-bin",
-        default="docker",
-        help="Docker executable name or path",
-    )
-    rehearse.add_argument(
-        "--docker-sudo",
-        action="store_true",
-        help="Run Docker through sudo for shells that do not have docker-group access yet",
-    )
-    rehearse.add_argument(
-        "--docker-image",
-        default=DEFAULT_IMAGE,
-        help="Docker image to use for the Docker policy step",
-    )
-    rehearse.add_argument(
-        "--skip-docker",
-        action="store_true",
-        help="Skip the Docker policy step when Docker is unavailable",
-    )
-    rehearse.add_argument(
-        "--include-real-worker",
-        action="store_true",
-        help="Execute the real Codex worker smoke step. This may spend Codex tokens.",
-    )
-    rehearse.add_argument(
-        "--codex-bin",
-        default="codex",
-        help="Codex executable name or path for --include-real-worker",
-    )
-    add_json_arg(rehearse, noun="rehearsal output")
     doctor = subparsers.add_parser("doctor", help="Check whether the local runtime environment can run AgentOS")
     doctor.add_argument(
         "--workspace",
@@ -164,7 +115,11 @@ def _main_impl(argv: list[str]) -> int:
     mcp_subparsers = mcp.add_subparsers(dest="mcp_command", required=True)
     mcp_subparsers.add_parser("serve", help="Run the AgentOS MCP stdio server")
     session = subparsers.add_parser("session", help="Create and operate persistent AgentOS workspace sessions")
-    session_subparsers = session.add_subparsers(dest="session_command", required=True)
+    session_subparsers = session.add_subparsers(
+        dest="session_command",
+        required=True,
+        metavar="{" + VISIBLE_SESSION_COMMANDS + "}",
+    )
     session_list = session_subparsers.add_parser("list", help="List persistent AgentOS workspace sessions")
     add_state_dir_arg(session_list, default=DEFAULT_STATE_DIR)
     add_json_arg(session_list, noun="session list output")
@@ -203,32 +158,6 @@ def _main_impl(argv: list[str]) -> int:
     )
     session_docker_exec.add_argument("sandbox_command", nargs=argparse.REMAINDER, help="Command to run after --")
     add_json_arg(session_docker_exec, noun="session Docker exec output")
-    session_codex = session_subparsers.add_parser(
-        "codex",
-        help="Run or prepare Codex inside an existing persistent workspace session",
-    )
-    add_state_dir_arg(session_codex, default=DEFAULT_STATE_DIR)
-    add_output_dir_arg(session_codex, default=DEFAULT_OUTPUT_DIR)
-    session_codex.add_argument("session_ref", help="Session id, id prefix, or name")
-    session_codex.add_argument("--task", required=True, help="Task prompt to pass to Codex")
-    session_codex.add_argument("--codex-bin", default="codex", help="Codex executable name or path")
-    session_codex.add_argument(
-        "--execute",
-        action="store_true",
-        help="Actually run Codex. Without this flag, only prepare artifacts in the session.",
-    )
-    session_codex.add_argument(
-        "--docker",
-        action="store_true",
-        help="Record the target AgentOS Docker runtime image for this host-side Codex worker session",
-    )
-    session_codex.add_argument("--docker-image", default=DEFAULT_IMAGE, help="Docker image to use with --docker")
-    session_codex.add_argument(
-        "--docker-network",
-        default="none",
-        help="Target AgentOS runtime network policy metadata for --docker. Default is none.",
-    )
-    add_json_arg(session_codex, noun="session Codex output")
     session_status = session_subparsers.add_parser("status", help="Inspect one persistent session or list sessions")
     add_state_dir_arg(session_status, default=DEFAULT_STATE_DIR)
     session_status.add_argument("session_ref", nargs="?", help="Session id, id prefix, or name")
@@ -242,27 +171,27 @@ def _main_impl(argv: list[str]) -> int:
     add_output_dir_arg(session_review, default=DEFAULT_OUTPUT_DIR)
     session_review.add_argument("session_ref", help="Session id, id prefix, or name")
     add_json_arg(session_review, noun="session review output")
-    session_cleanup = session_subparsers.add_parser("cleanup", help="Remove older AgentOS session records and artifacts")
+    session_cleanup = session_subparsers.add_parser("cleanup", help=argparse.SUPPRESS)
     add_state_dir_arg(session_cleanup, default=DEFAULT_STATE_DIR)
     add_output_dir_arg(session_cleanup, default=DEFAULT_OUTPUT_DIR)
     session_cleanup.add_argument("--keep-latest", type=int, default=10, help="Keep this many newest sessions")
     session_cleanup.add_argument("--dry-run", action="store_true", default=True, help="Preview cleanup without deleting")
     session_cleanup.add_argument("--execute", action="store_false", dest="dry_run", help="Actually remove cleanup candidates")
     add_json_arg(session_cleanup, noun="session cleanup output")
-    session_repair = session_subparsers.add_parser("repair", help="Inspect or repair lightweight session state issues")
+    session_repair = session_subparsers.add_parser("repair", help=argparse.SUPPRESS)
     add_state_dir_arg(session_repair, default=DEFAULT_STATE_DIR)
     add_output_dir_arg(session_repair, default=DEFAULT_OUTPUT_DIR)
     session_repair.add_argument("session_ref", help="Session id, id prefix, or name")
     session_repair.add_argument("--fix", action="store_true", help="Apply safe metadata/artifact-directory repairs")
     add_json_arg(session_repair, noun="session repair output")
-    session_debug = session_subparsers.add_parser("debug-bundle", help="Export session metadata and artifacts for debugging")
+    session_debug = session_subparsers.add_parser("debug-bundle", help=argparse.SUPPRESS)
     add_state_dir_arg(session_debug, default=DEFAULT_STATE_DIR)
     add_output_dir_arg(session_debug, default=DEFAULT_OUTPUT_DIR)
     session_debug.add_argument("session_ref", help="Session id, id prefix, or name")
     add_json_arg(session_debug, noun="debug bundle output")
     session_destroy = session_subparsers.add_parser(
         "destroy",
-        help="Destroy a persistent session workspace while keeping metadata and artifacts",
+        help=argparse.SUPPRESS,
     )
     add_state_dir_arg(session_destroy, default=DEFAULT_STATE_DIR)
     add_output_dir_arg(session_destroy, default=DEFAULT_OUTPUT_DIR)
@@ -270,12 +199,13 @@ def _main_impl(argv: list[str]) -> int:
     add_json_arg(session_destroy, noun="session destroy output")
     session_purge = session_subparsers.add_parser(
         "purge",
-        help="Permanently delete a persistent session workspace, artifacts, and metadata",
+        help=argparse.SUPPRESS,
     )
     add_state_dir_arg(session_purge, default=DEFAULT_STATE_DIR)
     add_output_dir_arg(session_purge, default=DEFAULT_OUTPUT_DIR)
     session_purge.add_argument("session_ref", help="Session id, id prefix, or name")
     add_json_arg(session_purge, noun="session purge output")
+    _hide_subparser_help(session_subparsers, *MAINTENANCE_SESSION_COMMANDS)
     reviews = subparsers.add_parser("reviews", help="List review packages")
     add_state_dir_arg(reviews, default=DEFAULT_STATE_DIR)
     reviews.add_argument(
@@ -394,45 +324,6 @@ def _main_impl(argv: list[str]) -> int:
         help="Allow local unsigned approval records for development-only preflight checks",
     )
     add_json_arg(sync_preflight, noun="sync preflight output")
-    run = subparsers.add_parser("run", help="Create a review-ready Codex task session")
-    add_state_dir_arg(run, default=DEFAULT_STATE_DIR)
-    add_output_dir_arg(run, default=DEFAULT_OUTPUT_DIR)
-    add_codex_task_args(run, docker_image_default=DEFAULT_IMAGE)
-    add_json_arg(run, noun="run output")
-    codex = subparsers.add_parser("codex", help="Prepare or execute a Codex task inside AgentOS")
-    add_state_dir_arg(codex, default=DEFAULT_STATE_DIR)
-    add_output_dir_arg(codex, default=DEFAULT_OUTPUT_DIR)
-    add_codex_task_args(codex, docker_image_default=DEFAULT_IMAGE)
-    add_json_arg(codex, noun="Codex task output")
-    codex_smoke = subparsers.add_parser("codex-smoke", help="Run an on-demand Codex adapter smoke test")
-    add_state_dir_arg(codex_smoke, default=DEFAULT_STATE_DIR)
-    add_output_dir_arg(codex_smoke, default=DEFAULT_OUTPUT_DIR)
-    codex_smoke.add_argument(
-        "--codex-bin",
-        default="codex",
-        help="Codex executable name or path",
-    )
-    codex_smoke.add_argument(
-        "--execute",
-        action="store_true",
-        help="Actually run Codex. Without this flag, only prepare the smoke session.",
-    )
-    codex_smoke.add_argument(
-        "--docker",
-        action="store_true",
-        help="Record the target AgentOS Docker runtime image for this smoke session",
-    )
-    codex_smoke.add_argument(
-        "--docker-image",
-        default=DEFAULT_IMAGE,
-        help="Docker image metadata to use with --docker",
-    )
-    codex_smoke.add_argument(
-        "--docker-network",
-        default="none",
-        help="Target AgentOS runtime network policy metadata for --docker. Default is none.",
-    )
-    add_json_arg(codex_smoke, noun="smoke output")
     docker_run = subparsers.add_parser("docker-run", help="Run a command inside an AgentOS Docker sandbox")
     add_state_dir_arg(docker_run, default=DEFAULT_STATE_DIR)
     add_output_dir_arg(docker_run, default=DEFAULT_OUTPUT_DIR)
@@ -465,80 +356,6 @@ def _main_impl(argv: list[str]) -> int:
     add_json_arg(docker_run, noun="Docker run output")
 
     args = parser.parse_args(argv)
-
-    if args.command in {"demo", "run-demo"}:
-        result = run_code_fix_demo(
-            state_dir=args.state_dir,
-            output_dir=args.output_dir,
-            destroy_session=not args.keep_session,
-        )
-        if args.json:
-            _print_json(_result_to_dict(result))
-            return 0
-        if args.command == "demo":
-            _print_public_demo_result(result)
-            return 0
-        print(f"session: {result.session_id}")
-        print(f"first_test_status: {result.first_test_status}")
-        print(f"second_test_status: {result.second_test_status}")
-        print(f"sync_before_approval_blocked: {result.sync_before_approval_blocked}")
-        print(f"patch_sync_before_approval_blocked: {result.patch_sync_before_approval_blocked}")
-        print(f"selected_sync_before_approval_blocked: {result.selected_sync_before_approval_blocked}")
-        print(f"approved_sync_dir: {result.approved_sync_dir}")
-        print(f"approved_patch_sync_dir: {result.approved_patch_sync_dir}")
-        print(f"approved_selected_sync_dir: {result.approved_selected_sync_dir}")
-        print(f"destroyed: {result.destroyed}")
-        print(f"diff_artifact: {result.diff_artifact}")
-        print(f"report_artifact: {result.report_artifact}")
-        print(f"task_manifest_artifact: {result.task_manifest_artifact}")
-        print(f"review_package_artifact: {result.review_package_artifact}")
-        print(f"approval_record_artifact: {result.approval_record_artifact}")
-        return 0
-
-    if args.command == "run-doc-demo":
-        result = run_markdown_document_demo(
-            state_dir=args.state_dir,
-            output_dir=args.output_dir,
-            destroy_session=not args.keep_session,
-        )
-        if args.json:
-            _print_json(_result_to_dict(result))
-            return 0
-        print(f"session: {result.session_id}")
-        print(f"first_validation_status: {result.first_validation_status}")
-        print(f"second_validation_status: {result.second_validation_status}")
-        print(f"sync_before_approval_blocked: {result.sync_before_approval_blocked}")
-        print(f"selected_sync_before_approval_blocked: {result.selected_sync_before_approval_blocked}")
-        print(f"approved_sync_dir: {result.approved_sync_dir}")
-        print(f"approved_selected_sync_dir: {result.approved_selected_sync_dir}")
-        print(f"destroyed: {result.destroyed}")
-        print(f"diff_artifact: {result.diff_artifact}")
-        print(f"report_artifact: {result.report_artifact}")
-        print(f"task_manifest_artifact: {result.task_manifest_artifact}")
-        print(f"review_package_artifact: {result.review_package_artifact}")
-        print(f"approval_record_artifact: {result.approval_record_artifact}")
-        return 0
-
-    if args.command == "rehearse":
-        result = run_rehearsal(
-            state_dir=args.state_dir,
-            output_dir=args.output_dir,
-            docker_bin=args.docker_bin,
-            docker_sudo=args.docker_sudo,
-            docker_image=args.docker_image,
-            skip_docker=args.skip_docker,
-            include_real_worker=args.include_real_worker,
-            codex_bin=args.codex_bin,
-        )
-        if args.json:
-            _print_json(_result_to_dict(result))
-            return 0 if result.passed else 1
-        print(f"rehearsal: {result.rehearsal_id}")
-        print(f"status: {'passed' if result.passed else 'failed'}")
-        for step in result.steps:
-            print(f"{step.status}: {step.name} session={step.session_id}")
-        print(f"summary: {result.summary_path}")
-        return 0 if result.passed else 1
 
     if args.command == "doctor":
         result = run_doctor(
@@ -680,23 +497,6 @@ def _main_impl(argv: list[str]) -> int:
             print(f"pinned_image_ref: {result.pinned_image_ref}")
             print(f"command_artifact: {result.command_artifact}")
             return result.exit_code
-        if args.session_command == "codex":
-            result = run_codex_session_task(
-                state_dir=args.state_dir,
-                output_dir=args.output_dir,
-                session_ref=args.session_ref,
-                task=args.task,
-                execute=args.execute,
-                codex_bin=args.codex_bin,
-                use_docker=args.docker,
-                docker_image=args.docker_image,
-                docker_network=args.docker_network,
-            )
-            if args.json:
-                _print_json(_result_to_dict(result))
-                return result.codex_result.exit_code if result.codex_result is not None else 0
-            _print_codex_task_result(result)
-            return result.codex_result.exit_code if result.codex_result is not None else 0
         if args.session_command == "status":
             data = status_work_session(state_dir=args.state_dir, session_ref=args.session_ref)
             print(render_inspection(data, as_json=args.json))
@@ -909,54 +709,6 @@ def _main_impl(argv: list[str]) -> int:
                 print(f"- {path}")
         return 0
 
-    if args.command == "run":
-        result = _run_codex_from_args(args)
-        if args.json:
-            payload = _result_to_dict(result)
-            payload["next_commands"] = _next_review_commands()
-            _print_json(payload)
-            return 0
-        _print_codex_task_result(result)
-        print("next:")
-        for command in _next_review_commands():
-            print(f"- {command}")
-        return 0
-
-    if args.command == "codex":
-        result = _run_codex_from_args(args)
-        if args.json:
-            _print_json(_result_to_dict(result))
-            return 0
-        _print_codex_task_result(result)
-        return 0
-
-    if args.command == "codex-smoke":
-        result = run_codex_smoke(
-            state_dir=args.state_dir,
-            output_dir=args.output_dir,
-            execute=args.execute,
-            codex_bin=args.codex_bin,
-            use_docker=args.docker,
-            docker_image=args.docker_image,
-            docker_network=args.docker_network,
-        )
-        if args.json:
-            _print_json(_result_to_dict(result))
-            return 0 if result.validation_status in {"passed", "not_run"} else 1
-        print(f"session: {result.session_id}")
-        print(f"workspace_path: {result.workspace_path}")
-        print(f"executed: {result.executed}")
-        print(f"validation_status: {result.validation_status}")
-        print(f"expected_line_present: {result.expected_line_present}")
-        print(f"codex_exit_code: {result.codex_exit_code}")
-        print(f"changed_files: {len(result.changed_files)}")
-        print(f"task_manifest_artifact: {result.task_manifest_artifact}")
-        print(f"command_artifact: {result.command_artifact}")
-        print(f"env_policy_artifact: {result.env_policy_artifact}")
-        print(f"worker_result_artifact: {result.worker_result_artifact}")
-        print(f"review_package_artifact: {result.review_package_artifact}")
-        return 0 if result.validation_status in {"passed", "not_run"} else 1
-
     if args.command == "docker-run":
         sandbox_command = args.sandbox_command
         if sandbox_command and sandbox_command[0] == "--":
@@ -995,62 +747,6 @@ def _main_impl(argv: list[str]) -> int:
 
 def _print_json(data: dict[str, Any]) -> None:
     print(safe_json_dumps(data, indent=2) + "\n", end="")
-
-
-def _print_public_demo_result(result: Any) -> None:
-    print("AgentOS demo: review before sync")
-    print("---------------------------------")
-    print(f"1. Created copied workspace session: {result.session_id}")
-    print(f"2. Ran failing validation first: exit {result.first_test_status}")
-    print(f"3. Applied demo fix and reran validation: exit {result.second_test_status}")
-    print(f"4. Blocked sync before approval: {result.sync_before_approval_blocked}")
-    print(f"5. Approved and synced selected outputs: {result.approved_selected_sync_dir}")
-    print(f"6. Review package: {result.review_package_artifact}")
-    print(f"7. Diff artifact: {result.diff_artifact}")
-    print(f"8. Workspace destroyed: {result.destroyed}")
-
-
-def _run_codex_from_args(args: argparse.Namespace) -> Any:
-    return run_codex_task(
-        state_dir=args.state_dir,
-        output_dir=args.output_dir,
-        input_path=args.input,
-        task=args.task,
-        execute=args.execute,
-        codex_bin=args.codex_bin,
-        use_docker=args.docker,
-        docker_image=args.docker_image,
-        docker_bin=args.docker_bin,
-        docker_sudo=args.docker_sudo,
-        docker_network=args.docker_network,
-        destroy_session=args.destroy_session,
-    )
-
-
-def _print_codex_task_result(result: Any) -> None:
-    print(f"session: {result.session_id}")
-    print(f"workspace_path: {result.workspace_path}")
-    print(f"executed: {result.executed}")
-    print(f"sandbox_image: {result.sandbox_image}")
-    if result.codex_result is not None:
-        print(f"codex_exit_code: {result.codex_result.exit_code}")
-    print(f"changed_files: {len(result.changed_files)}")
-    print(f"task_manifest_artifact: {result.task_manifest_artifact}")
-    print(f"command_artifact: {result.command_artifact}")
-    print(f"env_policy_artifact: {result.env_policy_artifact}")
-    print(f"worker_result_artifact: {result.worker_result_artifact}")
-    print(f"review_package_artifact: {result.review_package_artifact}")
-    print(f"destroyed: {result.destroyed}")
-
-
-def _next_review_commands() -> list[str]:
-    return [
-        "agentos review --latest",
-        "agentos diff --latest",
-        "agentos verify-review --latest --json",
-        "agentos approve --latest --target <target-project> --scope <scope-id>",
-        "agentos sync --latest --target <target-project> --dry-run",
-    ]
 
 
 def _review_package_arg(args: argparse.Namespace, parser: argparse.ArgumentParser) -> Path:

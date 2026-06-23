@@ -1,6 +1,6 @@
 # AgentOS Technical Plan v0.2
 
-작성일: 2026-06-16
+?묒꽦?? 2026-06-16
 
 ## 1. Current Definition
 
@@ -62,13 +62,15 @@ Current repository:
 /mnt/usb/projects/agentos
 ```
 
-Current prototype:
+Current plugin runtime:
 
 ```text
-prototype/agentos/
+plugins/agentos-workspace/runtime/agentos/
   cli.py
-  runtime.py
-  demo.py
+  core/
+  sandbox/
+  workers/
+  demos/
 ```
 
 Current demo behavior:
@@ -104,7 +106,7 @@ data-root: /mnt/usb/docker-data
 storage driver: overlay2
 ```
 
-Important: Docker is installed, but the current prototype has not yet moved
+Important: Docker is installed, but the current host-session runtime has not yet moved
 task execution into containers. Until that slice lands, the isolation claim is
 demo-grade.
 

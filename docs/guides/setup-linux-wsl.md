@@ -180,13 +180,13 @@ back to `~/.codex` for the Codex worker.
 ## 6. Run Tests
 
 ```bash
-PYTHONPATH=prototype python3 -m unittest discover -s prototype/tests
+PYTHONPATH=plugins/agentos-workspace/runtime python3 -m unittest discover -s tests
 ```
 
 Optional local quality checks:
 
 ```bash
-python3 -m compileall -q prototype/agentos prototype/tests
+python3 -m compileall -q plugins/agentos-workspace/runtime/agentos tests
 ```
 
 ## Troubleshooting

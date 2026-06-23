@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import sys
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from agentos.core.integrity import build_artifact_manifest, verify_review_package
-from agentos.demos.demo import run_code_fix_demo
+from agentos.core.work_sessions import create_work_session, exec_work_session, review_work_session
 
 
 class ContractIntegrityTests(unittest.TestCase):
@@ -47,11 +48,7 @@ class ContractIntegrityTests(unittest.TestCase):
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
             with patch.dict("os.environ", {"AGENTOS_MANIFEST_KEY": ""}):
-                result = run_code_fix_demo(
-                    state_dir=root / "state",
-                    output_dir=root / "output",
-                    destroy_session=True,
-                )
+                result = _create_review_fixture(root)
 
             verification = verify_review_package(result.review_package_artifact)
 
@@ -73,15 +70,46 @@ class ContractIntegrityTests(unittest.TestCase):
                     "AGENTOS_MANIFEST_KEY_ID": "test-key",
                 },
             ):
-                result = run_code_fix_demo(
-                    state_dir=root / "state",
-                    output_dir=root / "output",
-                    destroy_session=True,
-                )
+                result = _create_review_fixture(root)
 
             verification = verify_review_package(result.review_package_artifact, signing_key="test-secret")
 
             self.assertEqual(verification.status, "passed")
+
+
+def _create_review_fixture(root: Path):
+    project = root / "project"
+    project.mkdir()
+    (project / "README.md").write_text("# Demo\n", encoding="utf-8")
+    create_work_session(
+        state_dir=root / "state",
+        output_dir=root / "output",
+        input_path=project,
+        name="review-fixture",
+    )
+    exec_work_session(
+        state_dir=root / "state",
+        output_dir=root / "output",
+        session_ref="review-fixture",
+        command=[
+            sys.executable,
+            "-c",
+            "from pathlib import Path; Path('README.md').write_text('# Demo\\nupdated\\n', encoding='utf-8')",
+        ],
+        role="edit",
+    )
+    exec_work_session(
+        state_dir=root / "state",
+        output_dir=root / "output",
+        session_ref="review-fixture",
+        command=[sys.executable, "-c", "raise SystemExit(0)"],
+        role="validation",
+    )
+    return review_work_session(
+        state_dir=root / "state",
+        output_dir=root / "output",
+        session_ref="review-fixture",
+    )
 
 
 if __name__ == "__main__":

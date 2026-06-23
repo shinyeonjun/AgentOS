@@ -37,7 +37,7 @@ AgentOS is not the AI brain. It is the safety, review, and sync layer around the
 
 ## Current Status
 
-AgentOS is an alpha prototype with a working local lifecycle. See [CHANGELOG.md](CHANGELOG.md) for release notes.
+AgentOS is an alpha runtime with a working local lifecycle. See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
 - deterministic demo agent for token-free smoke tests
 - persistent workspace sessions
@@ -85,7 +85,7 @@ scripts/wsl-smoke.sh
 Without installing the package, commands can still run from the repo root with:
 
 ```bash
-PYTHONPATH=prototype python3 -m agentos doctor --workspace "$PWD"
+PYTHONPATH=plugins/agentos-workspace/runtime python3 -m agentos doctor --workspace "$PWD"
 ```
 
 See [docs/guides/setup-linux-wsl.md](docs/guides/setup-linux-wsl.md) for the full setup flow, then try [docs/guides/first-real-run.md](docs/guides/first-real-run.md) on a small throwaway repo.
@@ -175,14 +175,14 @@ Docker sandbox commands use no network, dropped capabilities, no-new-privileges,
 ## Repository Map
 
 ```text
-prototype/agentos/
+plugins/agentos-workspace/runtime/agentos/
   cli.py             CLI entrypoint
   cli_args.py        CLI argument registration
   core/              sessions, review packages, approvals, sync, storage
   sandbox/           Docker sandbox and sandbox policy helpers
   workers/           Codex worker adapter, smoke tests, env policy
   demos/             deterministic demos and rehearsals
-prototype/tests/     unit and lifecycle tests
+tests/               unit and lifecycle tests
 plugins/             Codex plugin package and bundled runtime
 .agentos/            plugin/runtime packaging assets
 .agents/             plugin marketplace metadata
@@ -202,13 +202,13 @@ Generated runtime folders such as `.agentos-state/`, `.agentos-output/`, `.ruff_
 ## Tests
 
 ```bash
-PYTHONPATH=prototype python3 -m unittest discover -s prototype/tests -v
+PYTHONPATH=plugins/agentos-workspace/runtime python3 -m unittest discover -s tests -v
 ```
 
 Optional quality checks when local tools are available:
 
 ```bash
-ruff check prototype
+ruff check plugins/agentos-workspace/runtime tests
 shellcheck scripts/*.sh
 ```
 
@@ -234,7 +234,7 @@ Useful entry points:
 - AgentOS is not a production security boundary yet.
 - AgentOS is not a replacement for the AI coding agent.
 - AgentOS is not trying to become a marketplace of every possible tool.
-- The current prototype favors clear lifecycle contracts over broad integrations.
+- The current runtime favors clear lifecycle contracts over broad integrations.
 
 ## License
 

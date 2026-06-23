@@ -7,6 +7,26 @@ The plugin rule is simple: Codex should work inside an AgentOS session
 workspace, produce a review package, and wait for explicit approval before any
 sync back to the host project.
 
+## Skill-First Shape
+
+AgentOS Workspace follows the Codex Security plugin pattern: the skill and
+reference files describe how Codex should run the workflow, while the runtime
+code stays focused on the safety kernel that cannot be delegated to prompt
+discipline.
+
+The bundled runtime intentionally keeps copied workspaces, command ledgers,
+review package verification, approval records, sync preflight, approved sync,
+Development demos, rehearsal harnesses, child-Codex worker flows, and side-panel UI code are not part of the plugin runtime bundle.
+
+Reference documents live under:
+
+```text
+plugins/agentos-workspace/references/
+```
+
+The main skill reads those references before coding work so the plugin remains a
+workflow harness rather than a large autonomous engine hidden behind MCP tools.
+
 ## Approval UX
 
 The default policy is **normal**: Codex may run `doctor`, create/reuse copied
@@ -16,39 +36,9 @@ for extra approval, because those steps do not mutate the original project.
 The approval boundary is sync back to the original project. `approve_scope` and
 non-dry-run `sync_approved` require explicit human approval.
 
-## Workbench App
+## MCP Runtime
 
-AgentOS also exposes a Codex MCP App resource at:
-
-```text
-ui://agentos-workspace/<version>/workbench.html
-```
-
-The legacy URI `ui://agentos-workspace/workbench.html` remains available for
-older hosts. The resource uses the MCP App MIME type
-`text/html;profile=mcp-app` and is opened by `open_agentos_workspace`
-(`open_workbench` remains as a compatibility alias).
-
-Only the open tool renders the Workbench app. Routine tools such as
-`create_session`, `session_summary`, `review_session`, and `sync_preflight`
-return structured state without attaching the Workbench output template, so the
-chat transcript does not fill with duplicate Workbench cards. This mirrors the
-Codex Security pattern: one side app, many state/action tools.
-
-The Workbench side panel can refresh session state, build a review package, run
-sync preflight, and request an approval intent through app-only MCP tools:
-
-```text
-get_agentos_workbench_state
-request_agentos_review
-request_agentos_sync_preflight
-request_agentos_sync_approval
-```
-
-These app-only tools do not bypass the sync boundary. The approval button creates
-a bounded approval intent with planned paths, blockers, target, review package,
-and scope. Actual `approve_scope` and non-dry-run `sync_approved` still require a
-trusted host-provided human approval token.
+AgentOS exposes MCP tools for session creation, command execution, review packages, preflight, and approval-gated sync. It intentionally does not ship a side-panel UI; chat/tool calls remain the control surface.
 
 Two optional modes are useful for hosts or advanced users:
 

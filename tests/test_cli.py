@@ -12,158 +12,28 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from agentos.cli import main
-from agentos.workers.codex_smoke import SMOKE_LINE
 from fake_tools import write_python_tool
+
+REVIEW_FIXTURE_LINE = "updated through AgentOS session"
 
 
 class AgentOSCliTests(unittest.TestCase):
-    def test_demo_json_outputs_machine_readable_result(self) -> None:
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            exit_code, output = _run_cli(
-                [
-                    "demo",
-                    "--state-dir",
-                    str(root / "state"),
-                    "--output-dir",
-                    str(root / "output"),
-                    "--json",
-                ]
-            )
+    def test_session_help_keeps_maintenance_commands_out_of_primary_workflow(self) -> None:
+        stdout = io.StringIO()
+        with redirect_stdout(stdout), self.assertRaises(SystemExit) as session_help:
+            main(["session", "--help"])
 
-            self.assertEqual(exit_code, 0)
-            data = json.loads(output)
-            self.assertEqual(data["first_test_status"], 1)
-            self.assertEqual(data["second_test_status"], 0)
-            self.assertTrue(data["sync_before_approval_blocked"])
-            self.assertTrue(data["destroyed"])
+        self.assertEqual(session_help.exception.code, 0)
+        output = stdout.getvalue()
+        self.assertIn("{list,create,exec,docker-exec,status,summary,review}", output)
+        for command in ("cleanup", "repair", "debug-bundle", "destroy", "purge"):
+            self.assertNotIn(command, output)
 
-    def test_demo_human_output_explains_review_before_sync(self) -> None:
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            exit_code, output = _run_cli(
-                [
-                    "demo",
-                    "--state-dir",
-                    str(root / "state"),
-                    "--output-dir",
-                    str(root / "output"),
-                ]
-            )
-
-            self.assertEqual(exit_code, 0)
-            self.assertIn("AgentOS demo: review before sync", output)
-            self.assertIn("Blocked sync before approval: True", output)
-            self.assertIn("Review package:", output)
-
-    def test_run_demo_json_outputs_machine_readable_result(self) -> None:
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            exit_code, output = _run_cli(
-                [
-                    "run-demo",
-                    "--state-dir",
-                    str(root / "state"),
-                    "--output-dir",
-                    str(root / "output"),
-                    "--json",
-                ]
-            )
-
-            self.assertEqual(exit_code, 0)
-            data = json.loads(output)
-            self.assertEqual(data["first_test_status"], 1)
-            self.assertEqual(data["second_test_status"], 0)
-            self.assertTrue(data["sync_before_approval_blocked"])
-            self.assertTrue(data["destroyed"])
-            self.assertTrue(data["approval_record_artifact"].endswith("approval-record.json"))
-
-    def test_sync_destroyed_demo_session_checks_target_baseline_before_dry_run(self) -> None:
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            run_exit_code, run_output = _run_cli(
-                [
-                    "run-demo",
-                    "--state-dir",
-                    str(root / "state"),
-                    "--output-dir",
-                    str(root / "output"),
-                    "--json",
-                ]
-            )
-            self.assertEqual(run_exit_code, 0)
-            self.assertTrue(json.loads(run_output)["destroyed"])
-
-            target = root / "target"
-            target.mkdir()
-            sync_exit_code, sync_output = _run_cli(
-                [
-                    "sync",
-                    "--latest",
-                    "--state-dir",
-                    str(root / "state"),
-                    "--output-dir",
-                    str(root / "output"),
-                    "--target",
-                    str(target),
-                    "--dry-run",
-                    "--json",
-                ]
-            )
-
-            self.assertEqual(sync_exit_code, 1)
-            data = json.loads(sync_output)
-            self.assertEqual(data["error"]["type"], "RuntimeError")
-            self.assertIn("sync target is missing expected file: calculator.py", data["error"]["message"])
-
-    def test_rehearse_json_outputs_steps(self) -> None:
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            exit_code, output = _run_cli(
-                [
-                    "rehearse",
-                    "--state-dir",
-                    str(root / "state"),
-                    "--output-dir",
-                    str(root / "output"),
-                    "--skip-docker",
-                    "--json",
-                ]
-            )
-
-            self.assertEqual(exit_code, 0)
-            data = json.loads(output)
-            self.assertTrue(data["passed"])
-            self.assertEqual(data["steps"][-1]["name"], "docker_sandbox_policy")
-            self.assertEqual(data["steps"][-1]["status"], "skipped")
-            self.assertEqual(data["steps"][-2]["name"], "real_worker_codex_smoke")
-            self.assertEqual(data["steps"][-2]["status"], "skipped")
-
-    def test_rehearse_json_can_include_real_worker_step(self) -> None:
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            fake_codex = _write_fake_codex(root / "fake-codex", edit_readme=True)
-            exit_code, output = _run_cli(
-                [
-                    "rehearse",
-                    "--state-dir",
-                    str(root / "state"),
-                    "--output-dir",
-                    str(root / "output"),
-                    "--skip-docker",
-                    "--include-real-worker",
-                    "--codex-bin",
-                    str(fake_codex),
-                    "--json",
-                ]
-            )
-
-            self.assertEqual(exit_code, 0)
-            data = json.loads(output)
-            self.assertTrue(data["passed"])
-            self.assertEqual(data["steps"][2]["name"], "real_worker_codex_smoke")
-            self.assertEqual(data["steps"][2]["status"], "passed")
-            self.assertIn("worker_result", data["steps"][2]["artifacts"])
+        cleanup_stdout = io.StringIO()
+        with redirect_stdout(cleanup_stdout), self.assertRaises(SystemExit) as cleanup_help:
+            main(["session", "cleanup", "--help"])
+        self.assertEqual(cleanup_help.exception.code, 0)
+        self.assertIn("--keep-latest", cleanup_stdout.getvalue())
 
     def test_docker_run_json_returns_sandbox_exit_code(self) -> None:
         with TemporaryDirectory() as tmp:
@@ -459,110 +329,6 @@ class AgentOSCliTests(unittest.TestCase):
             self.assertEqual(len(cleanup["candidates"]), 2)
             self.assertEqual(cleanup["removed_sessions"], [])
 
-    def test_persistent_session_codex_execute_uses_existing_workspace(self) -> None:
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            input_project = root / "input-project"
-            input_project.mkdir()
-            (input_project / "README.md").write_text("# Demo\n\n", encoding="utf-8")
-            fake_codex = _write_fake_codex(root / "fake-codex", edit_readme=True)
-
-            create_exit_code, create_output = _run_cli(
-                [
-                    "session",
-                    "create",
-                    "--state-dir",
-                    str(root / "state"),
-                    "--output-dir",
-                    str(root / "output"),
-                    "--input",
-                    str(input_project),
-                    "--name",
-                    "codex-work",
-                    "--json",
-                ]
-            )
-            self.assertEqual(create_exit_code, 0)
-            session_id = json.loads(create_output)["session_id"]
-
-            codex_exit_code, codex_output = _run_cli(
-                [
-                    "session",
-                    "codex",
-                    "--state-dir",
-                    str(root / "state"),
-                    "--output-dir",
-                    str(root / "output"),
-                    "codex-work",
-                    "--task",
-                    "Update README.",
-                    "--codex-bin",
-                    str(fake_codex),
-                    "--execute",
-                    "--json",
-                ]
-            )
-            self.assertEqual(codex_exit_code, 0)
-            codex_data = json.loads(codex_output)
-            self.assertEqual(codex_data["session_id"], session_id)
-            self.assertEqual(codex_data["changed_files"], ["README.md"])
-            self.assertFalse(codex_data["destroyed"])
-
-            review_exit_code, review_output = _run_cli(
-                ["review", "--latest", "--state-dir", str(root / "state"), "--json"]
-            )
-            self.assertEqual(review_exit_code, 0)
-            review_data = json.loads(review_output)
-            self.assertEqual(review_data["session_id"], session_id)
-            self.assertEqual(review_data["changed_files"][0]["path"], "README.md")
-
-    def test_persistent_session_codex_missing_binary_names_executable(self) -> None:
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            input_project = root / "input-project"
-            input_project.mkdir()
-            (input_project / "README.md").write_text("# Demo\n", encoding="utf-8")
-            create_exit_code, _create_output = _run_cli(
-                [
-                    "session",
-                    "create",
-                    "--state-dir",
-                    str(root / "state"),
-                    "--output-dir",
-                    str(root / "output"),
-                    "--input",
-                    str(input_project),
-                    "--name",
-                    "missing-codex",
-                    "--json",
-                ]
-            )
-            self.assertEqual(create_exit_code, 0)
-
-            exit_code, output = _run_cli(
-                [
-                    "session",
-                    "codex",
-                    "--state-dir",
-                    str(root / "state"),
-                    "--output-dir",
-                    str(root / "output"),
-                    "missing-codex",
-                    "--task",
-                    "Update README.",
-                    "--codex-bin",
-                    str(root / "missing-codex-bin"),
-                    "--execute",
-                    "--json",
-                ]
-            )
-
-            self.assertEqual(exit_code, 127)
-            data = json.loads(output)
-            self.assertEqual(data["error"]["type"], "FileNotFoundError")
-            self.assertIn("executable not found", data["error"]["message"])
-            self.assertIn("codex", data["error"]["hint"].lower())
-
     def test_persistent_session_docker_exec_uses_existing_workspace(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -835,83 +601,11 @@ class AgentOSCliTests(unittest.TestCase):
             self.assertEqual(status_exit_code, 0)
             self.assertEqual(json.loads(status_output)["session"]["state"], "destroyed")
 
-    def test_codex_prepare_json_outputs_session_metadata(self) -> None:
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            input_project = root / "input-project"
-            input_project.mkdir()
-            (input_project / "README.md").write_text("# Demo\n", encoding="utf-8")
-
-            exit_code, output = _run_cli(
-                [
-                    "codex",
-                    "--state-dir",
-                    str(root / "state"),
-                    "--output-dir",
-                    str(root / "output"),
-                    "--input",
-                    str(input_project),
-                    "--task",
-                    "Summarize the project.",
-                    "--json",
-                ]
-            )
-
-            self.assertEqual(exit_code, 0)
-            data = json.loads(output)
-            self.assertFalse(data["executed"])
-            self.assertIsNone(data["codex_result"])
-            self.assertEqual(data["changed_files"], [])
-
-    def test_run_json_outputs_review_ready_next_commands(self) -> None:
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            input_project = root / "input-project"
-            input_project.mkdir()
-            (input_project / "README.md").write_text("# Demo\n\n", encoding="utf-8")
-            fake_codex = _write_fake_codex(root / "fake-codex", edit_readme=True)
-
-            exit_code, output = _run_cli(
-                [
-                    "run",
-                    "--state-dir",
-                    str(root / "state"),
-                    "--output-dir",
-                    str(root / "output"),
-                    "--input",
-                    str(input_project),
-                    "--task",
-                    "Update README.",
-                    "--codex-bin",
-                    str(fake_codex),
-                    "--execute",
-                    "--json",
-                ]
-            )
-
-            self.assertEqual(exit_code, 0)
-            data = json.loads(output)
-            self.assertTrue(data["executed"])
-            self.assertEqual(data["changed_files"], ["README.md"])
-            self.assertTrue(data["review_package_artifact"].endswith("review_package.json"))
-            self.assertIn("agentos review --latest", data["next_commands"])
-
     def test_verify_review_json_outputs_integrity_status(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
             with patch.dict("os.environ", {"AGENTOS_MANIFEST_KEY": ""}):
-                run_exit_code, run_output = _run_cli(
-                    [
-                        "run-demo",
-                        "--state-dir",
-                        str(root / "state"),
-                        "--output-dir",
-                        str(root / "output"),
-                        "--json",
-                    ]
-                )
-            self.assertEqual(run_exit_code, 0)
-            review_package = json.loads(run_output)["review_package_artifact"]
+                review_package = _create_review_fixture(root)["review_package"]
 
             exit_code, output = _run_cli(
                 [
@@ -929,18 +623,7 @@ class AgentOSCliTests(unittest.TestCase):
     def test_review_json_outputs_human_summary_data(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
-            run_exit_code, run_output = _run_cli(
-                [
-                    "run-demo",
-                    "--state-dir",
-                    str(root / "state"),
-                    "--output-dir",
-                    str(root / "output"),
-                    "--json",
-                ]
-            )
-            self.assertEqual(run_exit_code, 0)
-            review_package = json.loads(run_output)["review_package_artifact"]
+            review_package = _create_review_fixture(root)["review_package"]
 
             exit_code, output = _run_cli(["review", review_package, "--json"])
 
@@ -954,17 +637,7 @@ class AgentOSCliTests(unittest.TestCase):
     def test_review_latest_json_uses_state_dir(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
-            run_exit_code, _run_output = _run_cli(
-                [
-                    "run-demo",
-                    "--state-dir",
-                    str(root / "state"),
-                    "--output-dir",
-                    str(root / "output"),
-                    "--json",
-                ]
-            )
-            self.assertEqual(run_exit_code, 0)
+            _create_review_fixture(root)
 
             exit_code, output = _run_cli(
                 [
@@ -984,39 +657,19 @@ class AgentOSCliTests(unittest.TestCase):
     def test_diff_latest_outputs_diff_artifact(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
-            run_exit_code, _run_output = _run_cli(
-                [
-                    "run-demo",
-                    "--state-dir",
-                    str(root / "state"),
-                    "--output-dir",
-                    str(root / "output"),
-                    "--json",
-                ]
-            )
-            self.assertEqual(run_exit_code, 0)
+            _create_review_fixture(root)
 
             exit_code, output = _run_cli(["diff", "--latest", "--state-dir", str(root / "state")])
 
             self.assertEqual(exit_code, 0)
-            self.assertIn("calculator.py", output)
+            self.assertIn("README.md", output)
             self.assertIn("---", output)
             self.assertIn("+++", output)
 
     def test_sessions_and_reviews_json_list_state(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
-            run_exit_code, _run_output = _run_cli(
-                [
-                    "run-demo",
-                    "--state-dir",
-                    str(root / "state"),
-                    "--output-dir",
-                    str(root / "output"),
-                    "--json",
-                ]
-            )
-            self.assertEqual(run_exit_code, 0)
+            _create_review_fixture(root)
 
             sessions_exit_code, sessions_output = _run_cli(
                 ["sessions", "--state-dir", str(root / "state"), "--json"]
@@ -1061,17 +714,7 @@ class AgentOSCliTests(unittest.TestCase):
     def test_verify_review_latest_json_uses_state_dir(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
-            run_exit_code, _run_output = _run_cli(
-                [
-                    "run-demo",
-                    "--state-dir",
-                    str(root / "state"),
-                    "--output-dir",
-                    str(root / "output"),
-                    "--json",
-                ]
-            )
-            self.assertEqual(run_exit_code, 0)
+            _create_review_fixture(root)
 
             exit_code, output = _run_cli(
                 [
@@ -1090,33 +733,11 @@ class AgentOSCliTests(unittest.TestCase):
     def test_approve_and_sync_latest_copies_only_approved_files(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
-            input_project = root / "input-project"
-            input_project.mkdir()
-            (input_project / "README.md").write_text("# Demo\n\n", encoding="utf-8")
+            _create_review_fixture(root)
             target_project = root / "target-project"
             target_project.mkdir()
             (target_project / "README.md").write_text("# Demo\n\n", encoding="utf-8")
             (target_project / "KEEP.md").write_text("do not remove\n", encoding="utf-8")
-            fake_codex = _write_fake_codex(root / "fake-codex", edit_readme=True)
-
-            run_exit_code, _run_output = _run_cli(
-                [
-                    "codex",
-                    "--state-dir",
-                    str(root / "state"),
-                    "--output-dir",
-                    str(root / "output"),
-                    "--input",
-                    str(input_project),
-                    "--task",
-                    "Update README.",
-                    "--codex-bin",
-                    str(fake_codex),
-                    "--execute",
-                    "--json",
-                ]
-            )
-            self.assertEqual(run_exit_code, 0)
 
             approve_exit_code, approve_output = _run_cli(
                 [
@@ -1157,7 +778,7 @@ class AgentOSCliTests(unittest.TestCase):
             self.assertEqual(dry_run_data["copied_paths"], ["README.md"])
             self.assertEqual(dry_run_data["review_verification_status"], "warning")
             self.assertEqual(dry_run_data["approval_verification_status"], "warning")
-            self.assertNotIn(SMOKE_LINE, (target_project / "README.md").read_text(encoding="utf-8"))
+            self.assertNotIn(REVIEW_FIXTURE_LINE, (target_project / "README.md").read_text(encoding="utf-8"))
 
             unsigned_exit_code, unsigned_output = _run_cli(
                 [
@@ -1219,40 +840,18 @@ class AgentOSCliTests(unittest.TestCase):
             self.assertEqual(data["copied_paths"], ["README.md"])
             self.assertEqual(data["review_verification_status"], "warning")
             self.assertEqual(data["approval_verification_status"], "passed")
-            self.assertIn(SMOKE_LINE, (target_project / "README.md").read_text(encoding="utf-8"))
+            self.assertIn(REVIEW_FIXTURE_LINE, (target_project / "README.md").read_text(encoding="utf-8"))
             self.assertTrue((target_project / "KEEP.md").exists())
 
     def test_sync_require_clean_git_rejects_dirty_target(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
-            input_project = root / "input-project"
-            input_project.mkdir()
-            (input_project / "README.md").write_text("# Demo\n\n", encoding="utf-8")
+            _create_review_fixture(root)
             target_project = root / "target-project"
             target_project.mkdir()
             (target_project / "README.md").write_text("# Demo\n\n", encoding="utf-8")
             subprocess.run(["git", "init"], cwd=target_project, check=True, capture_output=True)
             (target_project / "DIRTY.md").write_text("dirty\n", encoding="utf-8")
-            fake_codex = _write_fake_codex(root / "fake-codex", edit_readme=True)
-
-            run_exit_code, _run_output = _run_cli(
-                [
-                    "codex",
-                    "--state-dir",
-                    str(root / "state"),
-                    "--output-dir",
-                    str(root / "output"),
-                    "--input",
-                    str(input_project),
-                    "--task",
-                    "Update README.",
-                    "--codex-bin",
-                    str(fake_codex),
-                    "--execute",
-                    "--json",
-                ]
-            )
-            self.assertEqual(run_exit_code, 0)
             approve_exit_code, _approve_output = _run_cli(
                 [
                     "approve",
@@ -1287,52 +886,6 @@ class AgentOSCliTests(unittest.TestCase):
 
             self.assertEqual(sync_exit_code, 1)
             self.assertEqual(json.loads(sync_output)["error"]["type"], "RuntimeError")
-
-    def test_codex_smoke_prepare_json_outputs_validation_status(self) -> None:
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            exit_code, output = _run_cli(
-                [
-                    "codex-smoke",
-                    "--state-dir",
-                    str(root / "state"),
-                    "--output-dir",
-                    str(root / "output"),
-                    "--json",
-                ]
-            )
-
-            self.assertEqual(exit_code, 0)
-            data = json.loads(output)
-            self.assertFalse(data["executed"])
-            self.assertEqual(data["validation_status"], "not_run")
-            self.assertFalse(data["expected_line_present"])
-
-    def test_codex_smoke_execute_json_fails_when_expected_change_is_missing(self) -> None:
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            fake_codex = _write_fake_codex(root / "fake-codex", edit_readme=False)
-
-            exit_code, output = _run_cli(
-                [
-                    "codex-smoke",
-                    "--state-dir",
-                    str(root / "state"),
-                    "--output-dir",
-                    str(root / "output"),
-                    "--codex-bin",
-                    str(fake_codex),
-                    "--execute",
-                    "--json",
-                ]
-            )
-
-            self.assertEqual(exit_code, 1)
-            data = json.loads(output)
-            self.assertTrue(data["executed"])
-            self.assertEqual(data["codex_exit_code"], 0)
-            self.assertEqual(data["validation_status"], "failed")
-            self.assertFalse(data["expected_line_present"])
 
     def test_missing_executable_json_outputs_cli_error(self) -> None:
         with TemporaryDirectory() as tmp:
@@ -1399,6 +952,103 @@ def _run_cli(argv: list[str]) -> tuple[int, str]:
     return exit_code, stdout
 
 
+def _create_review_fixture(root: Path, *, work_name: str = "review-fixture") -> dict[str, str]:
+    input_project = root / "input-project"
+    input_project.mkdir(exist_ok=True)
+    (input_project / "README.md").write_text("# Demo\n\n", encoding="utf-8")
+
+    create_exit_code, create_output = _run_cli(
+        [
+            "session",
+            "create",
+            "--state-dir",
+            str(root / "state"),
+            "--output-dir",
+            str(root / "output"),
+            "--input",
+            str(input_project),
+            "--name",
+            work_name,
+            "--json",
+        ]
+    )
+    if create_exit_code != 0:
+        raise AssertionError(create_output)
+    session_data = json.loads(create_output)
+
+    edit_exit_code, edit_output = _run_cli(
+        [
+            "session",
+            "exec",
+            "--state-dir",
+            str(root / "state"),
+            "--output-dir",
+            str(root / "output"),
+            "--role",
+            "edit",
+            work_name,
+            "--json",
+            "--",
+            sys.executable,
+            "-c",
+            (
+                "from pathlib import Path; "
+                "path = Path('README.md'); "
+                "path.write_text(path.read_text(encoding='utf-8') + "
+                f"{(REVIEW_FIXTURE_LINE + chr(10))!r}, encoding='utf-8')"
+            ),
+        ]
+    )
+    if edit_exit_code != 0:
+        raise AssertionError(edit_output)
+
+    test_exit_code, test_output = _run_cli(
+        [
+            "session",
+            "exec",
+            "--state-dir",
+            str(root / "state"),
+            "--output-dir",
+            str(root / "output"),
+            "--role",
+            "validation",
+            work_name,
+            "--json",
+            "--",
+            sys.executable,
+            "-c",
+            (
+                "from pathlib import Path; "
+                f"needle = {REVIEW_FIXTURE_LINE!r}; "
+                "raise SystemExit(0 if needle in Path('README.md').read_text(encoding='utf-8') else 1)"
+            ),
+        ]
+    )
+    if test_exit_code != 0:
+        raise AssertionError(test_output)
+
+    review_exit_code, review_output = _run_cli(
+        [
+            "session",
+            "review",
+            "--state-dir",
+            str(root / "state"),
+            "--output-dir",
+            str(root / "output"),
+            work_name,
+            "--json",
+        ]
+    )
+    if review_exit_code != 0:
+        raise AssertionError(review_output)
+    review_data = json.loads(review_output)
+    return {
+        "session_id": session_data["session_id"],
+        "workspace_path": session_data["workspace_path"],
+        "review_package": review_data["review_package_artifact"],
+    }
+
+
 def _run_cli_with_stderr(argv: list[str]) -> tuple[int, str, str]:
     stdout = io.StringIO()
     stderr = io.StringIO()
@@ -1450,19 +1100,6 @@ def _write_fake_docker_workspace_writer(path: Path) -> Path:
         "    Path(artifacts, 'result.txt').write_text('ok\\n', encoding='utf-8')\n"
         "raise SystemExit(0)\n",
     )
-
-
-def _write_fake_codex(path: Path, *, edit_readme: bool) -> Path:
-    body = "from pathlib import Path\n"
-    if edit_readme:
-        body += (
-            "path = Path('README.md')\n"
-            "text = path.read_text(encoding='utf-8')\n"
-            f"line = {SMOKE_LINE!r}\n"
-            "path.write_text(text.replace('\\n\\n', f'\\n\\n{line}\\n\\n', 1), encoding='utf-8')\n"
-        )
-    body += "raise SystemExit(0)\n"
-    return write_python_tool(path, body)
 
 
 if __name__ == "__main__":

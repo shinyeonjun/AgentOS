@@ -52,7 +52,7 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-if [[ ! -f pyproject.toml || ! -d prototype/agentos ]]; then
+if [[ ! -f pyproject.toml || ! -d plugins/agentos-workspace/runtime/agentos ]]; then
   echo "Run this script from the AgentOS repo root." >&2
   exit 1
 fi
@@ -74,7 +74,7 @@ agentos_cmd() {
   if command -v agentos >/dev/null 2>&1; then
     agentos "$@"
   else
-    PYTHONPATH=prototype python3 -m agentos "$@"
+    PYTHONPATH=plugins/agentos-workspace/runtime python3 -m agentos "$@"
   fi
 }
 

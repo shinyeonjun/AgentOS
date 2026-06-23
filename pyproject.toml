@@ -26,8 +26,8 @@ dependencies = []
 agentos = "agentos.cli:main"
 
 [tool.setuptools]
-package-dir = { "" = "prototype" }
+package-dir = { "" = "plugins/agentos-workspace/runtime" }
 
 [tool.setuptools.packages.find]
-where = ["prototype"]
+where = ["plugins/agentos-workspace/runtime"]
 include = ["agentos*"]

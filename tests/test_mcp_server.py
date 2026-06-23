@@ -11,7 +11,7 @@ from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
-from agentos.mcp_server import WORKBENCH_LEGACY_WIDGET_URI, WORKBENCH_WIDGET_MIME_TYPE, WORKBENCH_WIDGET_URI, _handle_rpc, _write_rpc
+from agentos.mcp_server import _handle_rpc, _write_rpc
 
 
 class McpServerTests(unittest.TestCase):
@@ -33,218 +33,40 @@ class McpServerTests(unittest.TestCase):
         self.assertIn("run_command", names)
         self.assertIn("session_summary", names)
         self.assertIn("sync_preflight", names)
-        self.assertIn("open_agentos_workspace", names)
-        self.assertIn("open_workbench", names)
-        self.assertIn("get_agentos_workbench_state", names)
-        self.assertIn("request_agentos_review", names)
-        self.assertIn("request_agentos_sync_preflight", names)
-        self.assertIn("request_agentos_sync_approval", names)
-        self.assertIn("cleanup_sessions", names)
-        self.assertIn("repair_session", names)
-        self.assertIn("export_debug_bundle", names)
         self.assertIn("sync_approved", names)
-        self.assertIn("purge_session", names)
+        self.assertNotIn("open_agentos_workspace", names)
+        self.assertNotIn("get_agentos_workbench_state", names)
+        self.assertNotIn("cleanup_sessions", names)
+        self.assertNotIn("repair_session", names)
+        self.assertNotIn("export_debug_bundle", names)
+        self.assertNotIn("destroy_session", names)
+        self.assertNotIn("purge_session", names)
         self.assertIn("MUST CALL FIRST", tools_by_name["doctor"]["description"])
         self.assertIn("before editing", tools_by_name["create_session"]["description"])
         self.assertIn("max_bytes", tools_by_name["render_diff"]["inputSchema"]["properties"])
         run_command_schema = tools_by_name["run_command"]["inputSchema"]["properties"]
         self.assertEqual(run_command_schema["role"]["default"], "explore")
         self.assertEqual(run_command_schema["role"]["enum"], ["explore", "edit", "test", "validation"])
-        self.assertIn("keeping metadata", tools_by_name["destroy_session"]["description"])
         self.assertFalse(tools_by_name["create_session"]["annotations"]["destructiveHint"])
         self.assertFalse(tools_by_name["run_command"]["annotations"]["destructiveHint"])
         self.assertFalse(tools_by_name["review_session"]["annotations"]["destructiveHint"])
         self.assertTrue(tools_by_name["sync_approved"]["annotations"]["destructiveHint"])
         self.assertFalse(tools_by_name["sync_preflight"]["annotations"]["destructiveHint"])
-        self.assertTrue(tools_by_name["cleanup_sessions"]["annotations"]["destructiveHint"])
-        self.assertTrue(tools_by_name["purge_session"]["annotations"]["destructiveHint"])
         self.assertIn("approval boundary", tools_by_name["sync_approved"]["description"])
         self.assertIn("whether approval is still required", tools_by_name["sync_preflight"]["description"])
-        self.assertEqual(
-            tools_by_name["open_agentos_workspace"]["_meta"]["openai/outputTemplate"],
-            WORKBENCH_WIDGET_URI,
-        )
-        self.assertEqual(tools_by_name["open_agentos_workspace"]["_meta"]["ui/resourceUri"], WORKBENCH_WIDGET_URI)
-        self.assertTrue(tools_by_name["open_agentos_workspace"]["_meta"]["openai/widgetAccessible"])
-        self.assertEqual(tools_by_name["open_workbench"]["_meta"]["ui/resourceUri"], WORKBENCH_WIDGET_URI)
-        self.assertTrue(tools_by_name["open_workbench"]["_meta"]["openai/widgetAccessible"])
-        for routine_tool in ("create_session", "session_summary", "review_session", "sync_preflight"):
-            self.assertNotIn("_meta", tools_by_name[routine_tool])
-        for app_tool in (
-            "get_agentos_workbench_state",
-            "request_agentos_review",
-            "request_agentos_sync_preflight",
-            "request_agentos_sync_approval",
-        ):
-            self.assertEqual(tools_by_name[app_tool]["_meta"]["ui"]["visibility"], ["app"])
-            self.assertEqual(tools_by_name[app_tool]["_meta"]["ui/resourceUri"], WORKBENCH_WIDGET_URI)
-        self.assertFalse(tools_by_name["request_agentos_sync_approval"]["annotations"]["destructiveHint"])
-        self.assertTrue(tools_by_name["sync_preflight"]["inputSchema"]["properties"]["require_signed_approval"]["default"])
-        self.assertFalse(tools_by_name["sync_preflight"]["inputSchema"]["properties"]["allow_unsigned_approval"]["default"])
         self.assertTrue(tools_by_name["sync_approved"]["inputSchema"]["properties"]["require_signed_approval"]["default"])
         self.assertFalse(tools_by_name["sync_approved"]["inputSchema"]["properties"]["allow_unsigned_approval"]["default"])
         self.assertIn("review_package", tools_by_name["approve_scope"]["inputSchema"]["required"])
+        self.assertFalse(tools_by_name["approve_scope"]["inputSchema"]["properties"]["allow_unsigned_approval"]["default"])
         self.assertIn("human_approval_token", tools_by_name["approve_scope"]["inputSchema"]["properties"])
         self.assertIn("review_package", tools_by_name["sync_approved"]["inputSchema"]["required"])
         self.assertIn("human_approval_token", tools_by_name["sync_approved"]["inputSchema"]["properties"])
 
-    def test_workbench_resource_is_registered_and_readable(self) -> None:
+    def test_mcp_resources_are_empty_without_side_panel_ui(self) -> None:
         resources = _handle_rpc({"jsonrpc": "2.0", "id": 1, "method": "resources/list", "params": {}})
+
         self.assertIsNotNone(resources)
-        resources_by_uri = {resource["uri"]: resource for resource in resources["result"]["resources"]}
-        self.assertIn(WORKBENCH_WIDGET_URI, resources_by_uri)
-        self.assertIn(WORKBENCH_LEGACY_WIDGET_URI, resources_by_uri)
-        resource = resources_by_uri[WORKBENCH_WIDGET_URI]
-        self.assertEqual(resource["mimeType"], WORKBENCH_WIDGET_MIME_TYPE)
-        self.assertEqual(resource["_meta"]["openai/widgetDescription"].split()[0], "Observe")
-
-        for uri in (WORKBENCH_WIDGET_URI, WORKBENCH_LEGACY_WIDGET_URI):
-            read = _handle_rpc(
-                {
-                    "jsonrpc": "2.0",
-                    "id": 2,
-                    "method": "resources/read",
-                    "params": {"uri": uri},
-                }
-            )
-            self.assertIsNotNone(read)
-            content = read["result"]["contents"][0]
-            self.assertEqual(content["uri"], uri)
-            self.assertEqual(content["mimeType"], WORKBENCH_WIDGET_MIME_TYPE)
-            self.assertIn("AgentOS Workbench", content["text"])
-            self.assertIn("Approval Gate", content["text"])
-            self.assertIn("request_agentos_sync_approval", content["text"])
-
-    def test_open_workbench_returns_widget_context(self) -> None:
-        result = _handle_rpc(
-            {
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "tools/call",
-                "params": {"name": "open_workbench", "arguments": {}},
-            }
-        )
-        self.assertIsNotNone(result)
-        content = result["result"]["structuredContent"]
-        self.assertEqual(content["resource_uri"], WORKBENCH_WIDGET_URI)
-        self.assertEqual(content["legacy_resource_uri"], WORKBENCH_LEGACY_WIDGET_URI)
-        self.assertIn("session_count", content)
-        self.assertIn("approval", content["panels"])
-        self.assertIn("sync_approved dry_run=false", content["dangerous_actions"])
-
-    def test_workbench_app_tools_drive_review_preflight_and_approval_intent(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            project = root / "project"
-            project.mkdir()
-            (project / "README.md").write_text("hello\n", encoding="utf-8")
-            state_dir = root / "state"
-            output_dir = root / "output"
-
-            create = _handle_rpc(
-                {
-                    "jsonrpc": "2.0",
-                    "id": 1,
-                    "method": "tools/call",
-                    "params": {
-                        "name": "create_session",
-                        "arguments": {
-                            "project_dir": str(project),
-                            "work_name": "workbench-flow",
-                            "state_dir": str(state_dir),
-                            "output_dir": str(output_dir),
-                        },
-                    },
-                }
-            )
-            self.assertIsNotNone(create)
-            workspace_path = Path(create["result"]["structuredContent"]["workspace_path"])
-            (workspace_path / "README.md").write_text("hello\nworkbench\n", encoding="utf-8")
-
-            validation = _handle_rpc(
-                {
-                    "jsonrpc": "2.0",
-                    "id": 2,
-                    "method": "tools/call",
-                    "params": {
-                        "name": "run_command",
-                        "arguments": {
-                            "work_name": "workbench-flow",
-                            "command": [sys.executable, "-c", "print('validated')"],
-                            "role": "validation",
-                            "state_dir": str(state_dir),
-                            "output_dir": str(output_dir),
-                        },
-                    },
-                }
-            )
-            self.assertIsNotNone(validation)
-            self.assertEqual(validation["result"]["structuredContent"]["exit_code"], 0)
-
-            review = _handle_rpc(
-                {
-                    "jsonrpc": "2.0",
-                    "id": 3,
-                    "method": "tools/call",
-                    "params": {
-                        "name": "request_agentos_review",
-                        "arguments": {
-                            "work_name": "workbench-flow",
-                            "state_dir": str(state_dir),
-                            "output_dir": str(output_dir),
-                        },
-                    },
-                }
-            )
-            self.assertIsNotNone(review)
-            review_state = review["result"]["structuredContent"]
-            self.assertEqual(review_state["mode"], "review_ready")
-            self.assertEqual(review_state["summary"]["changed_files"], ["README.md"])
-
-            preflight = _handle_rpc(
-                {
-                    "jsonrpc": "2.0",
-                    "id": 4,
-                    "method": "tools/call",
-                    "params": {
-                        "name": "request_agentos_sync_preflight",
-                        "arguments": {
-                            "work_name": "workbench-flow",
-                            "state_dir": str(state_dir),
-                            "output_dir": str(output_dir),
-                        },
-                    },
-                }
-            )
-            self.assertIsNotNone(preflight)
-            preflight_state = preflight["result"]["structuredContent"]
-            self.assertEqual(preflight_state["mode"], "sync_preflight_ready")
-            self.assertEqual(preflight_state["preflight"]["planned_paths"], ["README.md"])
-            self.assertTrue(preflight_state["preflight"]["approval_required"])
-
-            approval = _handle_rpc(
-                {
-                    "jsonrpc": "2.0",
-                    "id": 5,
-                    "method": "tools/call",
-                    "params": {
-                        "name": "request_agentos_sync_approval",
-                        "arguments": {
-                            "work_name": "workbench-flow",
-                            "state_dir": str(state_dir),
-                            "output_dir": str(output_dir),
-                        },
-                    },
-                }
-            )
-            self.assertIsNotNone(approval)
-            approval_state = approval["result"]["structuredContent"]
-            self.assertEqual(approval_state["mode"], "approval_requested")
-            self.assertEqual(approval_state["approval_intent"]["operation"], "approve_then_sync")
-            self.assertEqual(approval_state["approval_intent"]["state"], "ready")
-            self.assertTrue(approval_state["approval_intent"]["host_approval_token_required"])
-            self.assertEqual(approval_state["session"]["approvals"], [])
-            self.assertEqual(approval_state["session"]["syncs"], [])
+        self.assertEqual(resources["result"]["resources"], [])
 
     def test_tool_result_replaces_unpaired_surrogates(self) -> None:
         from agentos.mcp_server import _tool_result
@@ -331,7 +153,7 @@ class McpServerTests(unittest.TestCase):
             output_dir = root / "output"
             target = root / "target"
             target.mkdir()
-            plugin_root = Path(__file__).resolve().parents[2] / "plugins" / "agentos-workspace"
+            plugin_root = Path(__file__).resolve().parents[1] / "plugins" / "agentos-workspace"
             process = subprocess.Popen(
                 ["node", str(plugin_root / "mcp" / "server.mjs"), "--stdio"],
                 cwd=plugin_root,
@@ -449,7 +271,7 @@ class McpServerTests(unittest.TestCase):
                 process.terminate()
                 process.communicate(timeout=5)
 
-    def test_tool_call_summary_preflight_and_debug_bundle(self) -> None:
+    def test_tool_call_summary_and_preflight(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             project = root / "project"
@@ -599,6 +421,30 @@ class McpServerTests(unittest.TestCase):
             self.assertTrue(blocked_approve["result"]["isError"])
             self.assertIn("human approval token", blocked_approve["result"]["structuredContent"]["error"])
 
+            unsigned_approve = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 66,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "approve_scope",
+                        "arguments": {
+                            "project_dir": str(target),
+                            "review_package": review_package,
+                            "scope_id": "sync_selected:README.md",
+                            "allow_unsigned_approval": True,
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                        },
+                    },
+                }
+            )
+            self.assertIsNotNone(unsigned_approve)
+            self.assertFalse(unsigned_approve["result"].get("isError", False))
+            self.assertEqual(
+                unsigned_approve["result"]["structuredContent"]["scope"]["id"],
+                "sync_selected:README.md",
+            )
             with patch.dict(os.environ, {"AGENTOS_MCP_HUMAN_APPROVAL_TOKEN": "test-token"}):
                 approve = _handle_rpc(
                     {
@@ -690,24 +536,6 @@ class McpServerTests(unittest.TestCase):
             self.assertFalse(unsigned_data["approval_required"])
             self.assertTrue(unsigned_data["safe_to_sync"])
             self.assertEqual(unsigned_data["approval_verification_status"], "warning")
-
-            bundle = _handle_rpc(
-                {
-                    "jsonrpc": "2.0",
-                    "id": 9,
-                    "method": "tools/call",
-                    "params": {
-                        "name": "export_debug_bundle",
-                        "arguments": {
-                            "work_name": "preflight-test",
-                            "state_dir": str(state_dir),
-                            "output_dir": str(output_dir),
-                        },
-                    },
-                }
-            )
-            self.assertIsNotNone(bundle)
-            self.assertTrue(Path(bundle["result"]["structuredContent"]["bundle_path"]).exists())
 
     def test_failed_validation_blocks_approval_and_preflight(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -825,68 +653,6 @@ class McpServerTests(unittest.TestCase):
             preflight_data = preflight["result"]["structuredContent"]
             self.assertFalse(preflight_data["safe_to_sync"])
             self.assertIn("review validation is not passed: failed", preflight_data["blockers"])
-
-    def test_tool_call_purges_session_metadata_and_artifacts(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            project = root / "project"
-            project.mkdir()
-            (project / "README.md").write_text("hello\n", encoding="utf-8")
-            state_dir = root / "state"
-            output_dir = root / "output"
-
-            create = _handle_rpc(
-                {
-                    "jsonrpc": "2.0",
-                    "id": 1,
-                    "method": "tools/call",
-                    "params": {
-                        "name": "create_session",
-                        "arguments": {
-                            "project_dir": str(project),
-                            "work_name": "purge-test",
-                            "state_dir": str(state_dir),
-                            "output_dir": str(output_dir),
-                        },
-                    },
-                }
-            )
-            self.assertIsNotNone(create)
-
-            purge = _handle_rpc(
-                {
-                    "jsonrpc": "2.0",
-                    "id": 2,
-                    "method": "tools/call",
-                    "params": {
-                        "name": "purge_session",
-                        "arguments": {
-                            "work_name": "purge-test",
-                            "state_dir": str(state_dir),
-                            "output_dir": str(output_dir),
-                        },
-                    },
-                }
-            )
-            self.assertIsNotNone(purge)
-            self.assertTrue(purge["result"]["structuredContent"]["purged"])
-
-            status = _handle_rpc(
-                {
-                    "jsonrpc": "2.0",
-                    "id": 3,
-                    "method": "tools/call",
-                    "params": {
-                        "name": "list_sessions",
-                        "arguments": {
-                            "state_dir": str(state_dir),
-                            "output_dir": str(output_dir),
-                        },
-                    },
-                }
-            )
-            self.assertIsNotNone(status)
-            self.assertEqual(status["result"]["structuredContent"]["sessions"], [])
 
     def test_create_session_ignores_agentos_state_inside_project(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1168,7 +934,7 @@ class McpServerTests(unittest.TestCase):
         self.assertIn("tools", response["result"])
 
     def test_bundled_plugin_launcher_smoke(self) -> None:
-        repo_root = Path(__file__).resolve().parents[2]
+        repo_root = Path(__file__).resolve().parents[1]
         request = {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}
         result = subprocess.run(
             [sys.executable, str(repo_root / "plugins" / "agentos-workspace" / "agentos_mcp_launcher.py")],
@@ -1184,7 +950,7 @@ class McpServerTests(unittest.TestCase):
         self.assertEqual(response["result"]["serverInfo"]["name"], "agentos")
 
     def test_node_plugin_launcher_smoke(self) -> None:
-        repo_root = Path(__file__).resolve().parents[2]
+        repo_root = Path(__file__).resolve().parents[1]
         request = {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}
         result = subprocess.run(
             ["node", str(repo_root / "plugins" / "agentos-workspace" / "mcp" / "server.mjs"), "--stdio"],

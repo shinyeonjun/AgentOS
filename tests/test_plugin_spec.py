@@ -20,7 +20,7 @@ class PluginSpecTests(unittest.TestCase):
 
         self.assertEqual(spec["schema_version"], "0.4")
         self.assertEqual(spec["interfaces"]["mcp_stdio"], "agentos mcp serve")
-        self.assertEqual(spec["interfaces"]["mcp_app_resource"], "ui://agentos-workspace/<version>/workbench.html")
+        self.assertNotIn("mcp_app_resource", spec["interfaces"])
         self.assertEqual(spec["runtime_contract"]["first_action"], "doctor_before_file_edits")
         self.assertEqual(spec["runtime_contract"]["missing_agentos_tools"], "stop_without_direct_edits")
         self.assertEqual(spec["scope_boundary"]["product_role"], "safe_workspace_runtime")
@@ -40,26 +40,23 @@ class PluginSpecTests(unittest.TestCase):
         self.assertIn("review_session", tools)
         self.assertIn("session_summary", tools)
         self.assertIn("sync_preflight", tools)
-        self.assertIn("open_agentos_workspace", tools)
-        self.assertIn("get_agentos_workbench_state", tools)
-        self.assertIn("request_agentos_review", tools)
-        self.assertIn("request_agentos_sync_preflight", tools)
-        self.assertIn("request_agentos_sync_approval", tools)
+        self.assertNotIn("open_agentos_workspace", tools)
         self.assertIn("approve_scope", tools)
         self.assertIn("sync_approved", tools)
-        self.assertIn("cleanup_sessions", tools)
-        self.assertIn("repair_session", tools)
-        self.assertIn("export_debug_bundle", tools)
-        self.assertIn("purge_session", tools)
+        self.assertNotIn("get_agentos_workbench_state", tools)
+        self.assertNotIn("request_agentos_sync_approval", tools)
+        self.assertNotIn("cleanup_sessions", tools)
+        self.assertNotIn("repair_session", tools)
+        self.assertNotIn("export_debug_bundle", tools)
+        self.assertNotIn("destroy_session", tools)
+        self.assertNotIn("purge_session", tools)
         self.assertTrue(tools["approve_scope"]["human_approval_required"])
         self.assertTrue(tools["sync_approved"]["human_approval_required"])
         self.assertFalse(tools["sync_preflight"]["human_approval_required"])
-        self.assertTrue(tools["request_agentos_sync_approval"]["app_only"])
-        self.assertFalse(tools["request_agentos_sync_approval"]["human_approval_required"])
         self.assertIn("workspace_path", tools["create_session"]["outputs"])
 
     def test_scope_boundary_document_defends_v0_product_scope(self) -> None:
-        repo_root = Path(__file__).resolve().parents[2]
+        repo_root = Path(__file__).resolve().parents[1]
         doc = (repo_root / "docs" / "design" / "scope-boundary.md").read_text(encoding="utf-8")
 
         self.assertIn("original project is not mutated", doc)
@@ -70,8 +67,14 @@ class PluginSpecTests(unittest.TestCase):
         self.assertIn("OverlayFS", doc)
         self.assertIn("ProjFS", doc)
 
+    def test_runtime_source_lives_in_plugin_package(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+
+        self.assertFalse((repo_root / "prototype").exists())
+        self.assertTrue((repo_root / "plugins" / "agentos-workspace" / "runtime" / "agentos" / "__init__.py").exists())
+
     def test_codex_plugin_declares_agentos_mcp_server(self) -> None:
-        repo_root = Path(__file__).resolve().parents[2]
+        repo_root = Path(__file__).resolve().parents[1]
         plugin_root = repo_root / "plugins" / "agentos-workspace"
         manifest = json.loads((plugin_root / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
         mcp_config = json.loads((plugin_root / ".mcp.json").read_text(encoding="utf-8"))
@@ -80,14 +83,15 @@ class PluginSpecTests(unittest.TestCase):
         self.assertEqual(manifest["version"], "0.5.0a1")
         self.assertEqual(manifest["mcpServers"], "./.mcp.json")
         self.assertEqual(manifest["skills"], "./skills/")
-        self.assertIn("Interactive", manifest["interface"]["capabilities"])
+        self.assertNotIn("Interactive", manifest["interface"]["capabilities"])
         self.assertIn("Read", manifest["interface"]["capabilities"])
         self.assertIn("Before any file edit", manifest["interface"]["defaultPrompt"][0])
         self.assertIn("setup", manifest["interface"]["defaultPrompt"][0])
-        self.assertIn("open_agentos_workspace", manifest["interface"]["defaultPrompt"][1])
-        self.assertIn("normal approval policy", manifest["interface"]["defaultPrompt"][2])
-        self.assertIn("role=explore", manifest["interface"]["defaultPrompt"][3])
-        self.assertIn("explicit human approval", manifest["interface"]["defaultPrompt"][5])
+        self.assertIn("workflow harness", manifest["interface"]["defaultPrompt"][1])
+        self.assertIn("safety kernel", manifest["interface"]["defaultPrompt"][1])
+        self.assertIn("normal approval policy", " ".join(manifest["interface"]["defaultPrompt"]))
+        self.assertIn("role=explore", " ".join(manifest["interface"]["defaultPrompt"]))
+        self.assertIn("explicit human approval", " ".join(manifest["interface"]["defaultPrompt"]))
         self.assertEqual(marketplace["plugins"][0]["source"]["path"], "./plugins/agentos-workspace")
         self.assertIn("mcpServers", mcp_config)
         self.assertNotIn("mcp_servers", mcp_config)
@@ -104,40 +108,23 @@ class PluginSpecTests(unittest.TestCase):
         self.assertTrue((plugin_root / "scripts" / "setup-codex-mcp.cjs").exists())
         self.assertTrue((plugin_root / "scripts" / "setup-codex-mcp.ps1").exists())
         self.assertTrue((plugin_root / "scripts" / "setup-codex-mcp.sh").exists())
+
+    def test_plugin_runtime_keeps_child_codex_harness_out_of_bundle(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        plugin_root = repo_root / "plugins" / "agentos-workspace"
+        runtime_root = plugin_root / "runtime" / "agentos"
+        self.assertFalse((runtime_root / "demos").exists())
+        self.assertFalse((runtime_root / "workers").exists())
+
+        references = plugin_root / "references"
+        self.assertTrue((references / "plugin-shape.md").is_file())
+        self.assertTrue((references / "workflow-contract.md").is_file())
+        self.assertTrue((references / "safety-boundary.md").is_file())
         self.assertTrue((plugin_root / "scripts" / "smoke-mcp.cjs").exists())
         self.assertFalse((plugin_root / "skills" / "agentos-workspace" / "agents" / "openai.yaml").exists())
 
-    def test_public_versions_stay_in_sync(self) -> None:
-        repo_root = Path(__file__).resolve().parents[2]
-        plugin_root = repo_root / "plugins" / "agentos-workspace"
-        package = tomllib.loads((repo_root / "pyproject.toml").read_text(encoding="utf-8"))
-        manifest = json.loads((plugin_root / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
-
-        expected_version = manifest["version"]
-        self.assertEqual(package["project"]["version"], expected_version)
-        self.assertIn(
-            f'__version__ = "{expected_version}"',
-            (repo_root / "prototype" / "agentos" / "__init__.py").read_text(encoding="utf-8"),
-        )
-        self.assertIn(
-            f'__version__ = "{expected_version}"',
-            (plugin_root / "runtime" / "agentos" / "__init__.py").read_text(encoding="utf-8"),
-        )
-
-    def test_codex_plugin_runtime_keeps_review_path_policy_in_sync(self) -> None:
-        repo_root = Path(__file__).resolve().parents[2]
-        runtime_core = repo_root / "plugins" / "agentos-workspace" / "runtime" / "agentos" / "core"
-        prototype_core = repo_root / "prototype" / "agentos" / "core"
-
-        for filename in ("changes.py", "path_policy.py"):
-            with self.subTest(filename=filename):
-                self.assertEqual(
-                    (runtime_core / filename).read_text(encoding="utf-8"),
-                    (prototype_core / filename).read_text(encoding="utf-8"),
-                )
-
     def test_setup_script_writes_absolute_mcp_config(self) -> None:
-        repo_root = Path(__file__).resolve().parents[2]
+        repo_root = Path(__file__).resolve().parents[1]
         plugin_root = repo_root / "plugins" / "agentos-workspace"
         setup_script = plugin_root / "scripts" / "setup-codex-mcp.cjs"
 
@@ -177,7 +164,7 @@ class PluginSpecTests(unittest.TestCase):
         self.assertIn("is managed by AgentOS Workspace", check.stdout)
 
     def test_setup_script_reports_stale_managed_launcher(self) -> None:
-        repo_root = Path(__file__).resolve().parents[2]
+        repo_root = Path(__file__).resolve().parents[1]
         setup_script = repo_root / "plugins" / "agentos-workspace" / "scripts" / "setup-codex-mcp.cjs"
 
         with TemporaryDirectory() as tmp:
@@ -207,7 +194,7 @@ class PluginSpecTests(unittest.TestCase):
         self.assertIn("Expected cwd:", result.stdout)
 
     def test_setup_script_refuses_unmanaged_existing_server_without_force(self) -> None:
-        repo_root = Path(__file__).resolve().parents[2]
+        repo_root = Path(__file__).resolve().parents[1]
         setup_script = repo_root / "plugins" / "agentos-workspace" / "scripts" / "setup-codex-mcp.cjs"
 
         with TemporaryDirectory() as tmp:
@@ -228,7 +215,7 @@ class PluginSpecTests(unittest.TestCase):
         self.assertIn("already has [mcp_servers.agentos]", result.stderr)
 
     def test_setup_script_check_reports_missing_config(self) -> None:
-        repo_root = Path(__file__).resolve().parents[2]
+        repo_root = Path(__file__).resolve().parents[1]
         setup_script = repo_root / "plugins" / "agentos-workspace" / "scripts" / "setup-codex-mcp.cjs"
 
         with TemporaryDirectory() as tmp:
@@ -243,7 +230,7 @@ class PluginSpecTests(unittest.TestCase):
         self.assertIn("No Codex config found", result.stdout)
 
     def test_codex_plugin_launcher_handles_windows_python_aliases(self) -> None:
-        repo_root = Path(__file__).resolve().parents[2]
+        repo_root = Path(__file__).resolve().parents[1]
         launcher = (repo_root / "plugins" / "agentos-workspace" / "mcp" / "python-bridge.mjs").read_text(
             encoding="utf-8"
         )
@@ -266,7 +253,7 @@ class PluginSpecTests(unittest.TestCase):
         self.assertIn("tryNext();", launcher)
 
     def test_node_launcher_distinguishes_python_crash_from_missing_python(self) -> None:
-        repo_root = Path(__file__).resolve().parents[2]
+        repo_root = Path(__file__).resolve().parents[1]
         launcher = repo_root / "plugins" / "agentos-workspace" / "mcp" / "server.mjs"
         node = shutil.which("node")
         self.assertIsNotNone(node)

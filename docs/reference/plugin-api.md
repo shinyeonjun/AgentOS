@@ -8,7 +8,7 @@ AgentOS is the safe workspace runtime that an external AI agent app can call
 when it needs to edit files, run checks, review changes, and sync approved
 results without directly mutating the user's original project.
 
-The AI agent is still the brain. AgentOS is the workbench:
+The AI agent is still the brain. AgentOS is the runtime boundary:
 
 ```text
 Codex / Claude Code / another agent app

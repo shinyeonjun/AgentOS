@@ -1,4 +1,4 @@
-"""AgentOS v0.2 prototype runtime."""
+"""AgentOS v0.2 runtime."""
 
 __all__ = ["__version__"]
 

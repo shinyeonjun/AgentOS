@@ -1,6 +1,6 @@
 # AgentOS Docker Storage Plan v0.2
 
-작성일: 2026-06-16
+?묒꽦?? 2026-06-16
 
 ## Current Host State
 
@@ -137,14 +137,14 @@ Verified after repartition:
 findmnt /mnt/usb
 findmnt /mnt/usb-share
 df -h /mnt/usb /mnt/usb-share
-PYTHONPATH=/mnt/usb/projects/agentos/prototype python3 -m unittest discover /mnt/usb/projects/agentos/prototype/tests -v
+PYTHONPATH=/mnt/usb/projects/agentos/plugins/agentos-workspace/runtime python3 -m unittest discover /mnt/usb/projects/agentos/tests -v
 ```
 
 Result:
 
 - `/mnt/usb` mounted as ext4 `AGENTOS`
 - `/mnt/usb-share` mounted as exFAT `USB_SHARE`
-- AgentOS prototype tests passed
+- AgentOS runtime tests passed
 
 Docker verification:
 

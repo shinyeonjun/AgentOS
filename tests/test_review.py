@@ -12,22 +12,21 @@ from agentos.core.changes import detect_file_changes
 from agentos.core.path_policy import PathPolicy
 from agentos.core.review import render_review_diffs, render_review_summary, summarize_review_package
 from agentos.core.work_sessions import create_work_session, exec_work_session, review_work_session, status_work_session
-from agentos.demos.demo import run_code_fix_demo
 
 
 class ReviewSummaryTests(unittest.TestCase):
     def test_review_summary_renders_key_review_sections(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
-            demo = run_code_fix_demo(state_dir=root / "state", output_dir=root / "output")
+            review = _create_review_fixture(root)
 
-            summary = summarize_review_package(demo.review_package_artifact)
+            summary = summarize_review_package(review.review_package_artifact)
             rendered = render_review_summary(summary)
 
-            self.assertEqual(summary.session_id, demo.session_id)
+            self.assertEqual(summary.session_id, review.session_id)
             self.assertIn("AgentOS Review", rendered)
             self.assertIn("Changed Files", rendered)
-            self.assertIn("calculator.py", rendered)
+            self.assertIn("README.md", rendered)
             self.assertIn("Validation Checks", rendered)
             self.assertIn("Approval Scopes", rendered)
             self.assertIn("Artifacts", rendered)
@@ -36,11 +35,11 @@ class ReviewSummaryTests(unittest.TestCase):
     def test_review_summary_to_dict_is_machine_readable(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
-            demo = run_code_fix_demo(state_dir=root / "state", output_dir=root / "output")
+            review = _create_review_fixture(root)
 
-            data = summarize_review_package(demo.review_package_artifact).to_dict()
+            data = summarize_review_package(review.review_package_artifact).to_dict()
 
-            self.assertEqual(data["session_id"], demo.session_id)
+            self.assertEqual(data["session_id"], review.session_id)
             self.assertEqual(data["state"], "REVIEW_READY")
             self.assertEqual(data["validation_status"], "passed")
             self.assertTrue(data["changed_files"])
@@ -345,6 +344,41 @@ class ReviewSummaryTests(unittest.TestCase):
                 self.assertEqual(list((state_dir / "sessions").glob("*")), [])
             finally:
                 blocked.chmod(0o755)
+
+
+def _create_review_fixture(root: Path):
+    project = root / "project"
+    project.mkdir()
+    (project / "README.md").write_text("# Demo\n", encoding="utf-8")
+    create_work_session(
+        state_dir=root / "state",
+        output_dir=root / "output",
+        input_path=project,
+        name="review-fixture",
+    )
+    exec_work_session(
+        state_dir=root / "state",
+        output_dir=root / "output",
+        session_ref="review-fixture",
+        command=[
+            sys.executable,
+            "-c",
+            "from pathlib import Path; Path('README.md').write_text('# Demo\\nupdated\\n', encoding='utf-8')",
+        ],
+        role="edit",
+    )
+    exec_work_session(
+        state_dir=root / "state",
+        output_dir=root / "output",
+        session_ref="review-fixture",
+        command=[sys.executable, "-c", "raise SystemExit(0)"],
+        role="validation",
+    )
+    return review_work_session(
+        state_dir=root / "state",
+        output_dir=root / "output",
+        session_ref="review-fixture",
+    )
 
 
 if __name__ == "__main__":
