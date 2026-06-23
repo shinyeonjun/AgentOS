@@ -4,7 +4,7 @@ const childProcess = require("node:child_process");
 const path = require("node:path");
 
 const pluginRoot = path.resolve(__dirname, "..");
-const launcher = process.argv[2] ? path.resolve(process.argv[2]) : path.join(pluginRoot, "agentos_mcp_launcher.cjs");
+const launcher = process.argv[2] ? path.resolve(process.argv[2]) : path.join(pluginRoot, "mcp", "server.mjs");
 const requiredTools = [
   "doctor",
   "prepare_environment",
@@ -27,7 +27,7 @@ const requiredTools = [
   "destroy_session",
   "purge_session",
 ];
-const child = childProcess.spawn("node", [launcher], {
+const child = childProcess.spawn("node", [launcher, "--stdio"], {
   cwd: pluginRoot,
   stdio: ["pipe", "pipe", "pipe"],
 });

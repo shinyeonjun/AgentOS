@@ -273,9 +273,9 @@ const path = require("node:path");
 
 const fallbackPluginRoot = ${JSON.stringify(fallbackPluginRoot)};
 const pluginRoot = path.resolve(fallbackPluginRoot);
-const launcher = path.join(pluginRoot, "agentos_mcp_launcher.cjs");
+const launcher = path.join(pluginRoot, "mcp", "server.mjs");
 
-const child = childProcess.spawn("node", [launcher], {
+const child = childProcess.spawn("node", [launcher, "--stdio"], {
   cwd: pluginRoot,
   env: process.env,
   stdio: ["inherit", "inherit", "inherit"],

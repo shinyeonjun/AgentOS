@@ -49,7 +49,7 @@ macOS/Linux:
 5. For custom AgentOS harnesses, pass a launcher override.
 
 ```bash
-./scripts/setup-codex-mcp.sh --launcher /absolute/path/to/agentos_mcp_launcher.cjs
+./scripts/setup-codex-mcp.sh --launcher /absolute/path/to/mcp/server.mjs
 ```
 
 6. After setup, run the config check and smoke helper when shell access is
