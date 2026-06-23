@@ -16,6 +16,33 @@ for extra approval, because those steps do not mutate the original project.
 The approval boundary is sync back to the original project. `approve_scope` and
 non-dry-run `sync_approved` require explicit human approval.
 
+## Workbench App
+
+AgentOS also exposes a Codex MCP App resource at:
+
+```text
+ui://agentos-workspace/<version>/workbench.html
+```
+
+The legacy URI `ui://agentos-workspace/workbench.html` remains available for
+older hosts. The resource uses the MCP App MIME type
+`text/html;profile=mcp-app` and is opened by `open_workbench`.
+
+The Workbench side panel can refresh session state, build a review package, run
+sync preflight, and request an approval intent through app-only MCP tools:
+
+```text
+get_agentos_workbench_state
+request_agentos_review
+request_agentos_sync_preflight
+request_agentos_sync_approval
+```
+
+These app-only tools do not bypass the sync boundary. The approval button creates
+a bounded approval intent with planned paths, blockers, target, review package,
+and scope. Actual `approve_scope` and non-dry-run `sync_approved` still require a
+trusted host-provided human approval token.
+
 Two optional modes are useful for hosts or advanced users:
 
 - **strict**: ask before session creation or command execution too.

@@ -19,6 +19,11 @@ const requiredTools = [
   "render_diff",
   "verify_review",
   "sync_preflight",
+  "open_workbench",
+  "get_agentos_workbench_state",
+  "request_agentos_review",
+  "request_agentos_sync_preflight",
+  "request_agentos_sync_approval",
   "approve_scope",
   "sync_approved",
   "cleanup_sessions",
@@ -94,5 +99,5 @@ function inspectResponses() {
     console.error(`MCP tools/list is missing required tools: ${missing.join(", ")}. stdout:\n${stdout}\nstderr:\n${stderr}`);
     process.exit(1);
   }
-  console.log(`AgentOS MCP smoke OK: ${requiredTools.length} tools, version ${version}`);
+  console.log(`AgentOS MCP smoke OK: ${tools.length} tools, version ${version}`);
 }

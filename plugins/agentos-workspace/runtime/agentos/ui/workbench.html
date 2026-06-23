@@ -358,9 +358,10 @@
             </div>
 
             <div class="actions">
-              <button class="action" id="verifyReview" type="button">Verify review</button>
+              <button class="action" id="refreshState" type="button">Refresh</button>
+              <button class="action" id="buildReview" type="button">Build review</button>
               <button class="action" id="syncPreflight" type="button">Sync preflight</button>
-              <button class="action primary" id="approveSync" type="button">Approve and sync</button>
+              <button class="action primary" id="requestApproval" type="button">Request approval</button>
             </div>
           </div>
         </aside>
@@ -368,12 +369,20 @@
     </main>
 
     <script>
+      let appState = null;
+
       const fallback = {
         title: "AgentOS Workbench",
         mode: "observe_and_approve",
         state_dir: "default",
         output_dir: "default",
         sessions: [],
+        selected_session_ref: null,
+        session: null,
+        summary: null,
+        preflight: null,
+        approval_intent: null,
+        action_result: null,
         changed_files: [],
         tool_calls: [],
         blockers: [],
@@ -381,6 +390,7 @@
 
       function toolData() {
         const item =
+          appState ||
           (window.openai && window.openai.toolResult) ||
           window.__OPENAI_TOOL_RESULT__ ||
           window.__AGENTOS_WORKBENCH_DATA__ ||
@@ -404,9 +414,9 @@
 
       function statusClass(value) {
         const v = String(value || "").toLowerCase();
-        if (["passed", "ready", "complete", "synced", "ok"].includes(v)) return "ok";
+        if (["passed", "ready", "complete", "synced", "ok", "true"].includes(v)) return "ok";
         if (["failed", "blocked", "error"].includes(v)) return "bad";
-        if (["warning", "missing", "pending", "not_checked"].includes(v)) return "warn";
+        if (["warning", "missing", "pending", "not_checked", "false"].includes(v)) return "warn";
         return "";
       }
 
@@ -427,31 +437,84 @@
 
       function asSession(data) {
         if (data.session) return data.session;
+        if (data.summary) return data.summary;
         if (data.session_id || data.workspace_path || data.input_path) return data;
         const sessions = data.sessions || [];
         return sessions[0] || null;
       }
 
+      function activeWorkName(data) {
+        const session = asSession(data);
+        return data.selected_session_ref || (session && (session.session_id || session.name)) || "";
+      }
+
+      function baseArgs(data) {
+        const args = {};
+        if (data.state_dir && data.state_dir !== "default") args.state_dir = data.state_dir;
+        if (data.output_dir && data.output_dir !== "default") args.output_dir = data.output_dir;
+        const workName = activeWorkName(data);
+        if (workName) args.work_name = workName;
+        if (data.project_dir) args.project_dir = data.project_dir;
+        return args;
+      }
+
+      async function callWorkbenchTool(name, args = {}) {
+        if (!window.openai || typeof window.openai.callTool !== "function") return;
+        setText("statePill", "working");
+        try {
+          const result = await window.openai.callTool(name, args);
+          appState = result && (result.structuredContent || result);
+          render();
+        } catch (error) {
+          const current = toolData();
+          appState = {
+            ...current,
+            mode: "error",
+            action_result: { error: error && error.message ? error.message : String(error) },
+          };
+          render();
+        }
+      }
+
+      function bindActions() {
+        const actions = {
+          refreshState: () => callWorkbenchTool("get_agentos_workbench_state", baseArgs(toolData())),
+          buildReview: () => callWorkbenchTool("request_agentos_review", baseArgs(toolData())),
+          syncPreflight: () => callWorkbenchTool("request_agentos_sync_preflight", baseArgs(toolData())),
+          requestApproval: () => callWorkbenchTool("request_agentos_sync_approval", baseArgs(toolData())),
+        };
+        for (const [id, handler] of Object.entries(actions)) {
+          const button = document.getElementById(id);
+          if (button) button.addEventListener("click", handler);
+        }
+      }
+
       function render() {
         const data = toolData();
+        const summary = data.summary || {};
+        const preflight = data.preflight || (data.action_result && data.action_result.safe_to_sync !== undefined ? data.action_result : null);
+        const approvalIntent = data.approval_intent || (data.action_result && data.action_result.operation === "approve_then_sync" ? data.action_result : null);
         const session = asSession(data);
         const sessions = data.sessions || (session ? [session] : []);
-        const commands = data.tool_calls || data.commands || (session && session.tool_calls) || [];
+        const detailedSession = data.session || {};
+        const commands = data.tool_calls || data.commands || detailedSession.tool_calls || (session && session.tool_calls) || [];
         const latestCommand = commands[commands.length - 1];
-        const changed = data.changed_files || data.planned_paths || [];
-        const blockers = data.blockers || [];
-        const reviewPath = data.review_package_artifact || data.review_package_path;
-        const validation = data.validation_status || data.review_verification_status || "not ready";
-        const approval = data.approval_verification_status || (blockers.length ? "blocked" : "pending");
+        const changed = summary.changed_files || data.changed_files || (preflight && preflight.planned_paths) || [];
+        const blockers = data.blockers || (preflight && preflight.blockers) || (approvalIntent && approvalIntent.blockers) || [];
+        const reviewPath = summary.review_package_artifact || data.review_package_artifact || data.review_package_path;
+        const validation = summary.validation_status || data.validation_status || data.review_verification_status || "not ready";
+        const approval = approvalIntent
+          ? approvalIntent.state
+          : data.approval_verification_status || (blockers.length ? "blocked" : "pending");
 
         setText("subtitle", data.project_dir || data.target_dir || data.input_path || "Workspace, review, approval");
-        setText("sessionPill", session ? session.name || session.session_id : "no session");
+        setText("sessionPill", activeWorkName(data) || "no session");
         setText("statePill", data.mode || data.next_action || "ready");
         setText("sessionCount", sessions.length);
         setText("commandCount", commands.length);
         setText("changedCount", changed.length);
         setText("blockerCount", blockers.length);
-        setBadge("sessionState", session && (session.state || session.validation_status || "ready"));
+        setBadge("sessionState", summary.state || (session && (session.state || session.validation_status || "ready")));
         setBadge("commandState", latestCommand && (latestCommand.status || latestCommand.exit_code || "done"));
         setBadge("reviewState", validation);
         setBadge("approvalState", approval);
@@ -479,25 +542,36 @@
         const reviewRows = [];
         if (reviewPath) reviewRows.push(row("package", reviewPath, validation));
         if (changed.length) reviewRows.push(row("changed files", changed.join("\\n"), `${changed.length}`));
-        if (data.next_action) reviewRows.push(row("next", data.next_action));
+        if (summary.next_action || data.next_action) reviewRows.push(row("next", summary.next_action || data.next_action));
         document.getElementById("reviewBox").innerHTML = reviewRows.length
           ? reviewRows.join("")
           : empty("Review details appear after review_session or sync_preflight.");
 
         const approvalRows = [];
         if (blockers.length) approvalRows.push(row("blockers", blockers.join("\\n"), "blocked"));
-        if (data.recommended_scope_id) approvalRows.push(row("scope", data.recommended_scope_id));
-        if (data.safe_to_sync !== undefined) approvalRows.push(row("safe to sync", String(data.safe_to_sync), data.safe_to_sync ? "ready" : "blocked"));
+        if (preflight && preflight.recommended_scope_id) approvalRows.push(row("scope", preflight.recommended_scope_id));
+        if (preflight && preflight.safe_to_sync !== undefined) {
+          approvalRows.push(row("safe to sync", String(preflight.safe_to_sync), preflight.safe_to_sync ? "ready" : "blocked"));
+        }
+        if (approvalIntent) {
+          approvalRows.push(row("intent", approvalIntent.next_action, approvalIntent.state));
+        }
+        if (data.action_result && data.action_result.error) {
+          approvalRows.push(row("last action", data.action_result.error, "error"));
+        }
         document.getElementById("approvalBox").innerHTML = approvalRows.length
           ? approvalRows.join("")
           : empty("Approval remains locked until sync_preflight returns a concrete scope.");
 
         const hasBridge = Boolean(window.openai && typeof window.openai.callTool === "function");
-        for (const id of ["verifyReview", "syncPreflight", "approveSync"]) {
-          document.getElementById(id).disabled = !hasBridge;
+        const hasSession = Boolean(activeWorkName(data));
+        for (const id of ["refreshState", "buildReview", "syncPreflight", "requestApproval"]) {
+          const button = document.getElementById(id);
+          if (button) button.disabled = !hasBridge || (id !== "refreshState" && !hasSession);
         }
       }
 
+      bindActions();
       render();
       window.addEventListener("message", render);
     </script>

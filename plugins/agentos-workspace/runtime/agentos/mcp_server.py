@@ -15,14 +15,18 @@ from .core.session_ops import approve_review_package, preflight_sync_review, syn
 from .core.version_info import SERVER_VERSION, runtime_identity
 
 MCP_HUMAN_APPROVAL_TOKEN_ENV = "AGENTOS_MCP_HUMAN_APPROVAL_TOKEN"
-WORKBENCH_WIDGET_URI = "ui://agentos-workspace/workbench.html"
-WORKBENCH_WIDGET_MIME_TYPE = "text/html"
+WORKBENCH_WIDGET_URI = f"ui://agentos-workspace/{SERVER_VERSION}/workbench.html"
+WORKBENCH_LEGACY_WIDGET_URI = "ui://agentos-workspace/workbench.html"
+WORKBENCH_WIDGET_MIME_TYPE = "text/html;profile=mcp-app"
 WORKBENCH_WIDGET_META = {
     "ui": {
         "prefersBorder": False,
         "csp": {
             "connectDomains": [],
             "resourceDomains": [],
+        },
+        "permissions": {
+            "clipboardWrite": {},
         },
     },
     "openai/widgetDescription": "Observe AgentOS sessions, sandbox runs, review packages, and approval gates.",
@@ -34,16 +38,37 @@ WORKBENCH_WIDGET_META = {
 }
 
 
-def _workbench_tool_meta(*, invoking: str, invoked: str) -> dict[str, Any]:
+def _workbench_tool_meta(
+    *,
+    invoking: str | None = None,
+    invoked: str | None = None,
+    visibility: list[str] | None = None,
+    output_template: bool = True,
+) -> dict[str, Any]:
+    meta: dict[str, Any] = {
+        "ui": {
+            "resourceUri": WORKBENCH_WIDGET_URI,
+            "visibility": visibility or ["model", "app"],
+        },
+        "ui/resourceUri": WORKBENCH_WIDGET_URI,
+    }
+    if output_template:
+        meta["openai/outputTemplate"] = WORKBENCH_WIDGET_URI
+        meta["openai/widgetAccessible"] = True
+    if invoking:
+        meta["openai/toolInvocation/invoking"] = invoking
+    if invoked:
+        meta["openai/toolInvocation/invoked"] = invoked
+    return meta
+
+
+def _workbench_app_tool_meta() -> dict[str, Any]:
     return {
         "ui": {
             "resourceUri": WORKBENCH_WIDGET_URI,
-            "visibility": ["model", "app"],
+            "visibility": ["app"],
         },
-        "openai/outputTemplate": WORKBENCH_WIDGET_URI,
-        "openai/widgetAccessible": True,
-        "openai/toolInvocation/invoking": invoking,
-        "openai/toolInvocation/invoked": invoked,
+        "ui/resourceUri": WORKBENCH_WIDGET_URI,
     }
 
 from .core.work_sessions import (
@@ -175,6 +200,10 @@ def _handle_tool_call(params: dict[str, Any]) -> dict[str, Any]:
         "verify_review": _tool_verify_review,
         "sync_preflight": _tool_sync_preflight,
         "open_workbench": _tool_open_workbench,
+        "get_agentos_workbench_state": _tool_get_agentos_workbench_state,
+        "request_agentos_review": _tool_request_agentos_review,
+        "request_agentos_sync_preflight": _tool_request_agentos_sync_preflight,
+        "request_agentos_sync_approval": _tool_request_agentos_sync_approval,
         "approve_scope": _tool_approve_scope,
         "sync_approved": _tool_sync_approved,
         "cleanup_sessions": _tool_cleanup_sessions,
@@ -190,25 +219,30 @@ def _handle_tool_call(params: dict[str, Any]) -> dict[str, Any]:
 
 def _resource_definitions() -> list[dict[str, Any]]:
     return [
-        {
-            "uri": WORKBENCH_WIDGET_URI,
-            "name": "agentos-workbench",
-            "title": "AgentOS Workbench",
-            "description": "Session, command, sandbox, review, and approval visibility for AgentOS workspaces.",
-            "mimeType": WORKBENCH_WIDGET_MIME_TYPE,
-            "_meta": WORKBENCH_WIDGET_META,
-        }
+        _workbench_resource(WORKBENCH_WIDGET_URI, "agentos-workbench"),
+        _workbench_resource(WORKBENCH_LEGACY_WIDGET_URI, "agentos-workbench-legacy"),
     ]
+
+
+def _workbench_resource(uri: str, name: str) -> dict[str, Any]:
+    return {
+        "uri": uri,
+        "name": name,
+        "title": "AgentOS Workbench",
+        "description": "Session, command, sandbox, review, and approval visibility for AgentOS workspaces.",
+        "mimeType": WORKBENCH_WIDGET_MIME_TYPE,
+        "_meta": WORKBENCH_WIDGET_META,
+    }
 
 
 def _handle_resource_read(params: dict[str, Any]) -> dict[str, Any]:
     uri = params.get("uri")
-    if uri != WORKBENCH_WIDGET_URI:
+    if uri not in {WORKBENCH_WIDGET_URI, WORKBENCH_LEGACY_WIDGET_URI}:
         raise ValueError(f"unknown AgentOS resource: {uri}")
     return {
         "contents": [
             {
-                "uri": WORKBENCH_WIDGET_URI,
+                "uri": uri,
                 "mimeType": WORKBENCH_WIDGET_MIME_TYPE,
                 "text": _workbench_html(),
                 "_meta": WORKBENCH_WIDGET_META,
@@ -347,18 +381,165 @@ def _tool_sync_preflight(arguments: dict[str, Any]) -> dict[str, Any]:
 def _tool_open_workbench(arguments: dict[str, Any]) -> dict[str, Any]:
     state_dir = _state_dir(arguments)
     output_dir = _output_dir(arguments)
+    return _workbench_state(
+        state_dir=state_dir,
+        output_dir=output_dir,
+        work_name=_optional_str(arguments, "work_name"),
+        project_dir=_optional_path(arguments, "project_dir"),
+        mode="observe_and_approve",
+    )
+
+
+def _tool_get_agentos_workbench_state(arguments: dict[str, Any]) -> dict[str, Any]:
+    return _workbench_state(
+        state_dir=_state_dir(arguments),
+        output_dir=_output_dir(arguments),
+        work_name=_optional_str(arguments, "work_name"),
+        project_dir=_optional_path(arguments, "project_dir"),
+        mode="observe_and_approve",
+    )
+
+
+def _tool_request_agentos_review(arguments: dict[str, Any]) -> dict[str, Any]:
+    state_dir = _state_dir(arguments)
+    output_dir = _output_dir(arguments)
+    work_name = _required_str(arguments, "work_name")
+    review = review_work_session(
+        state_dir=state_dir,
+        output_dir=output_dir,
+        session_ref=work_name,
+    ).to_dict()
+    return _workbench_state(
+        state_dir=state_dir,
+        output_dir=output_dir,
+        work_name=work_name,
+        project_dir=_optional_path(arguments, "project_dir"),
+        mode="review_ready",
+        last_action="request_agentos_review",
+        action_result=review,
+    )
+
+
+def _tool_request_agentos_sync_preflight(arguments: dict[str, Any]) -> dict[str, Any]:
+    state_dir = _state_dir(arguments)
+    output_dir = _output_dir(arguments)
+    work_name = _optional_str(arguments, "work_name")
+    project_dir = _optional_path(arguments, "project_dir") or _project_dir_for_session(state_dir, work_name)
+    review_package = _optional_path(arguments, "review_package")
+    allow_unsigned = _bool_arg(arguments, "allow_unsigned_approval", False)
+    preflight = preflight_sync_review(
+        state_dir=state_dir,
+        target_dir=project_dir,
+        review_package_path=review_package,
+        latest=_bool_arg(arguments, "latest", True),
+        scope_id=arguments.get("scope_id") if arguments.get("scope_id") is not None else None,
+        require_clean_git=_bool_arg(arguments, "require_clean_git", False),
+        require_signed_approval=_bool_arg(arguments, "require_signed_approval", not allow_unsigned),
+    ).to_dict()
+    return _workbench_state(
+        state_dir=state_dir,
+        output_dir=output_dir,
+        work_name=work_name,
+        project_dir=project_dir,
+        mode="sync_preflight_ready",
+        last_action="request_agentos_sync_preflight",
+        action_result=preflight,
+        preflight=preflight,
+    )
+
+
+def _tool_request_agentos_sync_approval(arguments: dict[str, Any]) -> dict[str, Any]:
+    state_dir = _state_dir(arguments)
+    output_dir = _output_dir(arguments)
+    work_name = _optional_str(arguments, "work_name")
+    project_dir = _optional_path(arguments, "project_dir") or _project_dir_for_session(state_dir, work_name)
+    review_package = _optional_path(arguments, "review_package")
+    allow_unsigned = _bool_arg(arguments, "allow_unsigned_approval", False)
+    preflight = preflight_sync_review(
+        state_dir=state_dir,
+        target_dir=project_dir,
+        review_package_path=review_package,
+        latest=_bool_arg(arguments, "latest", True),
+        scope_id=arguments.get("scope_id") if arguments.get("scope_id") is not None else None,
+        require_clean_git=_bool_arg(arguments, "require_clean_git", False),
+        require_signed_approval=_bool_arg(arguments, "require_signed_approval", not allow_unsigned),
+    ).to_dict()
+    blockers = [str(item) for item in preflight.get("blockers", [])]
+    non_approval_blockers = [item for item in blockers if "approval required" not in item.lower()]
+    intent_ready = bool(preflight.get("safe_to_sync")) or (
+        bool(preflight.get("approval_required")) and not non_approval_blockers
+    )
+    scope_id = str(preflight.get("recommended_scope_id") or arguments.get("scope_id") or "")
+    approval_intent = {
+        "operation": "approve_then_sync",
+        "state": "ready" if intent_ready else "blocked",
+        "project_dir": safe_text(str(project_dir)),
+        "review_package": safe_text(str(preflight.get("review_package") or review_package or "")),
+        "scope_id": scope_id,
+        "planned_paths": preflight.get("planned_paths", []),
+        "blockers": blockers,
+        "non_approval_blockers": non_approval_blockers,
+        "approval_required": True,
+        "host_approval_token_required": True,
+        "next_action": "host_approve_scope_then_sync_approved" if intent_ready else "resolve_preflight_blockers",
+    }
+    return _workbench_state(
+        state_dir=state_dir,
+        output_dir=output_dir,
+        work_name=work_name,
+        project_dir=project_dir,
+        mode="approval_requested",
+        last_action="request_agentos_sync_approval",
+        action_result=approval_intent,
+        preflight=preflight,
+        approval_intent=approval_intent,
+    )
+
+
+def _workbench_state(
+    *,
+    state_dir: Path,
+    output_dir: Path,
+    work_name: str | None,
+    project_dir: Path | None,
+    mode: str,
+    last_action: str | None = None,
+    action_result: dict[str, Any] | None = None,
+    preflight: dict[str, Any] | None = None,
+    approval_intent: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     try:
         sessions_state = status_work_session(state_dir=state_dir)
     except Exception as exc:
         sessions_state = {"error": safe_text(str(exc)), "sessions": []}
+    selected_ref = work_name or _latest_session_ref(sessions_state)
+    session_state: dict[str, Any] | None = None
+    summary: dict[str, Any] | None = None
+    if selected_ref:
+        try:
+            session_state = status_work_session(state_dir=state_dir, session_ref=selected_ref)
+            summary = summarize_work_session(state_dir=state_dir, session_ref=selected_ref).to_dict()
+        except Exception as exc:
+            session_state = {"error": safe_text(str(exc)), "session": None}
+    session = session_state.get("session") if session_state else None
+    effective_project_dir = project_dir or _path_from_session(session, "input_path")
     return {
         "title": "AgentOS Workbench",
         "resource_uri": WORKBENCH_WIDGET_URI,
-        "mode": "observe_and_approve",
+        "legacy_resource_uri": WORKBENCH_LEGACY_WIDGET_URI,
+        "mode": mode,
         "state_dir": str(state_dir),
         "output_dir": str(output_dir),
+        "project_dir": safe_text(str(effective_project_dir)) if effective_project_dir else None,
         "sessions": sessions_state.get("sessions", []),
         "session_count": len(sessions_state.get("sessions", [])),
+        "selected_session_ref": selected_ref,
+        "session": session,
+        "summary": summary,
+        "preflight": preflight,
+        "approval_intent": approval_intent,
+        "last_action": last_action,
+        "action_result": action_result,
         "panels": [
             "sessions",
             "commands",
@@ -383,6 +564,40 @@ def _tool_open_workbench(arguments: dict[str, Any]) -> dict[str, Any]:
             "purge_session",
         ],
     }
+
+
+def _latest_session_ref(sessions_state: dict[str, Any]) -> str | None:
+    sessions = sessions_state.get("sessions") or []
+    if not sessions:
+        return None
+    first = sessions[0]
+    if isinstance(first, dict):
+        value = first.get("session_id") or first.get("name")
+        return safe_text(str(value)) if value else None
+    return None
+
+
+def _project_dir_for_session(state_dir: Path, work_name: str | None) -> Path:
+    session_ref = work_name
+    if not session_ref:
+        sessions_state = status_work_session(state_dir=state_dir)
+        session_ref = _latest_session_ref(sessions_state)
+    if not session_ref:
+        raise ValueError("work_name or project_dir is required when no AgentOS session exists")
+    state = status_work_session(state_dir=state_dir, session_ref=session_ref)
+    project_dir = _path_from_session(state.get("session"), "input_path")
+    if project_dir is None:
+        raise ValueError("selected AgentOS session does not include an input_path")
+    return project_dir
+
+
+def _path_from_session(session: Any, key: str) -> Path | None:
+    if not isinstance(session, dict):
+        return None
+    value = session.get(key)
+    if not isinstance(value, str) or not value:
+        return None
+    return Path(value).expanduser()
 
 
 def _tool_approve_scope(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -517,6 +732,15 @@ def _required_str(arguments: dict[str, Any], name: str) -> str:
     value = arguments.get(name)
     if not isinstance(value, str) or not value:
         raise ValueError(f"{name} is required")
+    return value
+
+
+def _optional_str(arguments: dict[str, Any], name: str) -> str | None:
+    value = arguments.get(name)
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"{name} must be a non-empty string")
     return value
 
 
@@ -707,9 +931,74 @@ def _tool_definitions() -> list[dict[str, Any]]:
         _tool_definition(
             "open_workbench",
             "Open the AgentOS Workbench UI for observing sessions, sandbox commands, review packages, and approval gates.",
-            common_paths,
+            {
+                **common_paths,
+                "work_name": _string_schema("Optional session id, id prefix, or name to select."),
+                "project_dir": _string_schema("Optional target project directory for sync preflight actions."),
+            },
             annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True},
             meta=_workbench_tool_meta(invoking="Opening AgentOS Workbench...", invoked="AgentOS Workbench ready"),
+        ),
+        _tool_definition(
+            "get_agentos_workbench_state",
+            "App-only. Refresh AgentOS Workbench session, review, preflight, and approval state.",
+            {
+                **common_paths,
+                "work_name": _string_schema("Optional session id, id prefix, or name to select."),
+                "project_dir": _string_schema("Optional target project directory for sync preflight actions."),
+            },
+            annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True},
+            meta=_workbench_app_tool_meta(),
+        ),
+        _tool_definition(
+            "request_agentos_review",
+            "App-only. Build a review package for the selected AgentOS session without mutating the original project.",
+            {
+                **common_paths,
+                "work_name": _string_schema("Session id, id prefix, or name."),
+                "project_dir": _string_schema("Optional target project directory for follow-up sync preflight actions."),
+            },
+            required=["work_name"],
+            annotations={"readOnlyHint": False, "destructiveHint": False, "idempotentHint": True},
+            meta=_workbench_app_tool_meta(),
+        ),
+        _tool_definition(
+            "request_agentos_sync_preflight",
+            "App-only. Run sync preflight for the selected review package and target, returning blockers and planned paths.",
+            {
+                **review_selector,
+                "work_name": _string_schema("Optional session id, id prefix, or name used to infer the target project."),
+                "project_dir": _string_schema("Optional target project directory. Defaults to the session input path."),
+                "scope_id": _string_schema("Approval scope id to preview. Defaults to the review recommendation."),
+                "require_clean_git": {"type": "boolean", "default": False},
+                "require_signed_approval": {"type": "boolean", "default": True},
+                "allow_unsigned_approval": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "Development escape hatch. Set true only when unsigned local approvals are acceptable.",
+                },
+            },
+            annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True},
+            meta=_workbench_app_tool_meta(),
+        ),
+        _tool_definition(
+            "request_agentos_sync_approval",
+            "App-only. Create a bounded approval intent after sync preflight; does not approve or sync by itself.",
+            {
+                **review_selector,
+                "work_name": _string_schema("Optional session id, id prefix, or name used to infer the target project."),
+                "project_dir": _string_schema("Optional target project directory. Defaults to the session input path."),
+                "scope_id": _string_schema("Approval scope id to request. Defaults to the review recommendation."),
+                "require_clean_git": {"type": "boolean", "default": False},
+                "require_signed_approval": {"type": "boolean", "default": True},
+                "allow_unsigned_approval": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "Development escape hatch. Set true only when unsigned local approvals are acceptable.",
+                },
+            },
+            annotations={"readOnlyHint": False, "destructiveHint": False, "idempotentHint": True},
+            meta=_workbench_app_tool_meta(),
         ),
         _tool_definition(
             "approve_scope",
