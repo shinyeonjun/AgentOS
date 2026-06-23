@@ -269,11 +269,10 @@ function launcherShim(fallbackPluginRoot) {
   return `"use strict";
 
 const childProcess = require("node:child_process");
-const fs = require("node:fs");
 const path = require("node:path");
 
 const fallbackPluginRoot = ${JSON.stringify(fallbackPluginRoot)};
-const pluginRoot = resolveLatestPluginRoot(fallbackPluginRoot);
+const pluginRoot = path.resolve(fallbackPluginRoot);
 const launcher = path.join(pluginRoot, "agentos_mcp_launcher.cjs");
 
 const child = childProcess.spawn("node", [launcher], {
@@ -295,44 +294,6 @@ child.on("error", (error) => {
   process.exit(127);
 });
 
-function resolveLatestPluginRoot(currentRoot) {
-  const root = path.resolve(currentRoot);
-  const parent = path.dirname(root);
-  const currentName = path.basename(root);
-  if (!looksLikeVersion(currentName)) {
-    return root;
-  }
-  try {
-    const candidates = fs.readdirSync(parent, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory() && looksLikeVersion(entry.name))
-      .map((entry) => path.join(parent, entry.name))
-      .filter((candidate) => fs.existsSync(path.join(candidate, ".codex-plugin", "plugin.json")))
-      .sort(comparePluginRoots);
-    return candidates.at(-1) || root;
-  } catch {
-    return root;
-  }
-}
-
-function looksLikeVersion(value) {
-  return /^\\d+\\.\\d+\\.\\d+(?:[-+].*)?$/.test(value);
-}
-
-function comparePluginRoots(left, right) {
-  return compareVersions(path.basename(left), path.basename(right));
-}
-
-function compareVersions(left, right) {
-  const leftParts = left.split(/[.-]/).map((part) => Number.parseInt(part, 10) || 0);
-  const rightParts = right.split(/[.-]/).map((part) => Number.parseInt(part, 10) || 0);
-  for (let index = 0; index < Math.max(leftParts.length, rightParts.length); index += 1) {
-    const delta = (leftParts[index] || 0) - (rightParts[index] || 0);
-    if (delta !== 0) {
-      return delta;
-    }
-  }
-  return 0;
-}
 `;
 }
 

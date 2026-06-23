@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from .approvals import assert_scope_allows, build_approval_record, default_approval_scope
-from .path_policy import build_copy_ignore
+from .path_policy import build_copy_ignore, is_reparse_point
 from .storage import StateStore
 from .sync import PatchApplyResult, apply_patch_to_target
 from .text_safety import json_safe, safe_json_dumps, safe_text
@@ -55,6 +55,7 @@ SECRET_PATTERNS = (
     re.compile(r"(?i)(api[_-]?key|token|secret|password)\s*=\s*([^\s]+)"),
     re.compile(r"sk-[A-Za-z0-9_-]{12,}"),
 )
+SESSION_ID_PATTERN = re.compile(r"^[0-9a-f]{12}$")
 WINDOWS_SCRIPT_LAUNCHERS = {
     ".ps1": ("powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File"),
 }
@@ -319,9 +320,29 @@ class AgentOSRuntime:
         return SelectedSyncResult(target_dir=target_dir, copied_paths=tuple(copied_paths))
 
     def destroy_session(self, session: Session) -> None:
-        if session.session_dir.exists():
-            shutil.rmtree(session.session_dir)
+        session_dir = self.session_dir_for_deletion(
+            session_id=session.session_id,
+            session_dir=session.session_dir,
+        )
+        if session_dir.exists():
+            shutil.rmtree(session_dir)
         self.store.mark_destroyed(session_id=session.session_id, destroyed_at=utc_now())
+
+    def session_dir_for_deletion(self, *, session_id: str, session_dir: Path) -> Path:
+        return _safe_managed_child(
+            root=self.sessions_dir,
+            child_name=session_id,
+            recorded_path=session_dir,
+            label="session_dir",
+        )
+
+    def artifact_dir_for_deletion(self, *, session_id: str) -> Path:
+        return _safe_managed_child(
+            root=self.artifacts_dir,
+            child_name=session_id,
+            recorded_path=self.artifacts_dir / session_id,
+            label="artifact_dir",
+        )
 
     def _is_approved(self, session_id: str) -> bool:
         return self.store.is_approved(session_id)
@@ -346,6 +367,22 @@ def _safe_relative_source(root: Path, relative_path: str) -> Path:
     if not source.exists():
         raise FileNotFoundError(f"selected sync source does not exist: {relative_path}")
     return source
+
+
+def _safe_managed_child(*, root: Path, child_name: str, recorded_path: Path, label: str) -> Path:
+    if not SESSION_ID_PATTERN.fullmatch(child_name):
+        raise ValueError(f"unsafe {label}: invalid session id {child_name!r}")
+    expected = _lexical_absolute(root / child_name)
+    actual = _lexical_absolute(recorded_path)
+    if actual != expected:
+        raise ValueError(f"unsafe {label}: {recorded_path}")
+    if is_reparse_point(actual):
+        raise ValueError(f"unsafe {label}: reparse point {recorded_path}")
+    return actual
+
+
+def _lexical_absolute(path: Path) -> Path:
+    return Path(os.path.normcase(os.path.abspath(path)))
 
 
 def _safe_artifact_path(session_artifacts: Path, name: str) -> Path:

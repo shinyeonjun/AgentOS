@@ -144,7 +144,10 @@ class PluginSpecTests(unittest.TestCase):
             )
             shim = codex_home / "agentos-workspace-launcher.cjs"
             self.assertTrue(shim.exists())
-            self.assertIn("resolveLatestPluginRoot", shim.read_text(encoding="utf-8"))
+            shim_text = shim.read_text(encoding="utf-8")
+            self.assertIn("path.resolve(fallbackPluginRoot)", shim_text)
+            self.assertNotIn("resolveLatestPluginRoot", shim_text)
+            self.assertNotIn("readdirSync", shim_text)
 
         self.assertIn("Updated", result.stdout)
         self.assertIn("# BEGIN AgentOS Workspace MCP", config)
@@ -236,7 +239,9 @@ class PluginSpecTests(unittest.TestCase):
         self.assertIn("stderr tail", launcher)
         self.assertIn("PYTHONUTF8", launcher)
         self.assertIn("PYTHONIOENCODING", launcher)
-        self.assertIn("resolveLatestPluginRoot", launcher)
+        self.assertIn("const pluginRoot = path.resolve(__dirname);", launcher)
+        self.assertNotIn("resolveLatestPluginRoot", launcher)
+        self.assertNotIn("readdirSync", launcher)
         self.assertIn("tryNext();", launcher)
 
     def test_node_launcher_distinguishes_python_crash_from_missing_python(self) -> None:

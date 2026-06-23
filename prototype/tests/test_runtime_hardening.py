@@ -18,6 +18,7 @@ from agentos.core.runtime import (
     _prepare_subprocess_command,
 )
 from agentos.core.sync import PatchApplyError, apply_patch_to_target
+from agentos.core.work_sessions import cleanup_work_sessions, purge_work_session
 
 
 class RuntimeHardeningTests(unittest.TestCase):
@@ -216,6 +217,57 @@ class RuntimeHardeningTests(unittest.TestCase):
 
             self.assertFalse((runtime.artifacts_dir / "leak.txt").exists())
             self.assertFalse((runtime.artifacts_dir / session.session_id / "nested").exists())
+
+    def test_cleanup_rejects_state_db_session_dir_outside_runtime(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            runtime = AgentOSRuntime(state_dir=root / "state", output_dir=root / "output")
+            session = runtime.create_session()
+            outside = root / "outside"
+            outside.mkdir()
+            marker = outside / "keep.txt"
+            marker.write_text("do not delete\n", encoding="utf-8")
+            with closing(sqlite3.connect(runtime.db_path)) as conn:
+                conn.execute(
+                    "update sessions set session_dir = ? where session_id = ?",
+                    (str(outside), session.session_id),
+                )
+                conn.commit()
+
+            with self.assertRaisesRegex(ValueError, "unsafe session_dir"):
+                cleanup_work_sessions(
+                    state_dir=runtime.state_dir,
+                    output_dir=runtime.output_dir,
+                    keep_latest=0,
+                    dry_run=False,
+                )
+
+            self.assertTrue(marker.exists())
+
+    def test_purge_rejects_state_db_session_dir_outside_runtime(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            runtime = AgentOSRuntime(state_dir=root / "state", output_dir=root / "output")
+            session = runtime.create_session()
+            outside = root / "outside"
+            outside.mkdir()
+            marker = outside / "keep.txt"
+            marker.write_text("do not delete\n", encoding="utf-8")
+            with closing(sqlite3.connect(runtime.db_path)) as conn:
+                conn.execute(
+                    "update sessions set session_dir = ? where session_id = ?",
+                    (str(outside), session.session_id),
+                )
+                conn.commit()
+
+            with self.assertRaisesRegex(ValueError, "unsafe session_dir"):
+                purge_work_session(
+                    state_dir=runtime.state_dir,
+                    output_dir=runtime.output_dir,
+                    session_ref=session.session_id,
+                )
+
+            self.assertTrue(marker.exists())
 
     def test_windows_command_output_decodes_none_and_legacy_codepage_bytes(self) -> None:
         self.assertEqual(_output_to_text(None), "")

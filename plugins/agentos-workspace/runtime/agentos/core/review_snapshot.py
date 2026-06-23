@@ -270,9 +270,13 @@ def _read_snapshot_manifest(bundle: zipfile.ZipFile) -> dict[str, Any]:
 
 def _resolve_artifact_ref(artifact_dir: Path, ref: str) -> Path:
     _session_id, _, artifact_name = ref.removeprefix("artifact://").partition("/")
-    if not artifact_name or "/" in artifact_name or artifact_name in {".", ".."}:
+    if not _is_plain_artifact_name(artifact_name):
         raise RuntimeError(f"unsafe artifact ref: {ref}")
     return artifact_dir / artifact_name
+
+
+def _is_plain_artifact_name(name: str) -> bool:
+    return bool(name) and name not in {".", ".."} and Path(name).name == name and "/" not in name and "\\" not in name
 
 
 def _restore_backups(backups: list[tuple[Path, Path, bool]]) -> None:
