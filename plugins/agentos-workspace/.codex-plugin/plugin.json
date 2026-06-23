@@ -19,6 +19,7 @@
     "capabilities": ["Interactive", "Read", "Write", "Code"],
     "defaultPrompt": [
       "Use AgentOS MCP for this task. Before any file edit, call agentos doctor. If tools are unavailable, offer to run AgentOS setup.",
+      "When the user wants side-panel control, call open_agentos_workspace once. Routine session, review, and preflight tools should update state without rendering duplicate Workbench cards.",
       "Use the normal approval policy by default: create/reuse sessions, run commands, test, and review without asking because the original workspace is not changed.",
       "Mark discovery commands as role=explore or role=edit, and mark final checks as role=test or role=validation so review validation reflects real tests only.",
       "Do not edit the current/original workspace directly. Work only inside the returned workspace_path. If Docker or the AgentOS image is not ready, call prepare_environment before Docker sandbox work.",

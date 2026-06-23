@@ -33,6 +33,7 @@ class McpServerTests(unittest.TestCase):
         self.assertIn("run_command", names)
         self.assertIn("session_summary", names)
         self.assertIn("sync_preflight", names)
+        self.assertIn("open_agentos_workspace", names)
         self.assertIn("open_workbench", names)
         self.assertIn("get_agentos_workbench_state", names)
         self.assertIn("request_agentos_review", names)
@@ -60,11 +61,15 @@ class McpServerTests(unittest.TestCase):
         self.assertIn("approval boundary", tools_by_name["sync_approved"]["description"])
         self.assertIn("whether approval is still required", tools_by_name["sync_preflight"]["description"])
         self.assertEqual(
-            tools_by_name["open_workbench"]["_meta"]["openai/outputTemplate"],
+            tools_by_name["open_agentos_workspace"]["_meta"]["openai/outputTemplate"],
             WORKBENCH_WIDGET_URI,
         )
+        self.assertEqual(tools_by_name["open_agentos_workspace"]["_meta"]["ui/resourceUri"], WORKBENCH_WIDGET_URI)
+        self.assertTrue(tools_by_name["open_agentos_workspace"]["_meta"]["openai/widgetAccessible"])
         self.assertEqual(tools_by_name["open_workbench"]["_meta"]["ui/resourceUri"], WORKBENCH_WIDGET_URI)
         self.assertTrue(tools_by_name["open_workbench"]["_meta"]["openai/widgetAccessible"])
+        for routine_tool in ("create_session", "session_summary", "review_session", "sync_preflight"):
+            self.assertNotIn("_meta", tools_by_name[routine_tool])
         for app_tool in (
             "get_agentos_workbench_state",
             "request_agentos_review",
@@ -74,12 +79,6 @@ class McpServerTests(unittest.TestCase):
             self.assertEqual(tools_by_name[app_tool]["_meta"]["ui"]["visibility"], ["app"])
             self.assertEqual(tools_by_name[app_tool]["_meta"]["ui/resourceUri"], WORKBENCH_WIDGET_URI)
         self.assertFalse(tools_by_name["request_agentos_sync_approval"]["annotations"]["destructiveHint"])
-        for auto_tool in ("create_session", "session_summary", "review_session", "sync_preflight"):
-            self.assertEqual(
-                tools_by_name[auto_tool]["_meta"]["openai/outputTemplate"],
-                WORKBENCH_WIDGET_URI,
-            )
-            self.assertTrue(tools_by_name[auto_tool]["_meta"]["openai/widgetAccessible"])
         self.assertTrue(tools_by_name["sync_preflight"]["inputSchema"]["properties"]["require_signed_approval"]["default"])
         self.assertFalse(tools_by_name["sync_preflight"]["inputSchema"]["properties"]["allow_unsigned_approval"]["default"])
         self.assertTrue(tools_by_name["sync_approved"]["inputSchema"]["properties"]["require_signed_approval"]["default"])

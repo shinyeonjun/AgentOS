@@ -19,6 +19,7 @@ const requiredTools = [
   "render_diff",
   "verify_review",
   "sync_preflight",
+  "open_agentos_workspace",
   "open_workbench",
   "get_agentos_workbench_state",
   "request_agentos_review",

@@ -26,7 +26,14 @@ ui://agentos-workspace/<version>/workbench.html
 
 The legacy URI `ui://agentos-workspace/workbench.html` remains available for
 older hosts. The resource uses the MCP App MIME type
-`text/html;profile=mcp-app` and is opened by `open_workbench`.
+`text/html;profile=mcp-app` and is opened by `open_agentos_workspace`
+(`open_workbench` remains as a compatibility alias).
+
+Only the open tool renders the Workbench app. Routine tools such as
+`create_session`, `session_summary`, `review_session`, and `sync_preflight`
+return structured state without attaching the Workbench output template, so the
+chat transcript does not fill with duplicate Workbench cards. This mirrors the
+Codex Security pattern: one side app, many state/action tools.
 
 The Workbench side panel can refresh session state, build a review package, run
 sync preflight, and request an approval intent through app-only MCP tools:

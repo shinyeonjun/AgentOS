@@ -199,6 +199,7 @@ def _handle_tool_call(params: dict[str, Any]) -> dict[str, Any]:
         "render_diff": _tool_render_diff,
         "verify_review": _tool_verify_review,
         "sync_preflight": _tool_sync_preflight,
+        "open_agentos_workspace": _tool_open_workbench,
         "open_workbench": _tool_open_workbench,
         "get_agentos_workbench_state": _tool_get_agentos_workbench_state,
         "request_agentos_review": _tool_request_agentos_review,
@@ -815,7 +816,6 @@ def _tool_definitions() -> list[dict[str, Any]]:
             },
             required=["project_dir"],
             annotations={"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False},
-            meta=_workbench_tool_meta(invoking="Creating AgentOS session...", invoked="AgentOS session ready"),
         ),
         _tool_definition(
             "list_sessions",
@@ -836,7 +836,6 @@ def _tool_definitions() -> list[dict[str, Any]]:
             {**common_paths, "work_name": _string_schema("Session id, id prefix, or name.")},
             required=["work_name"],
             annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True},
-            meta=_workbench_tool_meta(invoking="Loading AgentOS session summary...", invoked="AgentOS session summary ready"),
         ),
         _tool_definition(
             "run_command",
@@ -882,7 +881,6 @@ def _tool_definitions() -> list[dict[str, Any]]:
             {**common_paths, "work_name": _string_schema("Session id, id prefix, or name.")},
             required=["work_name"],
             annotations={"readOnlyHint": False, "destructiveHint": False, "idempotentHint": True},
-            meta=_workbench_tool_meta(invoking="Building AgentOS review...", invoked="AgentOS review ready"),
         ),
         _tool_definition(
             "render_review",
@@ -926,11 +924,21 @@ def _tool_definitions() -> list[dict[str, Any]]:
             },
             required=["project_dir"],
             annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True},
-            meta=_workbench_tool_meta(invoking="Checking sync preflight...", invoked="Sync preflight ready"),
+        ),
+        _tool_definition(
+            "open_agentos_workspace",
+            "Open the native AgentOS Workbench side app for this thread. Call this once when the user wants side-panel control; routine session tools update state but do not render the app.",
+            {
+                **common_paths,
+                "work_name": _string_schema("Optional session id, id prefix, or name to select."),
+                "project_dir": _string_schema("Optional target project directory for sync preflight actions."),
+            },
+            annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True},
+            meta=_workbench_tool_meta(invoking="Opening AgentOS Workbench...", invoked="AgentOS Workbench ready"),
         ),
         _tool_definition(
             "open_workbench",
-            "Open the AgentOS Workbench UI for observing sessions, sandbox commands, review packages, and approval gates.",
+            "Compatibility alias for open_agentos_workspace.",
             {
                 **common_paths,
                 "work_name": _string_schema("Optional session id, id prefix, or name to select."),
