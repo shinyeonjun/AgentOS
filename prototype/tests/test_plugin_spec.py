@@ -20,6 +20,7 @@ class PluginSpecTests(unittest.TestCase):
 
         self.assertEqual(spec["schema_version"], "0.4")
         self.assertEqual(spec["interfaces"]["mcp_stdio"], "agentos mcp serve")
+        self.assertEqual(spec["interfaces"]["mcp_app_resource"], "ui://agentos-workspace/<version>/workbench.html")
         self.assertEqual(spec["runtime_contract"]["first_action"], "doctor_before_file_edits")
         self.assertEqual(spec["runtime_contract"]["missing_agentos_tools"], "stop_without_direct_edits")
         self.assertEqual(spec["scope_boundary"]["product_role"], "safe_workspace_runtime")
@@ -39,6 +40,10 @@ class PluginSpecTests(unittest.TestCase):
         self.assertIn("review_session", tools)
         self.assertIn("session_summary", tools)
         self.assertIn("sync_preflight", tools)
+        self.assertIn("get_agentos_workbench_state", tools)
+        self.assertIn("request_agentos_review", tools)
+        self.assertIn("request_agentos_sync_preflight", tools)
+        self.assertIn("request_agentos_sync_approval", tools)
         self.assertIn("approve_scope", tools)
         self.assertIn("sync_approved", tools)
         self.assertIn("cleanup_sessions", tools)
@@ -48,6 +53,8 @@ class PluginSpecTests(unittest.TestCase):
         self.assertTrue(tools["approve_scope"]["human_approval_required"])
         self.assertTrue(tools["sync_approved"]["human_approval_required"])
         self.assertFalse(tools["sync_preflight"]["human_approval_required"])
+        self.assertTrue(tools["request_agentos_sync_approval"]["app_only"])
+        self.assertFalse(tools["request_agentos_sync_approval"]["human_approval_required"])
         self.assertIn("workspace_path", tools["create_session"]["outputs"])
 
     def test_scope_boundary_document_defends_v0_product_scope(self) -> None:
@@ -72,6 +79,8 @@ class PluginSpecTests(unittest.TestCase):
         self.assertEqual(manifest["version"], "0.5.0a1")
         self.assertEqual(manifest["mcpServers"], "./.mcp.json")
         self.assertEqual(manifest["skills"], "./skills/")
+        self.assertIn("Interactive", manifest["interface"]["capabilities"])
+        self.assertIn("Read", manifest["interface"]["capabilities"])
         self.assertIn("Before any file edit", manifest["interface"]["defaultPrompt"][0])
         self.assertIn("setup", manifest["interface"]["defaultPrompt"][0])
         self.assertIn("normal approval policy", manifest["interface"]["defaultPrompt"][1])

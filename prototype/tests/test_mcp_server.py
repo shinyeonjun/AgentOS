@@ -11,7 +11,7 @@ from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
-from agentos.mcp_server import _handle_rpc, _write_rpc
+from agentos.mcp_server import WORKBENCH_LEGACY_WIDGET_URI, WORKBENCH_WIDGET_MIME_TYPE, WORKBENCH_WIDGET_URI, _handle_rpc, _write_rpc
 
 
 class McpServerTests(unittest.TestCase):
@@ -34,6 +34,10 @@ class McpServerTests(unittest.TestCase):
         self.assertIn("session_summary", names)
         self.assertIn("sync_preflight", names)
         self.assertIn("open_workbench", names)
+        self.assertIn("get_agentos_workbench_state", names)
+        self.assertIn("request_agentos_review", names)
+        self.assertIn("request_agentos_sync_preflight", names)
+        self.assertIn("request_agentos_sync_approval", names)
         self.assertIn("cleanup_sessions", names)
         self.assertIn("repair_session", names)
         self.assertIn("export_debug_bundle", names)
@@ -57,13 +61,23 @@ class McpServerTests(unittest.TestCase):
         self.assertIn("whether approval is still required", tools_by_name["sync_preflight"]["description"])
         self.assertEqual(
             tools_by_name["open_workbench"]["_meta"]["openai/outputTemplate"],
-            "ui://agentos-workspace/workbench.html",
+            WORKBENCH_WIDGET_URI,
         )
+        self.assertEqual(tools_by_name["open_workbench"]["_meta"]["ui/resourceUri"], WORKBENCH_WIDGET_URI)
         self.assertTrue(tools_by_name["open_workbench"]["_meta"]["openai/widgetAccessible"])
+        for app_tool in (
+            "get_agentos_workbench_state",
+            "request_agentos_review",
+            "request_agentos_sync_preflight",
+            "request_agentos_sync_approval",
+        ):
+            self.assertEqual(tools_by_name[app_tool]["_meta"]["ui"]["visibility"], ["app"])
+            self.assertEqual(tools_by_name[app_tool]["_meta"]["ui/resourceUri"], WORKBENCH_WIDGET_URI)
+        self.assertFalse(tools_by_name["request_agentos_sync_approval"]["annotations"]["destructiveHint"])
         for auto_tool in ("create_session", "session_summary", "review_session", "sync_preflight"):
             self.assertEqual(
                 tools_by_name[auto_tool]["_meta"]["openai/outputTemplate"],
-                "ui://agentos-workspace/workbench.html",
+                WORKBENCH_WIDGET_URI,
             )
             self.assertTrue(tools_by_name[auto_tool]["_meta"]["openai/widgetAccessible"])
         self.assertTrue(tools_by_name["sync_preflight"]["inputSchema"]["properties"]["require_signed_approval"]["default"])
@@ -78,24 +92,29 @@ class McpServerTests(unittest.TestCase):
     def test_workbench_resource_is_registered_and_readable(self) -> None:
         resources = _handle_rpc({"jsonrpc": "2.0", "id": 1, "method": "resources/list", "params": {}})
         self.assertIsNotNone(resources)
-        resource = resources["result"]["resources"][0]
-        self.assertEqual(resource["uri"], "ui://agentos-workspace/workbench.html")
-        self.assertEqual(resource["mimeType"], "text/html")
+        resources_by_uri = {resource["uri"]: resource for resource in resources["result"]["resources"]}
+        self.assertIn(WORKBENCH_WIDGET_URI, resources_by_uri)
+        self.assertIn(WORKBENCH_LEGACY_WIDGET_URI, resources_by_uri)
+        resource = resources_by_uri[WORKBENCH_WIDGET_URI]
+        self.assertEqual(resource["mimeType"], WORKBENCH_WIDGET_MIME_TYPE)
         self.assertEqual(resource["_meta"]["openai/widgetDescription"].split()[0], "Observe")
 
-        read = _handle_rpc(
-            {
-                "jsonrpc": "2.0",
-                "id": 2,
-                "method": "resources/read",
-                "params": {"uri": "ui://agentos-workspace/workbench.html"},
-            }
-        )
-        self.assertIsNotNone(read)
-        content = read["result"]["contents"][0]
-        self.assertEqual(content["mimeType"], "text/html")
-        self.assertIn("AgentOS Workbench", content["text"])
-        self.assertIn("Approval Gate", content["text"])
+        for uri in (WORKBENCH_WIDGET_URI, WORKBENCH_LEGACY_WIDGET_URI):
+            read = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 2,
+                    "method": "resources/read",
+                    "params": {"uri": uri},
+                }
+            )
+            self.assertIsNotNone(read)
+            content = read["result"]["contents"][0]
+            self.assertEqual(content["uri"], uri)
+            self.assertEqual(content["mimeType"], WORKBENCH_WIDGET_MIME_TYPE)
+            self.assertIn("AgentOS Workbench", content["text"])
+            self.assertIn("Approval Gate", content["text"])
+            self.assertIn("request_agentos_sync_approval", content["text"])
 
     def test_open_workbench_returns_widget_context(self) -> None:
         result = _handle_rpc(
@@ -108,10 +127,125 @@ class McpServerTests(unittest.TestCase):
         )
         self.assertIsNotNone(result)
         content = result["result"]["structuredContent"]
-        self.assertEqual(content["resource_uri"], "ui://agentos-workspace/workbench.html")
+        self.assertEqual(content["resource_uri"], WORKBENCH_WIDGET_URI)
+        self.assertEqual(content["legacy_resource_uri"], WORKBENCH_LEGACY_WIDGET_URI)
         self.assertIn("session_count", content)
         self.assertIn("approval", content["panels"])
         self.assertIn("sync_approved dry_run=false", content["dangerous_actions"])
+
+    def test_workbench_app_tools_drive_review_preflight_and_approval_intent(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "project"
+            project.mkdir()
+            (project / "README.md").write_text("hello\n", encoding="utf-8")
+            state_dir = root / "state"
+            output_dir = root / "output"
+
+            create = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "create_session",
+                        "arguments": {
+                            "project_dir": str(project),
+                            "work_name": "workbench-flow",
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                        },
+                    },
+                }
+            )
+            self.assertIsNotNone(create)
+            workspace_path = Path(create["result"]["structuredContent"]["workspace_path"])
+            (workspace_path / "README.md").write_text("hello\nworkbench\n", encoding="utf-8")
+
+            validation = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 2,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "run_command",
+                        "arguments": {
+                            "work_name": "workbench-flow",
+                            "command": [sys.executable, "-c", "print('validated')"],
+                            "role": "validation",
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                        },
+                    },
+                }
+            )
+            self.assertIsNotNone(validation)
+            self.assertEqual(validation["result"]["structuredContent"]["exit_code"], 0)
+
+            review = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 3,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "request_agentos_review",
+                        "arguments": {
+                            "work_name": "workbench-flow",
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                        },
+                    },
+                }
+            )
+            self.assertIsNotNone(review)
+            review_state = review["result"]["structuredContent"]
+            self.assertEqual(review_state["mode"], "review_ready")
+            self.assertEqual(review_state["summary"]["changed_files"], ["README.md"])
+
+            preflight = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 4,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "request_agentos_sync_preflight",
+                        "arguments": {
+                            "work_name": "workbench-flow",
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                        },
+                    },
+                }
+            )
+            self.assertIsNotNone(preflight)
+            preflight_state = preflight["result"]["structuredContent"]
+            self.assertEqual(preflight_state["mode"], "sync_preflight_ready")
+            self.assertEqual(preflight_state["preflight"]["planned_paths"], ["README.md"])
+            self.assertTrue(preflight_state["preflight"]["approval_required"])
+
+            approval = _handle_rpc(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 5,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "request_agentos_sync_approval",
+                        "arguments": {
+                            "work_name": "workbench-flow",
+                            "state_dir": str(state_dir),
+                            "output_dir": str(output_dir),
+                        },
+                    },
+                }
+            )
+            self.assertIsNotNone(approval)
+            approval_state = approval["result"]["structuredContent"]
+            self.assertEqual(approval_state["mode"], "approval_requested")
+            self.assertEqual(approval_state["approval_intent"]["operation"], "approve_then_sync")
+            self.assertEqual(approval_state["approval_intent"]["state"], "ready")
+            self.assertTrue(approval_state["approval_intent"]["host_approval_token_required"])
+            self.assertEqual(approval_state["session"]["approvals"], [])
+            self.assertEqual(approval_state["session"]["syncs"], [])
 
     def test_tool_result_replaces_unpaired_surrogates(self) -> None:
         from agentos.mcp_server import _tool_result

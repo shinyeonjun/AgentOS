@@ -13,10 +13,10 @@
   "interface": {
     "displayName": "AgentOS Workspace",
     "shortDescription": "Route coding work through AgentOS sessions.",
-      "longDescription": "AgentOS Workspace routes Codex coding work through copied AgentOS session workspaces, review packages, and approval-gated sync instead of editing host projects directly. The default UX is sync-only approval: doctor, session creation, session work, tests, and review can run without extra prompts because they do not mutate the original project; syncing back to the original project remains the explicit human approval boundary. When selected, Codex must call the bundled AgentOS MCP server before any file edit and run the setup workflow if AgentOS tools are unavailable.",
+      "longDescription": "AgentOS Workspace routes Codex coding work through copied AgentOS session workspaces, review packages, and approval-gated sync instead of editing host projects directly. Its Workbench side panel shows live session, review, preflight, and approval state, and can request review/preflight/approval-intent actions while preserving the host-mediated approval boundary for any original-project sync. The default UX is sync-only approval: doctor, session creation, session work, tests, and review can run without extra prompts because they do not mutate the original project. When selected, Codex must call the bundled AgentOS MCP server before any file edit and run the setup workflow if AgentOS tools are unavailable.",
     "developerName": "AgentOS",
     "category": "Productivity",
-    "capabilities": ["Write", "Code"],
+    "capabilities": ["Interactive", "Read", "Write", "Code"],
     "defaultPrompt": [
       "Use AgentOS MCP for this task. Before any file edit, call agentos doctor. If tools are unavailable, offer to run AgentOS setup.",
       "Use the normal approval policy by default: create/reuse sessions, run commands, test, and review without asking because the original workspace is not changed.",

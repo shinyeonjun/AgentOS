@@ -33,6 +33,7 @@ def build_plugin_spec() -> dict[str, Any]:
         "interfaces": {
             "cli": "agentos",
             "mcp_stdio": "agentos mcp serve",
+            "mcp_app_resource": "ui://agentos-workspace/<version>/workbench.html",
             "codex_plugin": "plugins/agentos-workspace",
         },
         "runtime_contract": {
@@ -136,6 +137,38 @@ def build_plugin_spec() -> dict[str, Any]:
                 outputs=["safe_to_sync", "approval_required", "planned_paths", "blockers", "next_action"],
             ),
             _tool(
+                name="get_agentos_workbench_state",
+                command="MCP app-only: get_agentos_workbench_state",
+                purpose="Refresh Workbench session, review, preflight, and approval state from the side panel.",
+                required=[],
+                outputs=["sessions", "session", "summary", "preflight", "approval_intent"],
+                app_only=True,
+            ),
+            _tool(
+                name="request_agentos_review",
+                command="MCP app-only: request_agentos_review",
+                purpose="Let the Workbench request a review package for a session without mutating the original project.",
+                required=["work_name"],
+                outputs=["summary", "action_result", "review_package_artifact"],
+                app_only=True,
+            ),
+            _tool(
+                name="request_agentos_sync_preflight",
+                command="MCP app-only: request_agentos_sync_preflight",
+                purpose="Let the Workbench run sync preflight and render planned paths and blockers.",
+                required=[],
+                outputs=["preflight", "planned_paths", "blockers", "recommended_scope_id"],
+                app_only=True,
+            ),
+            _tool(
+                name="request_agentos_sync_approval",
+                command="MCP app-only: request_agentos_sync_approval",
+                purpose="Create a bounded approval intent for the host approval flow; does not approve or sync directly.",
+                required=[],
+                outputs=["approval_intent", "preflight"],
+                app_only=True,
+            ),
+            _tool(
                 name="approve_scope",
                 command="agentos approve --latest --target <project-dir> --scope <scope-id> --json",
                 purpose="Record explicit human approval for one review scope.",
@@ -212,6 +245,7 @@ def _tool(
     required: list[str],
     outputs: list[str],
     human_approval_required: bool = False,
+    app_only: bool = False,
 ) -> dict[str, Any]:
     return {
         "name": name,
@@ -220,4 +254,5 @@ def _tool(
         "required": required,
         "outputs": outputs,
         "human_approval_required": human_approval_required,
+        "app_only": app_only,
     }
