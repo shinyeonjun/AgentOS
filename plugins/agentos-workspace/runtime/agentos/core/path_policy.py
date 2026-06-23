@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import fnmatch
 import os
+import stat
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
@@ -73,9 +74,11 @@ class PathPolicy:
         return cls(root=resolved, ignore_rules=tuple(_read_gitignore_rules(resolved / ".gitignore")))
 
     def is_managed_path(self, path: Path) -> bool:
-        if path != self.root and path.is_symlink():
+        if path != self.root and is_reparse_point(path):
             return False
         relative = _relative_to_root(self.root, path)
+        if relative.is_absolute() or ".." in relative.parts:
+            return False
         if not relative.parts:
             return True
         if self.ignored_parts.intersection(relative.parts):
@@ -169,6 +172,16 @@ def _relative_to_root(root: Path, path: Path) -> Path:
         return resolved.relative_to(root)
     except ValueError:
         return path
+
+
+def is_reparse_point(path: Path) -> bool:
+    if path.is_symlink():
+        return True
+    try:
+        attributes = path.lstat().st_file_attributes
+    except (AttributeError, OSError):
+        return False
+    return bool(attributes & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400))
 
 
 def _copy_directory_path(root: Path, directory: str) -> Path:

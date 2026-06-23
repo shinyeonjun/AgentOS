@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import os
+import subprocess
 import sys
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from agentos.core import integrity, review_snapshot
 from agentos.core.changes import detect_file_changes
 from agentos.core.path_policy import PathPolicy
-from agentos.core.review import render_review_summary, summarize_review_package
+from agentos.core.review import render_review_diffs, render_review_summary, summarize_review_package
 from agentos.core.work_sessions import create_work_session, exec_work_session, review_work_session, status_work_session
 from agentos.demos.demo import run_code_fix_demo
 
@@ -111,6 +113,77 @@ class ReviewSummaryTests(unittest.TestCase):
             self.assertFalse(policy.is_managed_path(project / "ignored.txt"))
             self.assertFalse(policy.is_managed_path(project / "settings.local"))
             self.assertFalse(policy.is_managed_path(project / "logs" / "run.txt"))
+
+    def test_create_session_does_not_import_windows_junction_targets(self) -> None:
+        if os.name != "nt":
+            self.skipTest("Windows junction regression")
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "project"
+            outside = root / "outside"
+            project.mkdir()
+            outside.mkdir()
+            (project / "README.md").write_text("hello\n", encoding="utf-8")
+            (outside / "secret.txt").write_text("host secret\n", encoding="utf-8")
+            link = project / "linked"
+            result = subprocess.run(
+                ["cmd", "/c", "mklink", "/J", str(link), str(outside)],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            if result.returncode != 0:
+                self.skipTest(f"could not create junction: {result.stderr or result.stdout}")
+
+            session = create_work_session(
+                state_dir=root / "state",
+                output_dir=root / "output",
+                input_path=project,
+                name="junction-import",
+            )
+
+            workspace_project = session.workspace_path
+            self.assertTrue((workspace_project / "README.md").exists())
+            self.assertFalse((workspace_project / "linked" / "secret.txt").exists())
+
+    def test_review_diff_rejects_windows_artifact_ref_traversal(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            artifact_dir = root / "artifacts"
+            artifact_dir.mkdir()
+            outside = root / "secret.diff"
+            outside.write_text("leaked diff\n", encoding="utf-8")
+            review_package = artifact_dir / "review_package.json"
+            review_package.write_text(
+                """
+                {
+                  "session_id": "abc123",
+                  "changes": {
+                    "changed_files": [
+                      {
+                        "path": "app.py",
+                        "change_type": "modified",
+                        "diff_ref": "artifact://abc123/..\\\\secret.diff"
+                      }
+                    ]
+                  }
+                }
+                """,
+                encoding="utf-8",
+            )
+            summary = summarize_review_package(review_package)
+
+            with self.assertRaisesRegex(ValueError, "unsafe artifact ref"):
+                render_review_diffs(summary)
+
+    def test_integrity_and_snapshot_reject_windows_artifact_ref_traversal(self) -> None:
+        with TemporaryDirectory() as tmp:
+            artifact_dir = Path(tmp)
+
+            with self.assertRaisesRegex(ValueError, "unsafe artifact ref"):
+                integrity._resolve_artifact_ref(artifact_dir, r"artifact://abc123/..\secret.diff")
+            with self.assertRaisesRegex(RuntimeError, "unsafe artifact ref"):
+                review_snapshot._resolve_artifact_ref(artifact_dir, r"artifact://abc123/..\snapshot.zip")
 
     def test_change_detection_respects_gitignore(self) -> None:
         with TemporaryDirectory() as tmp:

@@ -1,10 +1,9 @@
 "use strict";
 
 const childProcess = require("node:child_process");
-const fs = require("node:fs");
 const path = require("node:path");
 
-const pluginRoot = resolveLatestPluginRoot(__dirname);
+const pluginRoot = path.resolve(__dirname);
 const scriptPath = path.join(pluginRoot, "agentos_mcp_launcher.py");
 const windowsCandidates = [
   { command: "py", args: ["-3", scriptPath] },
@@ -95,44 +94,6 @@ function formatStderrTail(chunks) {
   }
   const tail = stderr.slice(-STDERR_TAIL_BYTES);
   return `; stderr tail: ${tail}`;
-}
-
-function resolveLatestPluginRoot(currentRoot) {
-  const parent = path.dirname(currentRoot);
-  const currentName = path.basename(currentRoot);
-  if (!looksLikeVersion(currentName)) {
-    return currentRoot;
-  }
-  try {
-    const candidates = fs.readdirSync(parent, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory() && looksLikeVersion(entry.name))
-      .map((entry) => path.join(parent, entry.name))
-      .filter((candidate) => fs.existsSync(path.join(candidate, ".codex-plugin", "plugin.json")))
-      .sort(comparePluginRoots);
-    return candidates.at(-1) || currentRoot;
-  } catch {
-    return currentRoot;
-  }
-}
-
-function looksLikeVersion(value) {
-  return /^\d+\.\d+\.\d+(?:[-+].*)?$/.test(value);
-}
-
-function comparePluginRoots(left, right) {
-  return compareVersions(path.basename(left), path.basename(right));
-}
-
-function compareVersions(left, right) {
-  const leftParts = left.split(/[.-]/).map((part) => Number.parseInt(part, 10) || 0);
-  const rightParts = right.split(/[.-]/).map((part) => Number.parseInt(part, 10) || 0);
-  for (let index = 0; index < Math.max(leftParts.length, rightParts.length); index += 1) {
-    const delta = (leftParts[index] || 0) - (rightParts[index] || 0);
-    if (delta !== 0) {
-      return delta;
-    }
-  }
-  return 0;
 }
 
 tryNext();

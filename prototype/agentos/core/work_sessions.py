@@ -530,8 +530,11 @@ def purge_work_session(
 ) -> WorkSessionPurgeResult:
     runtime = AgentOSRuntime(state_dir=state_dir.resolve(), output_dir=output_dir.resolve())
     session = resolve_session(state_dir=state_dir, session_ref=session_ref)
-    session_dir = Path(session.session_dir)
-    artifact_dir = runtime.artifacts_dir / session.session_id
+    session_dir = runtime.session_dir_for_deletion(
+        session_id=session.session_id,
+        session_dir=Path(session.session_dir),
+    )
+    artifact_dir = runtime.artifact_dir_for_deletion(session_id=session.session_id)
     if session_dir.exists():
         shutil.rmtree(session_dir)
     if artifact_dir.exists():
@@ -607,7 +610,8 @@ def cleanup_work_sessions(
     runtime = AgentOSRuntime(state_dir=state_dir.resolve(), output_dir=output_dir.resolve())
     if not dry_run:
         for session_id, session_dir in candidates:
-            artifact_dir = runtime.artifacts_dir / session_id
+            session_dir = runtime.session_dir_for_deletion(session_id=session_id, session_dir=session_dir)
+            artifact_dir = runtime.artifact_dir_for_deletion(session_id=session_id)
             if session_dir.exists():
                 shutil.rmtree(session_dir)
             if artifact_dir.exists():
