@@ -33,6 +33,19 @@ WORKBENCH_WIDGET_META = {
     },
 }
 
+
+def _workbench_tool_meta(*, invoking: str, invoked: str) -> dict[str, Any]:
+    return {
+        "ui": {
+            "resourceUri": WORKBENCH_WIDGET_URI,
+            "visibility": ["model", "app"],
+        },
+        "openai/outputTemplate": WORKBENCH_WIDGET_URI,
+        "openai/widgetAccessible": True,
+        "openai/toolInvocation/invoking": invoking,
+        "openai/toolInvocation/invoked": invoked,
+    }
+
 from .core.work_sessions import (
     create_work_session,
     cleanup_work_sessions,
@@ -332,12 +345,20 @@ def _tool_sync_preflight(arguments: dict[str, Any]) -> dict[str, Any]:
 
 
 def _tool_open_workbench(arguments: dict[str, Any]) -> dict[str, Any]:
+    state_dir = _state_dir(arguments)
+    output_dir = _output_dir(arguments)
+    try:
+        sessions_state = status_work_session(state_dir=state_dir)
+    except Exception as exc:
+        sessions_state = {"error": safe_text(str(exc)), "sessions": []}
     return {
         "title": "AgentOS Workbench",
         "resource_uri": WORKBENCH_WIDGET_URI,
         "mode": "observe_and_approve",
-        "state_dir": str(_state_dir(arguments)),
-        "output_dir": str(_output_dir(arguments)),
+        "state_dir": str(state_dir),
+        "output_dir": str(output_dir),
+        "sessions": sessions_state.get("sessions", []),
+        "session_count": len(sessions_state.get("sessions", [])),
         "panels": [
             "sessions",
             "commands",
@@ -570,6 +591,7 @@ def _tool_definitions() -> list[dict[str, Any]]:
             },
             required=["project_dir"],
             annotations={"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False},
+            meta=_workbench_tool_meta(invoking="Creating AgentOS session...", invoked="AgentOS session ready"),
         ),
         _tool_definition(
             "list_sessions",
@@ -590,6 +612,7 @@ def _tool_definitions() -> list[dict[str, Any]]:
             {**common_paths, "work_name": _string_schema("Session id, id prefix, or name.")},
             required=["work_name"],
             annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True},
+            meta=_workbench_tool_meta(invoking="Loading AgentOS session summary...", invoked="AgentOS session summary ready"),
         ),
         _tool_definition(
             "run_command",
@@ -635,6 +658,7 @@ def _tool_definitions() -> list[dict[str, Any]]:
             {**common_paths, "work_name": _string_schema("Session id, id prefix, or name.")},
             required=["work_name"],
             annotations={"readOnlyHint": False, "destructiveHint": False, "idempotentHint": True},
+            meta=_workbench_tool_meta(invoking="Building AgentOS review...", invoked="AgentOS review ready"),
         ),
         _tool_definition(
             "render_review",
@@ -678,22 +702,14 @@ def _tool_definitions() -> list[dict[str, Any]]:
             },
             required=["project_dir"],
             annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True},
+            meta=_workbench_tool_meta(invoking="Checking sync preflight...", invoked="Sync preflight ready"),
         ),
         _tool_definition(
             "open_workbench",
             "Open the AgentOS Workbench UI for observing sessions, sandbox commands, review packages, and approval gates.",
             common_paths,
             annotations={"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True},
-            meta={
-                "ui": {
-                    "resourceUri": WORKBENCH_WIDGET_URI,
-                    "visibility": ["model", "app"],
-                },
-                "openai/outputTemplate": WORKBENCH_WIDGET_URI,
-                "openai/widgetAccessible": True,
-                "openai/toolInvocation/invoking": "Opening AgentOS Workbench...",
-                "openai/toolInvocation/invoked": "AgentOS Workbench ready",
-            },
+            meta=_workbench_tool_meta(invoking="Opening AgentOS Workbench...", invoked="AgentOS Workbench ready"),
         ),
         _tool_definition(
             "approve_scope",

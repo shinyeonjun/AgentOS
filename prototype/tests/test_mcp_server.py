@@ -60,6 +60,12 @@ class McpServerTests(unittest.TestCase):
             "ui://agentos-workspace/workbench.html",
         )
         self.assertTrue(tools_by_name["open_workbench"]["_meta"]["openai/widgetAccessible"])
+        for auto_tool in ("create_session", "session_summary", "review_session", "sync_preflight"):
+            self.assertEqual(
+                tools_by_name[auto_tool]["_meta"]["openai/outputTemplate"],
+                "ui://agentos-workspace/workbench.html",
+            )
+            self.assertTrue(tools_by_name[auto_tool]["_meta"]["openai/widgetAccessible"])
         self.assertTrue(tools_by_name["sync_preflight"]["inputSchema"]["properties"]["require_signed_approval"]["default"])
         self.assertFalse(tools_by_name["sync_preflight"]["inputSchema"]["properties"]["allow_unsigned_approval"]["default"])
         self.assertTrue(tools_by_name["sync_approved"]["inputSchema"]["properties"]["require_signed_approval"]["default"])
@@ -103,6 +109,7 @@ class McpServerTests(unittest.TestCase):
         self.assertIsNotNone(result)
         content = result["result"]["structuredContent"]
         self.assertEqual(content["resource_uri"], "ui://agentos-workspace/workbench.html")
+        self.assertIn("session_count", content)
         self.assertIn("approval", content["panels"])
         self.assertIn("sync_approved dry_run=false", content["dangerous_actions"])
 

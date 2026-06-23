@@ -10,29 +10,27 @@
         --bg: #f7f8fb;
         --panel: #ffffff;
         --panel-2: #eef2f7;
-        --text: #18202b;
-        --muted: #607084;
-        --line: #d7dde6;
+        --text: #17202c;
+        --muted: #657386;
+        --line: #d8dee8;
         --accent: #2563eb;
         --ok: #15803d;
         --warn: #b45309;
         --bad: #b91c1c;
-        --shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
       }
 
       @media (prefers-color-scheme: dark) {
         :root {
-          --bg: #0f1217;
-          --panel: #171b22;
-          --panel-2: #202630;
+          --bg: #10141a;
+          --panel: #171c24;
+          --panel-2: #222936;
           --text: #eef2f7;
-          --muted: #9aa8b8;
-          --line: #2d3542;
-          --accent: #6ea8fe;
+          --muted: #9ba8b7;
+          --line: #303948;
+          --accent: #73a7ff;
           --ok: #4ade80;
           --warn: #fbbf24;
           --bad: #fb7185;
-          --shadow: 0 18px 42px rgba(0, 0, 0, 0.22);
         }
       }
 
@@ -51,9 +49,7 @@
         letter-spacing: 0;
       }
 
-      button,
-      input,
-      select {
+      button {
         font: inherit;
       }
 
@@ -68,21 +64,21 @@
         align-items: center;
         justify-content: space-between;
         gap: 16px;
-        padding: 16px 20px;
+        padding: 14px 18px;
         border-bottom: 1px solid var(--line);
-        background: color-mix(in srgb, var(--panel) 92%, transparent);
+        background: var(--panel);
       }
 
       .brand {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
         min-width: 0;
       }
 
       .mark {
-        width: 32px;
-        height: 32px;
+        width: 30px;
+        height: 30px;
         display: grid;
         place-items: center;
         border: 1px solid var(--line);
@@ -94,20 +90,20 @@
 
       h1 {
         margin: 0;
-        font-size: 17px;
-        line-height: 1.2;
+        font-size: 16px;
+        line-height: 1.15;
       }
 
       .subtitle {
         margin-top: 2px;
         color: var(--muted);
         font-size: 12px;
-        white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
-      .status-strip {
+      .pills {
         display: flex;
         align-items: center;
         gap: 8px;
@@ -115,68 +111,106 @@
         justify-content: flex-end;
       }
 
-      .pill {
+      .pill,
+      .badge {
         display: inline-flex;
         align-items: center;
-        min-height: 28px;
-        padding: 5px 9px;
-        border: 1px solid var(--line);
-        border-radius: 7px;
-        background: var(--panel);
+        min-height: 24px;
+        padding: 3px 8px;
+        border-radius: 6px;
+        background: var(--panel-2);
         color: var(--muted);
         font-size: 12px;
-        font-weight: 650;
+        font-weight: 700;
+      }
+
+      .ok {
+        color: var(--ok);
+      }
+
+      .warn {
+        color: var(--warn);
+      }
+
+      .bad {
+        color: var(--bad);
       }
 
       .grid {
         display: grid;
-        grid-template-columns: minmax(190px, 0.85fr) minmax(320px, 1.6fr) minmax(260px, 1fr);
+        grid-template-columns: minmax(300px, 1.25fr) minmax(280px, 0.85fr);
         gap: 1px;
-        background: var(--line);
         min-height: 0;
+        background: var(--line);
       }
 
       .pane {
-        background: var(--bg);
         min-width: 0;
         overflow: auto;
+        background: var(--bg);
       }
 
-      .pane-inner {
-        padding: 18px;
+      .inner {
+        padding: 16px;
       }
 
-      .section {
-        margin-bottom: 22px;
-      }
-
-      .section-title {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        margin-bottom: 10px;
-        color: var(--muted);
-        font-size: 12px;
-        font-weight: 750;
-        text-transform: uppercase;
-      }
-
-      .list {
+      .summary {
         display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 8px;
+        margin-bottom: 14px;
       }
 
+      .metric,
+      .panel,
       .row {
         border: 1px solid var(--line);
         border-radius: 7px;
         background: var(--panel);
-        padding: 10px;
-        box-shadow: var(--shadow);
       }
 
-      .row.compact {
-        box-shadow: none;
+      .metric {
+        padding: 11px;
+        min-height: 68px;
+      }
+
+      .metric strong {
+        display: block;
+        font-size: 22px;
+        line-height: 1;
+      }
+
+      .metric span {
+        display: block;
+        margin-top: 7px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .panel {
+        padding: 12px;
+        margin-bottom: 12px;
+      }
+
+      .title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 9px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+
+      .rows {
+        display: grid;
+        gap: 7px;
+      }
+
+      .row {
+        padding: 9px 10px;
       }
 
       .row-head {
@@ -197,96 +231,23 @@
       }
 
       .meta {
+        margin-top: 3px;
         color: var(--muted);
         font-size: 12px;
-        line-height: 1.4;
+        line-height: 1.35;
         overflow-wrap: anywhere;
       }
 
-      .badge {
-        flex: 0 0 auto;
-        border-radius: 6px;
-        padding: 3px 7px;
-        font-size: 11px;
-        font-weight: 750;
-        background: var(--panel-2);
-        color: var(--muted);
-      }
-
-      .badge.ok {
-        color: var(--ok);
-      }
-
-      .badge.warn {
-        color: var(--warn);
-      }
-
-      .badge.bad {
-        color: var(--bad);
-      }
-
-      .metrics {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 8px;
-      }
-
-      .metric {
-        border: 1px solid var(--line);
-        border-radius: 7px;
-        background: var(--panel);
-        padding: 12px;
-      }
-
-      .metric-value {
-        font-size: 24px;
-        font-weight: 800;
-        line-height: 1;
-      }
-
-      .metric-label {
-        margin-top: 6px;
-        color: var(--muted);
-        font-size: 12px;
-      }
-
-      .timeline {
-        display: grid;
-        gap: 10px;
-      }
-
-      .event {
-        display: grid;
-        grid-template-columns: 86px minmax(0, 1fr);
-        gap: 12px;
-        padding: 12px;
-        border: 1px solid var(--line);
-        border-radius: 7px;
-        background: var(--panel);
-      }
-
-      .role {
-        font-size: 11px;
-        color: var(--muted);
-        font-weight: 800;
-        text-transform: uppercase;
-      }
-
-      code,
       pre {
-        font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
-      }
-
-      pre {
-        margin: 8px 0 0;
-        max-height: 136px;
+        margin: 7px 0 0;
+        max-height: 112px;
         overflow: auto;
-        padding: 10px;
+        padding: 9px;
         border-radius: 6px;
         background: var(--panel-2);
-        color: var(--text);
+        font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
         font-size: 11px;
-        line-height: 1.45;
+        line-height: 1.4;
         white-space: pre-wrap;
       }
 
@@ -296,7 +257,6 @@
       }
 
       .action {
-        width: 100%;
         min-height: 36px;
         border: 1px solid var(--line);
         border-radius: 7px;
@@ -308,47 +268,41 @@
       }
 
       .action.primary {
-        border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+        border-color: color-mix(in srgb, var(--accent) 58%, var(--line));
         color: var(--accent);
-        font-weight: 750;
+        font-weight: 760;
       }
 
       .action:disabled {
         cursor: not-allowed;
-        color: var(--muted);
-        opacity: 0.65;
+        opacity: 0.62;
       }
 
       .empty {
         border: 1px dashed var(--line);
         border-radius: 7px;
-        padding: 14px;
+        padding: 12px;
         color: var(--muted);
-        background: color-mix(in srgb, var(--panel) 72%, transparent);
         font-size: 13px;
-        line-height: 1.5;
+        line-height: 1.45;
       }
 
-      @media (max-width: 920px) {
-        .grid {
-          grid-template-columns: 1fr;
-        }
-
+      @media (max-width: 820px) {
         .topbar {
           align-items: flex-start;
           flex-direction: column;
         }
 
-        .status-strip {
+        .pills {
           justify-content: flex-start;
         }
 
-        .metrics {
+        .grid {
           grid-template-columns: 1fr;
         }
 
-        .event {
-          grid-template-columns: 1fr;
+        .summary {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
         }
       }
     </style>
@@ -360,76 +314,53 @@
           <div class="mark">A</div>
           <div>
             <h1>AgentOS Workbench</h1>
-            <div class="subtitle">Copied workspace visibility and approval-gated sync</div>
+            <div class="subtitle" id="subtitle">Workspace, review, approval</div>
           </div>
         </div>
-        <div class="status-strip">
-          <span class="pill" id="mode">observe_and_approve</span>
-          <span class="pill" id="stateDir">state: default</span>
-          <span class="pill" id="outputDir">output: default</span>
+        <div class="pills">
+          <span class="pill" id="sessionPill">no session</span>
+          <span class="pill" id="statePill">ready</span>
         </div>
       </header>
 
       <section class="grid" aria-label="AgentOS workbench">
-        <aside class="pane">
-          <div class="pane-inner">
-            <div class="section">
-              <div class="section-title">Sessions <span id="sessionCount">0</span></div>
-              <div class="list" id="sessions"></div>
-            </div>
-
-            <div class="section">
-              <div class="section-title">Safe Tools</div>
-              <div class="list" id="safeActions"></div>
-            </div>
-          </div>
-        </aside>
-
         <section class="pane">
-          <div class="pane-inner">
-            <div class="section">
-              <div class="section-title">Run State</div>
-              <div class="metrics">
-                <div class="metric">
-                  <div class="metric-value" id="commandCount">0</div>
-                  <div class="metric-label">commands</div>
-                </div>
-                <div class="metric">
-                  <div class="metric-value" id="changedCount">0</div>
-                  <div class="metric-label">changed files</div>
-                </div>
-                <div class="metric">
-                  <div class="metric-value" id="blockerCount">0</div>
-                  <div class="metric-label">blockers</div>
-                </div>
-              </div>
+          <div class="inner">
+            <div class="summary">
+              <div class="metric"><strong id="sessionCount">0</strong><span>sessions</span></div>
+              <div class="metric"><strong id="commandCount">0</strong><span>commands</span></div>
+              <div class="metric"><strong id="changedCount">0</strong><span>changed</span></div>
+              <div class="metric"><strong id="blockerCount">0</strong><span>blockers</span></div>
             </div>
 
-            <div class="section">
-              <div class="section-title">Timeline</div>
-              <div class="timeline" id="timeline"></div>
+            <div class="panel">
+              <div class="title">Current Session <span id="sessionState" class="badge">unknown</span></div>
+              <div id="sessionBox"></div>
+            </div>
+
+            <div class="panel">
+              <div class="title">Latest Command <span id="commandState" class="badge">none</span></div>
+              <div id="commandBox"></div>
             </div>
           </div>
         </section>
 
         <aside class="pane">
-          <div class="pane-inner">
-            <div class="section">
-              <div class="section-title">Review</div>
-              <div class="list" id="review"></div>
+          <div class="inner">
+            <div class="panel">
+              <div class="title">Review <span id="reviewState" class="badge">not ready</span></div>
+              <div id="reviewBox"></div>
             </div>
 
-            <div class="section">
-              <div class="section-title">Approval Gate</div>
-              <div class="actions">
-                <button class="action" id="verifyReview" type="button">Verify review package</button>
-                <button class="action" id="syncPreflight" type="button">Run sync preflight</button>
-                <button class="action primary" id="approveSync" type="button">Approve and sync selected scope</button>
-              </div>
-              <div class="empty" id="approvalNote">
-                Real mutation still requires host-mediated approval. This panel should request a token
-                from the host before approve_scope or non-dry-run sync_approved.
-              </div>
+            <div class="panel">
+              <div class="title">Approval Gate <span id="approvalState" class="badge">blocked</span></div>
+              <div id="approvalBox"></div>
+            </div>
+
+            <div class="actions">
+              <button class="action" id="verifyReview" type="button">Verify review</button>
+              <button class="action" id="syncPreflight" type="button">Sync preflight</button>
+              <button class="action primary" id="approveSync" type="button">Approve and sync</button>
             </div>
           </div>
         </aside>
@@ -442,60 +373,22 @@
         mode: "observe_and_approve",
         state_dir: "default",
         output_dir: "default",
-        panels: ["sessions", "commands", "sandbox", "review", "approval"],
-        safe_actions: ["doctor", "list_sessions", "session_summary", "verify_review", "sync_preflight"],
-        dangerous_actions: ["approve_scope", "sync_approved dry_run=false", "purge_session"],
-        approval_boundary: {
-          approve_scope: "requires host-mediated human approval",
-          sync_approved: "non-dry-run sync requires host-mediated human approval",
-        },
+        sessions: [],
+        changed_files: [],
+        tool_calls: [],
+        blockers: [],
       };
 
-      const state = {
-        data: fallback,
-        toolResult: null,
-      };
-
-      function getToolData() {
-        const candidates = [
-          window.openai && window.openai.toolResult,
-          window.__OPENAI_TOOL_RESULT__,
-          window.__AGENTOS_WORKBENCH_DATA__,
-        ];
-        return candidates.find((item) => item && typeof item === "object") || fallback;
+      function toolData() {
+        const item =
+          (window.openai && window.openai.toolResult) ||
+          window.__OPENAI_TOOL_RESULT__ ||
+          window.__AGENTOS_WORKBENCH_DATA__ ||
+          fallback;
+        return item.structuredContent || item;
       }
 
-      function setText(id, text) {
-        const el = document.getElementById(id);
-        if (el) el.textContent = text;
-      }
-
-      function badgeClass(status) {
-        const value = String(status || "").toLowerCase();
-        if (["passed", "complete", "ready", "ok", "synced"].includes(value)) return "ok";
-        if (["failed", "blocked", "error"].includes(value)) return "bad";
-        if (["warning", "missing", "pending"].includes(value)) return "warn";
-        return "";
-      }
-
-      function row({ name, meta = "", badge = "" }) {
-        const cls = badgeClass(badge);
-        return [
-          '<div class="row compact">',
-          '<div class="row-head">',
-          `<div class="name">${escapeHtml(name)}</div>`,
-          badge ? `<span class="badge ${cls}">${escapeHtml(badge)}</span>` : "",
-          "</div>",
-          meta ? `<div class="meta">${escapeHtml(meta)}</div>` : "",
-          "</div>",
-        ].join("");
-      }
-
-      function empty(text) {
-        return `<div class="empty">${escapeHtml(text)}</div>`;
-      }
-
-      function escapeHtml(value) {
+      function esc(value) {
         return String(value ?? "")
           .replace(/&/g, "&amp;")
           .replace(/</g, "&lt;")
@@ -504,75 +397,104 @@
           .replace(/'/g, "&#039;");
       }
 
+      function setText(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+      }
+
+      function statusClass(value) {
+        const v = String(value || "").toLowerCase();
+        if (["passed", "ready", "complete", "synced", "ok"].includes(v)) return "ok";
+        if (["failed", "blocked", "error"].includes(v)) return "bad";
+        if (["warning", "missing", "pending", "not_checked"].includes(v)) return "warn";
+        return "";
+      }
+
+      function setBadge(id, value) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = value || "unknown";
+        el.className = `badge ${statusClass(value)}`;
+      }
+
+      function row(name, meta = "", badge = "") {
+        return `<div class="row"><div class="row-head"><div class="name">${esc(name)}</div>${badge ? `<span class="badge ${statusClass(badge)}">${esc(badge)}</span>` : ""}</div>${meta ? `<div class="meta">${esc(meta)}</div>` : ""}</div>`;
+      }
+
+      function empty(text) {
+        return `<div class="empty">${esc(text)}</div>`;
+      }
+
+      function asSession(data) {
+        if (data.session) return data.session;
+        if (data.session_id || data.workspace_path || data.input_path) return data;
+        const sessions = data.sessions || [];
+        return sessions[0] || null;
+      }
+
       function render() {
-        const data = getToolData();
-        state.data = data.structuredContent || data;
+        const data = toolData();
+        const session = asSession(data);
+        const sessions = data.sessions || (session ? [session] : []);
+        const commands = data.tool_calls || data.commands || (session && session.tool_calls) || [];
+        const latestCommand = commands[commands.length - 1];
+        const changed = data.changed_files || data.planned_paths || [];
+        const blockers = data.blockers || [];
+        const reviewPath = data.review_package_artifact || data.review_package_path;
+        const validation = data.validation_status || data.review_verification_status || "not ready";
+        const approval = data.approval_verification_status || (blockers.length ? "blocked" : "pending");
 
-        setText("mode", state.data.mode || "observe");
-        setText("stateDir", `state: ${state.data.state_dir || "default"}`);
-        setText("outputDir", `output: ${state.data.output_dir || "default"}`);
-
-        const sessions = state.data.sessions || state.data.recent_sessions || [];
+        setText("subtitle", data.project_dir || data.target_dir || data.input_path || "Workspace, review, approval");
+        setText("sessionPill", session ? session.name || session.session_id : "no session");
+        setText("statePill", data.mode || data.next_action || "ready");
         setText("sessionCount", sessions.length);
-        document.getElementById("sessions").innerHTML = sessions.length
-          ? sessions
-              .map((session) =>
-                row({
-                  name: session.name || session.session_id || "session",
-                  meta: session.workspace_path || session.input_path || "",
-                  badge: session.state || session.validation_status || "",
-                }),
-              )
-              .join("")
-          : empty("Open with list_sessions or session_summary results to populate live sessions.");
-
-        const safeActions = state.data.safe_actions || fallback.safe_actions;
-        document.getElementById("safeActions").innerHTML = safeActions
-          .map((name) => row({ name, meta: "safe read or preflight action" }))
-          .join("");
-
-        const commands = state.data.tool_calls || state.data.commands || [];
-        const changed = state.data.changed_files || state.data.planned_paths || [];
-        const blockers = state.data.blockers || [];
         setText("commandCount", commands.length);
         setText("changedCount", changed.length);
         setText("blockerCount", blockers.length);
+        setBadge("sessionState", session && (session.state || session.validation_status || "ready"));
+        setBadge("commandState", latestCommand && (latestCommand.status || latestCommand.exit_code || "done"));
+        setBadge("reviewState", validation);
+        setBadge("approvalState", approval);
 
-        document.getElementById("timeline").innerHTML = commands.length
-          ? commands
-              .slice(-12)
-              .map((cmd) => {
-                const command = Array.isArray(cmd.command) ? cmd.command.join(" ") : cmd.command || "";
-                const detail = cmd.stdout_tail || cmd.stderr_tail || command || cmd.cwd || "";
-                return [
-                  '<div class="event">',
-                  `<div><div class="role">${escapeHtml(cmd.role || "run")}</div><span class="badge ${badgeClass(cmd.status)}">${escapeHtml(cmd.status || cmd.exit_code || "done")}</span></div>`,
-                  `<div><div class="name">${escapeHtml(command || "command")}</div><div class="meta">${escapeHtml(cmd.cwd || "")}</div>${detail ? `<pre>${escapeHtml(detail)}</pre>` : ""}</div>`,
-                  "</div>",
-                ].join("");
-              })
-              .join("")
-          : empty("Command events appear here after session_status or session_summary data is supplied.");
+        document.getElementById("sessionBox").innerHTML = session
+          ? [
+              row("original", session.input_path || session.original_path || data.project_dir || ""),
+              row("workspace", session.workspace_path || ""),
+            ].join("")
+          : empty("No session data yet. It will appear after create_session or session_summary.");
 
-        const reviewItems = [
-          ["review package", state.data.review_package_artifact || state.data.review_package_path],
-          ["validation", state.data.validation_status],
-          ["approval", state.data.approval_verification_status],
-          ["sync", state.data.next_action],
-        ].filter((item) => item[1]);
-        document.getElementById("review").innerHTML = reviewItems.length
-          ? reviewItems.map(([name, meta]) => row({ name, meta, badge: meta })).join("")
-          : empty("Review package, diff, and sync preflight details appear here.");
+        document.getElementById("commandBox").innerHTML = latestCommand
+          ? [
+              row(
+                Array.isArray(latestCommand.command) ? latestCommand.command.join(" ") : latestCommand.command || "command",
+                latestCommand.cwd || "",
+                latestCommand.role || latestCommand.status || "",
+              ),
+              latestCommand.stdout_tail || latestCommand.stderr_tail
+                ? `<pre>${esc(latestCommand.stdout_tail || latestCommand.stderr_tail)}</pre>`
+                : "",
+            ].join("")
+          : empty("No command result yet.");
+
+        const reviewRows = [];
+        if (reviewPath) reviewRows.push(row("package", reviewPath, validation));
+        if (changed.length) reviewRows.push(row("changed files", changed.join("\\n"), `${changed.length}`));
+        if (data.next_action) reviewRows.push(row("next", data.next_action));
+        document.getElementById("reviewBox").innerHTML = reviewRows.length
+          ? reviewRows.join("")
+          : empty("Review details appear after review_session or sync_preflight.");
+
+        const approvalRows = [];
+        if (blockers.length) approvalRows.push(row("blockers", blockers.join("\\n"), "blocked"));
+        if (data.recommended_scope_id) approvalRows.push(row("scope", data.recommended_scope_id));
+        if (data.safe_to_sync !== undefined) approvalRows.push(row("safe to sync", String(data.safe_to_sync), data.safe_to_sync ? "ready" : "blocked"));
+        document.getElementById("approvalBox").innerHTML = approvalRows.length
+          ? approvalRows.join("")
+          : empty("Approval remains locked until sync_preflight returns a concrete scope.");
 
         const hasBridge = Boolean(window.openai && typeof window.openai.callTool === "function");
         for (const id of ["verifyReview", "syncPreflight", "approveSync"]) {
           document.getElementById(id).disabled = !hasBridge;
-        }
-        if (!hasBridge) {
-          setText(
-            "approvalNote",
-            "Action buttons are waiting for a host bridge. The approval boundary remains enforced by MCP tokens.",
-          );
         }
       }
 
