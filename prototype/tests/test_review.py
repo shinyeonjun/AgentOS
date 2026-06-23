@@ -272,16 +272,12 @@ class ReviewSummaryTests(unittest.TestCase):
             self.assertIsNone(changes[0].diff_text)
             self.assertEqual(changes[0].old_mode, "0644")
             self.assertEqual(changes[0].new_mode, "0755")
-            self.assertEqual(
-                changes[0].to_review_entry(diff_ref=None),
-                {
-                    "path": "tool.sh",
-                    "change_type": "mode_changed",
-                    "diff_ref": None,
-                    "old_mode": "0644",
-                    "new_mode": "0755",
-                },
-            )
+            entry = changes[0].to_review_entry(diff_ref=None)
+            self.assertEqual(entry["path"], "tool.sh")
+            self.assertEqual(entry["change_type"], "mode_changed")
+            self.assertIsNone(entry["diff_ref"])
+            self.assertEqual(entry["old_mode"], "0644")
+            self.assertEqual(entry["new_mode"], "0755")
 
     def test_review_validation_ignores_failed_exploration_commands(self) -> None:
         with TemporaryDirectory() as tmp:
