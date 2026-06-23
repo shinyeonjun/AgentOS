@@ -137,6 +137,13 @@ def build_plugin_spec() -> dict[str, Any]:
                 outputs=["safe_to_sync", "approval_required", "planned_paths", "blockers", "next_action"],
             ),
             _tool(
+                name="open_agentos_workspace",
+                command="MCP app: open_agentos_workspace",
+                purpose="Open the AgentOS Workbench side app once for live session, review, preflight, and approval control.",
+                required=[],
+                outputs=["resource_uri", "sessions", "session", "summary", "preflight", "approval_intent"],
+            ),
+            _tool(
                 name="get_agentos_workbench_state",
                 command="MCP app-only: get_agentos_workbench_state",
                 purpose="Refresh Workbench session, review, preflight, and approval state from the side panel.",
