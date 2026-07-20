@@ -12,6 +12,8 @@ AgentOS is an approval-gated safe workspace runtime for external AI agents such 
 Workspace Session -> Tool Calls -> Artifacts -> Preview/Diff -> Approval -> Sync
 ```
 
+**Status:** alpha, with a working local review-before-sync lifecycle. It is a safety/review runtime around an AI worker, not an AI model or autonomous deployment platform.
+
 The AI can keep working inside a copied project workspace. Your host project changes only after a human reviews the package and approves a sync scope.
 
 Use AgentOS when you want AI coding help, but you still want a hard boundary between "the agent tried this" and "my real repo changed."
