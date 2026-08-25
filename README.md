@@ -1,5 +1,8 @@
 # AgentOS
 
+> [!NOTE]
+> This project is discontinued and preserved for reference. It is not actively maintained or released.
+
 [![CI](https://github.com/shinyeonjun/AgentOS/actions/workflows/ci.yml/badge.svg)](https://github.com/shinyeonjun/AgentOS/actions/workflows/ci.yml)
 
 AI coding agents should not touch your repo directly.
